@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createServiceClient } from "@/lib/supabase";
+import { isValidImageUrl } from "@/lib/constants";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -101,6 +102,22 @@ export async function processUnprocessedArticles(limit: number = 5): Promise<{
     try {
       const result = await rewriteArticles(group, persona.style_prompt);
 
+      // 從原始文章收集圖片
+      const collectedImages: { url: string; source: string; caption: string }[] = [];
+      for (const raw of group) {
+        const rawImages: string[] = raw.images || [];
+        for (const url of rawImages) {
+          if (
+            isValidImageUrl(url) &&
+            !collectedImages.some((img) => img.url === url)
+          ) {
+            collectedImages.push({ url, source: raw.source, caption: "" });
+          }
+        }
+      }
+
+      const category = group[0].category || "綜合";
+
       const { error: insertError } = await supabase
         .from("generated_articles")
         .insert({
@@ -108,7 +125,8 @@ export async function processUnprocessedArticles(limit: number = 5): Promise<{
           writer_persona_id: persona.id,
           title: result.title,
           content: result.content,
-          images: [],
+          images: collectedImages.slice(0, 5),
+          category,
           status: "draft",
         });
 

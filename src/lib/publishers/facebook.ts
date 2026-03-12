@@ -1,5 +1,7 @@
 import type { PublishArticle } from "./types";
 
+const FACEBOOK_API_VERSION = "v19.0";
+
 interface FacebookConfig {
   page_id: string;
   access_token: string;
@@ -42,7 +44,7 @@ export async function publishToFacebook(
     }
 
     const response = await fetch(
-      `https://graph.facebook.com/v19.0/${page_id}/feed`,
+      `https://graph.facebook.com/${FACEBOOK_API_VERSION}/${page_id}/feed`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

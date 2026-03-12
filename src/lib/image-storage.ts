@@ -7,7 +7,7 @@ const USER_AGENT =
 /**
  * 確保 Storage bucket 存在（首次執行時自動建立）
  */
-export async function ensureBucket() {
+export async function ensureBucket(): Promise<void> {
   const supabase = createServiceClient();
   const { data } = await supabase.storage.getBucket(BUCKET_NAME);
   if (!data) {

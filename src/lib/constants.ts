@@ -22,6 +22,14 @@ export const CATEGORY_LABELS: Record<string, string> = {
   general: "綜合",
 };
 
+/** slug → DB 查詢用的分類值 */
+export const CATEGORY_DB_MAP: Record<string, string> = {
+  nba: "NBA",
+  mlb: "棒球",
+  soccer: "足球",
+  general: "綜合",
+};
+
 /** 分類名稱 → slug */
 export function getCategorySlug(category: string): string {
   const map: Record<string, string> = {
@@ -52,6 +60,26 @@ export const ARTICLE_STATUS_LABELS: Record<string, string> = {
   draft: "未發布",
   published: "已發布",
 };
+
+/** 排除非內容圖片（logo、tracking pixel、icon 等） */
+const IMAGE_EXCLUSION_PATTERNS = [
+  "logo",
+  ".svg",
+  "icon",
+  "avatar",
+  "et_track",
+  "content-reactions",
+  "columnists/full",
+  "pixel",
+  "tracker",
+  "beacon",
+];
+
+export function isValidImageUrl(url: string): boolean {
+  if (!url || !url.startsWith("http")) return false;
+  const lower = url.toLowerCase();
+  return !IMAGE_EXCLUSION_PATTERNS.some((pattern) => lower.includes(pattern));
+}
 
 /**
  * 格式化日期 - 完整版（含時間），用於文章詳情頁

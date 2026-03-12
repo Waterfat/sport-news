@@ -2,16 +2,9 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, CATEGORY_LABELS, formatDateShort } from "@/lib/constants";
+import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_LABELS, formatDateShort } from "@/lib/constants";
 
 export const revalidate = 60;
-
-const categoryMap: Record<string, string> = {
-  nba: "NBA",
-  mlb: "棒球",
-  soccer: "足球",
-  general: "綜合",
-};
 
 const comingSoonCategories = new Set(["mlb", "soccer", "general"]);
 
@@ -61,7 +54,7 @@ export default async function CategoryPage({
 }) {
   const { slug } = await params;
   const { page: pageParam } = await searchParams;
-  const categoryName = categoryMap[slug];
+  const categoryName = CATEGORY_DB_MAP[slug];
   const displayLabel = CATEGORY_LABELS[slug];
 
   if (!categoryName) {

@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { isValidImageUrl } from "@/lib/constants";
 import type { CrawledArticle } from "./types";
 
 const USER_AGENT =
@@ -177,17 +178,9 @@ async function crawlArticle(
 
     // 提取圖片
     const images: string[] = [];
-    $("article img, main img, .article-body img, .story-body img, .content img").each((_, el) => {
-      const src = $(el).attr("src") || $(el).attr("data-src");
-      if (
-        src &&
-        src.startsWith("http") &&
-        !src.includes("logo") &&
-        !src.includes(".svg") &&
-        !src.includes("icon") &&
-        !src.includes("avatar") &&
-        !images.includes(src)
-      ) {
+    $("article img, main img, .article-body img, .story-body img, .story img, .article_content img, .caas-body img, .content img").each((_, el) => {
+      const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-original");
+      if (src && isValidImageUrl(src) && !images.includes(src)) {
         images.push(src);
       }
     });
