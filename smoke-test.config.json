@@ -1,0 +1,39 @@
+{
+  "base_url": "https://sportnews-ashen.vercel.app",
+
+  "pages_200": [
+    "/",
+    "/login"
+  ],
+
+  "auth": {
+    "nextauth": true
+  },
+
+  "protected_apis": [
+    "/api/dashboard/stats",
+    "/api/articles/generated?page=1&limit=1",
+    "/api/articles/raw?page=1&limit=1"
+  ],
+
+  "public_apis": [
+    "/api/public/articles?limit=1",
+    "/robots.txt",
+    "/sitemap.xml"
+  ],
+
+  "db_checks": [
+    {
+      "path": "/api/public/articles?limit=1",
+      "fields": ["id", "title", "category", "view_count"],
+      "label": "Public Articles"
+    }
+  ],
+
+  "custom_checks": [
+    {
+      "label": "Public Articles API 含 total 欄位",
+      "command": "curl -s {{BASE_URL}}/api/public/articles?limit=1 | python3 -c \"import sys,json; assert isinstance(json.load(sys.stdin).get('total'),int)\""
+    }
+  ]
+}

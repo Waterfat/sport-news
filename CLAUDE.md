@@ -6,6 +6,7 @@
 - 新增/修改 `src/lib/*.ts` 或 `src/app/api/**/*.ts` → 必須同步新增/更新對應 unit test
 - `/review` 重構完 → 執行 `/write-tests` 補齊測試覆蓋
 - **部署後必須執行 `./scripts/smoke-test.sh`**，全部通過才算部署完成。不得手動挑選驗證項目。
+- 新增 API 端點後 → 更新 `smoke-test.config.json` 對應的 protected_apis 或 public_apis
 
 ## 測試指令
 
