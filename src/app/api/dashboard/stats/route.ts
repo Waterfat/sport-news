@@ -11,15 +11,14 @@ export async function GET() {
   const [
     rawCount,
     draftCount,
-    approvedCount,
     publishedCount,
-    rejectedCount,
     personaStats,
     todayRaw,
     todayGenerated,
     channelCount,
     todayPublished,
     scheduledCount,
+    totalViews,
   ] = await Promise.all([
     supabase.from("raw_articles").select("*", { count: "exact", head: true }),
     supabase
@@ -29,15 +28,7 @@ export async function GET() {
     supabase
       .from("generated_articles")
       .select("*", { count: "exact", head: true })
-      .eq("status", "approved"),
-    supabase
-      .from("generated_articles")
-      .select("*", { count: "exact", head: true })
       .eq("status", "published"),
-    supabase
-      .from("generated_articles")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "rejected"),
     supabase.from("writer_personas").select("id, name, is_active"),
     supabase
       .from("raw_articles")
@@ -59,21 +50,29 @@ export async function GET() {
     supabase
       .from("generated_articles")
       .select("*", { count: "exact", head: true })
-      .not("scheduled_at", "is", null)
-      .eq("status", "approved"),
+      .eq("status", "draft")
+      .not("scheduled_at", "is", null),
+    supabase
+      .from("generated_articles")
+      .select("view_count")
+      .eq("status", "published"),
   ]);
+
+  const totalViewCount = (totalViews.data || []).reduce(
+    (sum, row) => sum + (row.view_count || 0),
+    0
+  );
 
   return NextResponse.json({
     raw_articles_total: rawCount.count || 0,
     today_raw: todayRaw.count || 0,
     today_generated: todayGenerated.count || 0,
     draft: draftCount.count || 0,
-    approved: approvedCount.count || 0,
     published: publishedCount.count || 0,
-    rejected: rejectedCount.count || 0,
-    personas: personaStats.data || [],
-    channels: channelCount.data || [],
     today_published: todayPublished.count || 0,
     scheduled: scheduledCount.count || 0,
+    total_views: totalViewCount,
+    personas: personaStats.data || [],
+    channels: channelCount.data || [],
   });
 }

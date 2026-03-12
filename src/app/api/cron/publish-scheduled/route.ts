@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
-import { publishToChannel } from "@/lib/publishers";
+import { publishArticle } from "@/lib/publish-article";
 
 export const maxDuration = 60;
 
@@ -16,11 +16,11 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
     const now = new Date().toISOString();
 
-    // Find articles that are approved and scheduled_at <= now
+    // Find articles that are scheduled (draft/approved with scheduled_at <= now)
     const { data: articles, error: fetchError } = await supabase
       .from("generated_articles")
-      .select("*")
-      .eq("status", "approved")
+      .select("id, title")
+      .in("status", ["draft", "approved"])
       .not("scheduled_at", "is", null)
       .lte("scheduled_at", now);
 
@@ -40,86 +40,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const summary: Array<{
-      article_id: string;
-      title: string;
-      channels_published: number;
-      channels_failed: number;
-      errors: string[];
-    }> = [];
-
+    // 統一發布邏輯
+    const results = [];
     for (const article of articles) {
-      const channelIds: number[] = article.publish_channel_ids || [];
-
-      if (channelIds.length === 0) {
-        // No channels assigned, just mark as published
-        await supabase
-          .from("generated_articles")
-          .update({
-            status: "published",
-            published_at: now,
-          })
-          .eq("id", article.id);
-
-        summary.push({
-          article_id: article.id,
-          title: article.title,
-          channels_published: 0,
-          channels_failed: 0,
-          errors: [],
-        });
-        continue;
-      }
-
-      // Fetch channels
-      const { data: channels } = await supabase
-        .from("publish_channels")
-        .select("*")
-        .in("id", channelIds)
-        .eq("is_active", true);
-
-      const results = channels
-        ? await Promise.all(
-            channels.map((channel) =>
-              publishToChannel(
-                {
-                  title: article.title,
-                  content: article.content,
-                  slug: article.slug,
-                },
-                channel
-              )
-            )
-          )
-        : [];
-
-      const successCount = results.filter((r) => r.success).length;
-      const errors = results
-        .filter((r) => !r.success)
-        .map((r) => `${r.channel_name}: ${r.error}`);
-
-      // Update article status
-      await supabase
-        .from("generated_articles")
-        .update({
-          status: "published",
-          published_at: now,
-        })
-        .eq("id", article.id);
-
-      summary.push({
-        article_id: article.id,
-        title: article.title,
-        channels_published: successCount,
-        channels_failed: results.length - successCount,
-        errors,
-      });
+      const result = await publishArticle(article.id);
+      results.push(result);
     }
+
+    const published = results.filter((r) => r.success).length;
+
+    console.log(
+      `[Cron/PublishScheduled] Published ${published}/${articles.length} articles`
+    );
 
     return NextResponse.json({
       success: true,
-      published: summary.length,
-      summary,
+      published,
+      results,
       timestamp: now,
     });
   } catch (err) {
