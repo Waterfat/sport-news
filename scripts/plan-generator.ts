@@ -1,8 +1,12 @@
 /**
- * 規劃產生器 — 為每位寫手產生預計文章標題列表
+ * 規劃產生器 — AI 整體分析所有素材，產出去重後的文章規劃
  *
- * 使用 Claude CLI 快速產生標題（不產生全文），
- * 結果存入 rewrite_plans 表供後台審核。
+ * 核心邏輯：
+ * 1. 從 DB 讀取最近 48 小時的原始新聞
+ * 2. 取得啟用的寫手及其專長設定
+ * 3. 根據寫手專長匹配素材
+ * 4. 一次把所有素材丟給 Claude，讓 AI 分析、去重、規劃
+ * 5. 結果存入 rewrite_plans 表供後台審核
  *
  * 使用方式：npx tsx scripts/plan-generator.ts
  */
@@ -42,7 +46,6 @@ function matchesSpecialties(article: RawArticle, spec: Specialties): boolean {
     綜合: [],
   };
 
-  // 加權計數：計算文章中各球種的關鍵字命中次數，判斷文章的主分類
   const articleSportCounts: Record<string, number> = {};
   for (const [sport, patterns] of Object.entries(sportKeywords)) {
     if (sport === "綜合") continue;
@@ -54,13 +57,11 @@ function matchesSpecialties(article: RawArticle, spec: Specialties): boolean {
     if (count > 0) articleSportCounts[sport] = count;
   }
 
-  // 找出命中次數最高的球種作為文章主分類
   const dominantSport = Object.entries(articleSportCounts)
     .sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
   for (const sport of spec.sports) {
     if (sport === "綜合") return true;
-    // 文章主分類必須是寫手擅長的球種
     if (dominantSport === sport) return true;
   }
 
@@ -84,61 +85,8 @@ function matchesSpecialties(article: RawArticle, spec: Specialties): boolean {
   return false;
 }
 
-function groupByLeague(articles: RawArticle[]): Record<string, RawArticle[]> {
-  const groups: Record<string, RawArticle[]> = {};
-  const detectors: [string, RegExp[]][] = [
-    ["NBA", [/\bnba\b/i]], ["MLB", [/\bmlb\b/i, /大聯盟/]], ["NFL", [/\bnfl\b/i]],
-    ["NCAAM", [/\bncaam\b/i, /\bmarch madness\b/i, /\bncaa\b/i]],
-    ["英超", [/英超/, /\bpremier league\b/i]], ["西甲", [/西甲/]], ["歐冠", [/歐冠/]],
-    ["NHL", [/\bnhl\b/i]], ["WBC", [/\bwbc\b/i]], ["WNBA", [/\bwnba\b/i]],
-    ["中職", [/中職/]], ["日職", [/日職/]],
-  ];
-
-  for (const a of articles) {
-    const t = a.title + " " + a.content + " " + (a.category || "");
-    let assigned = false;
-    for (const [league, patterns] of detectors) {
-      if (patterns.some((re) => re.test(t))) {
-        (groups[league] ??= []).push(a);
-        assigned = true;
-        break;
-      }
-    }
-    if (!assigned) (groups["綜合"] ??= []).push(a);
-  }
-  return groups;
-}
-
-const MAX_GROUP_SIZE = 5;
-
-function groupByTopic(articles: RawArticle[]): RawArticle[][] {
-  const groups: RawArticle[][] = [];
-  const used = new Set<string>();
-  for (const article of articles) {
-    if (used.has(article.id)) continue;
-    const group = [article];
-    used.add(article.id);
-    const names1 = extractNames(article.title);
-    for (const other of articles) {
-      if (used.has(other.id) || group.length >= MAX_GROUP_SIZE) break;
-      const names2 = extractNames(other.title);
-      if (names1.some((n) => names2.includes(n))) {
-        group.push(other);
-        used.add(other.id);
-      }
-    }
-    groups.push(group);
-  }
-  return groups;
-}
-
-function extractNames(text: string): string[] {
-  const matches = text.match(/\b([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)\b/g) || [];
-  return [...new Set(matches.filter((n) => n.split(" ").length <= 4).map((n) => n.toLowerCase()))];
-}
-
-// --- Claude title generation ---
-function callClaudeForTitles(prompt: string): string[] {
+// --- Claude call ---
+function callClaude(prompt: string, timeout = 120000): string {
   const tmpPrompt = join(tmpdir(), `plan-prompt-${Date.now()}.txt`);
   const tmpOutput = join(tmpdir(), `plan-output-${Date.now()}.txt`);
   writeFileSync(tmpPrompt, prompt, "utf-8");
@@ -148,7 +96,7 @@ function callClaudeForTitles(prompt: string): string[] {
   delete env.ANTHROPIC_API_KEY;
 
   spawnSync("bash", ["-c", `cat "${tmpPrompt}" | claude -p --model sonnet > "${tmpOutput}" 2>&1`], {
-    encoding: "utf-8", timeout: 60000, maxBuffer: 1024 * 1024, env,
+    encoding: "utf-8", timeout, maxBuffer: 2 * 1024 * 1024, env,
   });
 
   let output = "";
@@ -156,16 +104,31 @@ function callClaudeForTitles(prompt: string): string[] {
   try { unlinkSync(tmpPrompt); } catch {}
   try { unlinkSync(tmpOutput); } catch {}
 
-  // Parse JSON array of titles
-  const cleaned = output.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  try {
-    const parsed = JSON.parse(cleaned);
-    if (Array.isArray(parsed)) return parsed.map(String);
-    if (parsed.titles && Array.isArray(parsed.titles)) return parsed.titles.map(String);
-  } catch {}
+  return output;
+}
 
-  // Fallback: extract lines that look like titles
-  return cleaned.split("\n").filter((l) => l.trim().length > 5).slice(0, 5);
+interface PlanProposal {
+  title: string;
+  source_indices: number[];
+  league: string;
+  plan_type: "official" | "columnist";
+}
+
+function parseAIPlan(output: string): PlanProposal[] {
+  const cleaned = output.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) {
+    console.error("AI 回傳非 JSON:", output.substring(0, 500));
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((p: PlanProposal) => p.title && Array.isArray(p.source_indices));
+  } catch (e) {
+    console.error("JSON 解析失敗:", e);
+    return [];
+  }
 }
 
 // --- Main ---
@@ -179,10 +142,7 @@ export async function generatePlans() {
 
   if (!personas?.length) { console.log("沒有啟用的寫手"); return; }
 
-  const columnists = personas.filter((p) => (p.writer_type || "columnist") === "columnist") as WriterPersona[];
-  const officials = personas.filter((p) => p.writer_type === "official") as WriterPersona[];
-
-  // 取得最近 48 小時的文章（確保跨日爬取的文章都能納入）
+  // 取得最近 48 小時的文章
   const since = new Date();
   since.setHours(since.getHours() - 48);
 
@@ -191,116 +151,130 @@ export async function generatePlans() {
     .gte("crawled_at", since.toISOString())
     .order("crawled_at", { ascending: false });
 
-  if (!rawArticles?.length) { console.log("沒有昨日文章"); return; }
+  if (!rawArticles?.length) { console.log("沒有近期文章"); return; }
 
-  // 過濾掉垃圾文章（標題太短或只是分類名）
+  // 過濾垃圾文章
   const validArticles = rawArticles.filter((a) => {
     if (!a.title || a.title.trim().length < 10) return false;
-    // 過濾只有分類名稱的文章
-    const categoryNames = ["NBA", "MLB", "NFL", "NHL", "NCAAM", "NCAAW", "WNBA", "MLS", "Soccer", "Tennis", "Hockey"];
+    const categoryNames = ["NBA", "MLB", "NFL", "NHL", "NCAAM", "NCAAW", "WNBA", "MLS", "Soccer", "Tennis", "Hockey", "College Sports"];
     if (categoryNames.some((c) => a.title.trim().toUpperCase() === c.toUpperCase())) return false;
     return true;
   });
 
-  if (!validArticles.length) { console.log("沒有有效的昨日文章"); return; }
-  console.log(`找到 ${rawArticles.length} 篇昨日文章，其中 ${validArticles.length} 篇有效`);
+  if (!validArticles.length) { console.log("沒有有效的文章"); return; }
+  console.log(`找到 ${rawArticles.length} 篇文章，其中 ${validArticles.length} 篇有效`);
 
-  const plans: { writer_persona_id: string; title: string; raw_article_ids: string[]; league: string | null; plan_type: string; }[] = [];
+  // 取得已產出過的文章（避免重複規劃已產出的素材）
+  const { data: existingArticles } = await supabase
+    .from("generated_articles")
+    .select("raw_article_ids")
+    .gte("created_at", since.toISOString());
 
-  // 追蹤已規劃的文章 ID，用於跨寫手去重
-  const plannedArticleIds = new Set<string>();
-
-  // 官方戰報：先按聯盟篩選，再按主題分組
-  for (const official of officials) {
-    const matched = validArticles.filter((a) => matchesSpecialties(a as RawArticle, official.specialties));
-    if (!matched.length) continue;
-
-    const leagueGroups = groupByLeague(matched as RawArticle[]);
-    const maxArticles = official.max_articles || 2;
-    let count = 0;
-
-    for (const [league, articles] of Object.entries(leagueGroups)) {
-      if (count >= maxArticles) break;
-      if (articles.length < 1) continue;
-
-      // 如果寫手有設定擅長聯盟，只產出該聯盟的戰報
-      if (official.specialties.leagues.length > 0 && !official.specialties.leagues.includes(league)) {
-        console.log(`[官方] ${official.name} - 跳過 ${league} (不在擅長聯盟內)`);
-        continue;
-      }
-
-      // 將該聯盟的文章按主題分組，每組產一個規劃
-      const topicGroups = groupByTopic(articles);
-      console.log(`[官方] ${official.name} - ${league} (${articles.length} 篇素材，分成 ${topicGroups.length} 個主題)`);
-
-      for (const group of topicGroups) {
-        if (count >= maxArticles) break;
-
-        const summaries = group.map((a) => `- ${a.title}\n  ${a.content.substring(0, 200)}`).join("\n\n");
-        const prompt = `根據以下體育新聞素材，為一篇 ${league} 報導想一個繁體中文標題。標題要具體描述主題內容，吸引讀者點擊。球員、教練等人名保留英文原文，不要翻譯成中文。只回覆一個標題，不要其他文字。\n\n${summaries}`;
-
-        const titles = callClaudeForTitles(prompt);
-        const title = titles[0] || group[0].title;
-
-        plans.push({
-          writer_persona_id: official.id,
-          title,
-          raw_article_ids: group.map((a) => a.id),
-          league,
-          plan_type: "official",
-        });
-        group.forEach((a) => plannedArticleIds.add(a.id));
-        count++;
+  const alreadyUsedIds = new Set<string>();
+  if (existingArticles) {
+    for (const article of existingArticles) {
+      for (const id of article.raw_article_ids || []) {
+        alreadyUsedIds.add(id);
       }
     }
   }
 
-  // 專欄作家
-  for (const columnist of columnists) {
-    const matched = validArticles.filter((a) => matchesSpecialties(a as RawArticle, columnist.specialties));
-    if (!matched.length) continue;
+  const allPlans: { writer_persona_id: string; title: string; raw_article_ids: string[]; league: string | null; plan_type: string; }[] = [];
 
-    const groups = groupByTopic(matched as RawArticle[]);
-    const maxArticles = columnist.max_articles || 2;
-    let produced = 0;
+  for (const persona of personas as WriterPersona[]) {
+    // 匹配專長
+    const matched = validArticles.filter((a) => matchesSpecialties(a as RawArticle, persona.specialties));
+    if (!matched.length) {
+      console.log(`[${persona.name}] 沒有匹配的文章`);
+      continue;
+    }
 
-    for (const group of groups) {
-      if (produced >= maxArticles) break;
+    // 排除已被產出過的素材
+    const freshArticles = matched.filter((a) => !alreadyUsedIds.has(a.id));
+    if (!freshArticles.length) {
+      console.log(`[${persona.name}] 所有匹配文章皆已產出過`);
+      continue;
+    }
 
-      // 跨寫手去重：如果這組素材全部都已被其他規劃使用，跳過
-      const newArticles = group.filter((a) => !plannedArticleIds.has(a.id));
-      if (newArticles.length === 0) {
-        console.log(`[專欄] ${columnist.name} - 跳過 (${group.length} 篇素材皆已被其他規劃使用)`);
+    console.log(`[${persona.name}] 匹配 ${matched.length} 篇，新素材 ${freshArticles.length} 篇`);
+
+    const maxArticles = persona.max_articles || 5;
+
+    // 建立素材清單（帶編號供 AI 引用）
+    const articleList = freshArticles.map((a, i) =>
+      `[${i}] 來源：${a.source}\n    標題：${a.title}\n    摘要：${a.content.substring(0, 300)}`
+    ).join("\n\n");
+
+    const writerTypeDesc = persona.writer_type === "official"
+      ? "官方體育編輯，負責撰寫每日聯盟戰報與重點新聞報導"
+      : `專欄作家「${persona.name}」，有個人觀點和分析風格`;
+
+    const prompt = `你是體育新聞網站的內容規劃師。以下是從多個來源爬取的 ${freshArticles.length} 篇體育新聞素材。
+
+你的任務：分析這些素材，找出不重複的獨立主題，為「${persona.name}」（${writerTypeDesc}）規劃要產出的文章列表。
+
+重要規則：
+1. 多篇來自不同來源但報導同一事件的素材，必須合併為一個規劃項目（例如：ESPN 和 ETtoday 都在報導同一場比賽）
+2. 同一事件的不同角度（例如：得分紀錄、賽後反應、女友見證）可以合併成一篇綜合報導，或拆成最多 2 篇（主報導 + 花絮）
+3. 每個規劃項目必須引用所有相關的素材編號
+4. 標題必須是繁體中文，球員/教練等人名保留英文原文
+5. 最多產出 ${maxArticles} 個規劃項目
+6. Fantasy、選秀預測、排名等列表型內容可以跳過，優先報導實際賽事和新聞事件
+7. 只回覆 JSON，不要其他文字
+
+素材清單：
+${articleList}
+
+請以 JSON 陣列格式回覆，每個項目包含：
+- title: 繁體中文標題
+- source_indices: 引用的素材編號陣列（例如 [0, 3, 7]）
+- league: 聯盟名稱（如 "NBA"、"NFL"、"MLB" 等）
+- plan_type: "${persona.writer_type}"
+
+範例格式：
+[{"title": "Bam Adebayo 單場轟下83分超越 Kobe，寫下 NBA 史上第二高得分紀錄", "source_indices": [0, 1, 5, 8], "league": "NBA", "plan_type": "${persona.writer_type}"}]`;
+
+    console.log(`[${persona.name}] 呼叫 AI 分析 ${freshArticles.length} 篇素材...`);
+    const output = callClaude(prompt, 180000);
+    const proposals = parseAIPlan(output);
+
+    if (!proposals.length) {
+      console.log(`[${persona.name}] AI 沒有產生任何規劃`);
+      continue;
+    }
+
+    console.log(`[${persona.name}] AI 規劃了 ${proposals.length} 篇文章`);
+
+    for (const proposal of proposals) {
+      // 將 source_indices 轉換為實際的 raw_article_ids
+      const rawIds = proposal.source_indices
+        .filter((i) => i >= 0 && i < freshArticles.length)
+        .map((i) => freshArticles[i].id);
+
+      if (rawIds.length === 0) {
+        console.log(`  跳過「${proposal.title}」- 沒有有效的素材引用`);
         continue;
       }
 
-      const summaries = group.map((a) => `- ${a.title}\n  ${a.content.substring(0, 200)}`).join("\n\n");
-      const sportHint = columnist.specialties.sports.length > 0 ? `你專長的領域是：${columnist.specialties.sports.join("、")}。` : "";
-      const prompt = `你是專欄作家「${columnist.name}」。${sportHint}根據以下素材，想一個吸引人的繁體中文文章標題。注意正確辨別文章的運動類型，不要搞混。球員、教練等人名保留英文原文，不要翻譯成中文。只回覆一個標題，不要其他文字。\n\n${summaries}`;
-
-      console.log(`[專欄] ${columnist.name} - ${group.length} 篇素材`);
-      const titles = callClaudeForTitles(prompt);
-      const title = titles[0] || group[0].title;
-
-      plans.push({
-        writer_persona_id: columnist.id,
-        title,
-        raw_article_ids: group.map((a) => a.id),
-        league: null,
-        plan_type: "columnist",
+      allPlans.push({
+        writer_persona_id: persona.id,
+        title: proposal.title,
+        raw_article_ids: rawIds,
+        league: proposal.league || null,
+        plan_type: proposal.plan_type || persona.writer_type,
       });
-      group.forEach((a) => plannedArticleIds.add(a.id));
-      produced++;
+
+      console.log(`  ✓ ${proposal.title} (${rawIds.length} 篇素材)`);
     }
   }
 
-  if (plans.length > 0) {
-    const { error } = await supabase.from("rewrite_plans").insert(plans);
+  if (allPlans.length > 0) {
+    const { error } = await supabase.from("rewrite_plans").insert(allPlans);
     if (error) {
       console.error("儲存規劃失敗:", error.message);
       return;
     }
-    console.log(`\n=== 已產生 ${plans.length} 個規劃項目 ===`);
+    console.log(`\n=== 已產生 ${allPlans.length} 個規劃項目 ===`);
   } else {
     console.log("沒有產生任何規劃");
   }
