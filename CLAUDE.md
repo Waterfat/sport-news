@@ -16,7 +16,7 @@
 - 框架：Playwright（`npx playwright test`）
 - 測試目錄：`e2e/`
 - 執行：`./scripts/e2e-test.sh [BASE_URL]`
-- 後台測試需設定環境變數：`E2E_USERNAME` + `E2E_PASSWORD`（未設定則自動跳過）
+- 後台測試需設定環境變數：`E2E_USERNAME` + `E2E_PASSWORD`（未設定時腳本會主動詢問，不得自動跳過）
 - 新增頁面/修改 UI 時必須同步更新 E2E 測試
 
 ## 測試指令
