@@ -9,16 +9,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { POLLING_INTERVAL_MS, POLLING_TIMEOUT_MS, PAGE_SIZE_OPTIONS } from "@/lib/constants";
+import { PAGE_SIZE_OPTIONS } from "@/lib/constants";
 
 import { PaginationBar } from "@/components/admin/PaginationBar";
 import { PlansTable } from "@/components/admin/PlansTable";
-import type { PlanItem, RawArticleInfo } from "@/components/admin/PlansTable";
 import { ProductionPanel, PlanLoadingCard } from "@/components/admin/ProductionPanel";
 import { ArticlesTable } from "@/components/admin/ArticlesTable";
 import type { Article } from "@/components/admin/ArticlesTable";
 import { BatchActionsBar } from "@/components/admin/BatchActionsBar";
-import type { RewriteStatus } from "@/types/rewrite";
+
+import { useRewritePolling } from "@/hooks/useRewritePolling";
+import { usePlanManager } from "@/hooks/usePlanManager";
 
 export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -35,45 +36,6 @@ export default function ArticlesPage() {
 
   // 單篇發布 loading
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set());
-
-  // 改寫任務狀態
-  const [rewriteStatus, setRewriteStatus] = useState<RewriteStatus | null>(null);
-  const [triggering, setTriggering] = useState(false);
-
-  // 規劃相關
-  const [plans, setPlans] = useState<PlanItem[]>([]);
-  const [rawArticleMap, setRawArticleMap] = useState<Record<string, RawArticleInfo>>({});
-  const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
-  const [planLoading, setPlanLoading] = useState(false);
-  const [planTriggering, setPlanTriggering] = useState(false);
-
-  // 追蹤目前正在執行的任務類型：'plan' | 'produce' | 'rewrite' | null
-  const [runningMode, setRunningMode] = useState<string | null>(null);
-
-  const fetchRewriteStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/rewrite");
-      if (res.ok) {
-        const data = await res.json();
-        setRewriteStatus(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch rewrite status:", err);
-    }
-  }, []);
-
-  const fetchPlans = useCallback(async () => {
-    try {
-      const res = await fetch("/api/rewrite/plan");
-      if (res.ok) {
-        const data = await res.json();
-        setPlans(data.plans || []);
-        setRawArticleMap(data.rawArticleMap || {});
-      }
-    } catch (err) {
-      console.error("Failed to fetch plans:", err);
-    }
-  }, []);
 
   const fetchArticles = useCallback(async () => {
     setLoading(true);
@@ -95,190 +57,28 @@ export default function ArticlesPage() {
     }
   }, [page, pageSize, status]);
 
-  useEffect(() => {
-    fetchPlans();
-  }, [fetchPlans]);
+  const planManager = usePlanManager({
+    onProduceSuccess: () => {
+      // reset runningMode on failure is handled inside triggerProduce
+    },
+  });
 
-  useEffect(() => {
-    fetchRewriteStatus();
-  }, [fetchRewriteStatus]);
+  const rewritePolling = useRewritePolling({
+    onPollComplete: () => {
+      fetchArticles();
+    },
+    onPlanPollComplete: () => {
+      planManager.fetchPlans();
+    },
+    onProducePollComplete: () => {
+      planManager.fetchPlans();
+      fetchArticles();
+    },
+  });
 
   useEffect(() => {
     fetchArticles();
   }, [fetchArticles]);
-
-  const pollRewriteStatus = useCallback(() => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch("/api/rewrite");
-        if (res.ok) {
-          const data = await res.json();
-          setRewriteStatus(data);
-          if (!data.currentTask) {
-            clearInterval(interval);
-            clearTimeout(timeout);
-            setRunningMode(null);
-            fetchArticles();
-          }
-        }
-      } catch (err) {
-        console.error("Failed to poll rewrite status:", err);
-      }
-    }, POLLING_INTERVAL_MS);
-
-    const timeout = setTimeout(() => clearInterval(interval), POLLING_TIMEOUT_MS);
-  }, [fetchArticles]);
-
-  // 如果頁面載入時已有進行中的任務，啟動輪詢
-  useEffect(() => {
-    if (rewriteStatus?.currentTask && !runningMode) {
-      setRunningMode("rewrite");
-      pollRewriteStatus();
-    }
-  }, [rewriteStatus?.currentTask?.status]);
-
-  // --- Plan callbacks ---
-
-  const triggerPlan = async (force = false) => {
-    setPlanTriggering(true);
-    setRunningMode("plan");
-    if (force) {
-      setPlans([]);
-      setSelectedPlanIds(new Set());
-    }
-    try {
-      const res = await fetch("/api/rewrite/plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.hasExisting) {
-          setRunningMode(null);
-          setPlanTriggering(false);
-          if (confirm("已有規劃存在，是否清除並重新產生？")) {
-            triggerPlan(true);
-          }
-          return;
-        }
-        alert(data.error || "規劃產生失敗");
-        setRunningMode(null);
-        return;
-      }
-      const interval = setInterval(async () => {
-        try {
-          const r = await fetch("/api/rewrite");
-          if (r.ok) {
-            const d = await r.json();
-            setRewriteStatus(d);
-            if (!d.currentTask) {
-              clearInterval(interval);
-              clearTimeout(timeout);
-              setRunningMode(null);
-              fetchPlans();
-            }
-          }
-        } catch (err) {
-          console.error("Failed to poll rewrite status during plan:", err);
-        }
-      }, POLLING_INTERVAL_MS);
-      const timeout = setTimeout(() => clearInterval(interval), POLLING_TIMEOUT_MS);
-    } catch {
-      alert("規劃失敗，請確認監聽器是否正在運行");
-      setRunningMode(null);
-    } finally {
-      setPlanTriggering(false);
-    }
-  };
-
-  const handlePlanProduce = async () => {
-    const ids = Array.from(selectedPlanIds);
-    if (ids.length === 0) return;
-    if (!confirm(`確定要產出 ${ids.length} 篇規劃文章？`)) return;
-
-    setPlanLoading(true);
-    setRunningMode("produce");
-    try {
-      const res = await fetch("/api/rewrite/plan/produce", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "產出失敗");
-        setRunningMode(null);
-        return;
-      }
-      setPlans((prev) => prev.filter((p) => !ids.includes(p.id)));
-      setSelectedPlanIds(new Set());
-      const interval = setInterval(async () => {
-        try {
-          const r = await fetch("/api/rewrite");
-          if (r.ok) {
-            const d = await r.json();
-            setRewriteStatus(d);
-            if (!d.currentTask) {
-              clearInterval(interval);
-              clearTimeout(timeout);
-              setRunningMode(null);
-              fetchPlans();
-              fetchArticles();
-            }
-          }
-        } catch (err) {
-          console.error("Failed to poll rewrite status during produce:", err);
-        }
-      }, POLLING_INTERVAL_MS);
-      const timeout = setTimeout(() => clearInterval(interval), POLLING_TIMEOUT_MS);
-    } catch {
-      alert("產出失敗");
-      setRunningMode(null);
-    } finally {
-      setPlanLoading(false);
-    }
-  };
-
-  const handlePlanDelete = async () => {
-    const ids = Array.from(selectedPlanIds);
-    if (ids.length === 0) return;
-    if (!confirm(`確定要移除 ${ids.length} 個規劃項目？`)) return;
-
-    setPlanLoading(true);
-    try {
-      const res = await fetch("/api/rewrite/plan", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
-      if (res.ok) {
-        setSelectedPlanIds(new Set());
-        fetchPlans();
-      }
-    } catch {
-      alert("移除失敗");
-    } finally {
-      setPlanLoading(false);
-    }
-  };
-
-  const togglePlanSelect = (id: string) => {
-    setSelectedPlanIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const togglePlanSelectAll = () => {
-    if (selectedPlanIds.size === plans.length) {
-      setSelectedPlanIds(new Set());
-    } else {
-      setSelectedPlanIds(new Set(plans.map((p) => p.id)));
-    }
-  };
 
   // --- Article callbacks ---
 
@@ -389,6 +189,16 @@ export default function ArticlesPage() {
     setSelectedIds(new Set());
   };
 
+  const handleTriggerPlan = () => {
+    rewritePolling.triggerPlan(false, planManager.clearPlans);
+  };
+
+  const handlePlanProduce = () => {
+    planManager.handlePlanProduce(() => {
+      rewritePolling.triggerProduce();
+    });
+  };
+
   const totalPages = Math.ceil(total / pageSize);
 
   const handleJump = () => {
@@ -428,27 +238,27 @@ export default function ArticlesPage() {
 
       {/* 產出文章控制面板 */}
       <ProductionPanel
-        rewriteStatus={rewriteStatus}
-        runningMode={runningMode}
-        planTriggering={planTriggering}
-        plansCount={plans.length}
-        onTriggerPlan={() => triggerPlan()}
+        rewriteStatus={rewritePolling.rewriteStatus}
+        runningMode={rewritePolling.runningMode}
+        planTriggering={rewritePolling.planTriggering}
+        plansCount={planManager.plans.length}
+        onTriggerPlan={handleTriggerPlan}
       />
 
       {/* 規劃列表 */}
       <PlansTable
-        plans={plans}
-        selectedPlanIds={selectedPlanIds}
-        rawArticleMap={rawArticleMap}
-        planLoading={planLoading}
-        rewriteCurrentTask={!!rewriteStatus?.currentTask}
-        onToggleSelect={togglePlanSelect}
-        onToggleSelectAll={togglePlanSelectAll}
+        plans={planManager.plans}
+        selectedPlanIds={planManager.selectedPlanIds}
+        rawArticleMap={planManager.rawArticleMap}
+        planLoading={planManager.planLoading}
+        rewriteCurrentTask={!!rewritePolling.rewriteStatus?.currentTask}
+        onToggleSelect={planManager.togglePlanSelect}
+        onToggleSelectAll={planManager.togglePlanSelectAll}
         onProduce={handlePlanProduce}
-        onDelete={handlePlanDelete}
+        onDelete={planManager.handlePlanDelete}
       />
 
-      {runningMode === "plan" && plans.length === 0 && <PlanLoadingCard />}
+      {rewritePolling.runningMode === "plan" && planManager.plans.length === 0 && <PlanLoadingCard />}
 
       {/* 狀態篩選 */}
       <Tabs value={status} onValueChange={handleStatusChange}>
