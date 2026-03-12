@@ -179,6 +179,20 @@ export async function generatePlans() {
     }
   }
 
+  // 取得近 7 天已發布/已審核的文章標題（供 AI 判斷主題是否已報導過）
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const { data: recentPublished } = await supabase
+    .from("generated_articles")
+    .select("title")
+    .in("status", ["published", "approved"])
+    .gte("created_at", sevenDaysAgo.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const publishedTitles = (recentPublished || []).map((a) => a.title);
+  console.log(`近 7 天已發布/審核文章: ${publishedTitles.length} 篇`);
+
   const allPlans: { writer_persona_id: string; title: string; raw_article_ids: string[]; league: string | null; plan_type: string; }[] = [];
 
   for (const persona of personas as WriterPersona[]) {
@@ -209,10 +223,15 @@ export async function generatePlans() {
       ? "官方體育編輯，負責撰寫每日聯盟戰報與重點新聞報導"
       : `專欄作家「${persona.name}」，有個人觀點和分析風格`;
 
+    // 組裝已發布文章提示
+    const publishedSection = publishedTitles.length > 0
+      ? `\n以下是近 7 天已發布的文章標題，請勿規劃與這些主題重複的內容：\n${publishedTitles.map((t) => `- ${t}`).join("\n")}\n`
+      : "";
+
     const prompt = `你是體育新聞網站的內容規劃師。以下是從多個來源爬取的 ${freshArticles.length} 篇體育新聞素材。
 
 你的任務：分析這些素材，找出不重複的獨立主題，為「${persona.name}」（${writerTypeDesc}）規劃要產出的文章列表。
-
+${publishedSection}
 重要規則：
 1. 多篇來自不同來源但報導同一事件的素材，必須合併為一個規劃項目（例如：ESPN 和 ETtoday 都在報導同一場比賽）
 2. 同一事件的不同角度（例如：得分紀錄、賽後反應、女友見證）可以合併成一篇綜合報導，或拆成最多 2 篇（主報導 + 花絮）
@@ -220,7 +239,8 @@ export async function generatePlans() {
 4. 標題必須是繁體中文，球員/教練等人名保留英文原文
 5. 最多產出 ${maxArticles} 個規劃項目
 6. Fantasy、選秀預測、排名等列表型內容可以跳過，優先報導實際賽事和新聞事件
-7. 只回覆 JSON，不要其他文字
+7. 與已發布文章主題相同或高度相似的內容，必須跳過不規劃
+8. 只回覆 JSON，不要其他文字
 
 素材清單：
 ${articleList}
