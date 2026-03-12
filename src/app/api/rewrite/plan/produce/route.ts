@@ -30,10 +30,7 @@ export async function POST(request: NextRequest) {
     .from("rewrite_tasks")
     .insert({
       status: "pending",
-      // NOTE: error_message is repurposed here to carry task metadata (mode + plan_ids)
-      // because the rewrite_tasks table has no dedicated metadata column.
-      // TODO: Add a `metadata jsonb` column to rewrite_tasks and migrate this.
-      error_message: JSON.stringify({ mode: "produce", plan_ids: ids }),
+      metadata: { mode: "produce", plan_ids: ids },
     })
     .select()
     .single();
