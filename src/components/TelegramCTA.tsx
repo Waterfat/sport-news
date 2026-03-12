@@ -1,6 +1,5 @@
 import Link from "next/link";
-
-const TG_CHANNEL_URL = "https://t.me/howger_sport_news";
+import { TELEGRAM_CHANNEL_URL } from "@/lib/constants";
 
 /**
  * Telegram 訂閱推廣元件 - 大型 Banner 版（用於首頁）
@@ -23,7 +22,7 @@ export function TelegramBanner() {
           </p>
         </div>
         <Link
-          href={TG_CHANNEL_URL}
+          href={TELEGRAM_CHANNEL_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-6 py-3 bg-white text-[#0088cc] font-semibold rounded-xl hover:bg-white/90 transition-colors shrink-0"
@@ -58,7 +57,7 @@ export function TelegramArticleCTA() {
             加入我們的 Telegram 頻道，第一時間收到最新體育新聞
           </p>
           <Link
-            href={TG_CHANNEL_URL}
+            href={TELEGRAM_CHANNEL_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#0088cc] text-white text-sm font-medium rounded-lg hover:bg-[#0077b5] transition-colors"

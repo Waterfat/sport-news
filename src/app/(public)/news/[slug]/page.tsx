@@ -2,30 +2,13 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
+import { CATEGORY_COLORS, formatDateFull, SITE_URL } from "@/lib/constants";
 import ViewTracker from "./ViewTracker";
 
 import LikeButton from "./LikeButton";
 import { TelegramArticleCTA } from "@/components/TelegramCTA";
 
 export const revalidate = 60;
-
-const categoryColors: Record<string, string> = {
-  籃球: "bg-orange-100 text-orange-800",
-  棒球: "bg-green-100 text-green-800",
-  足球: "bg-blue-100 text-blue-800",
-  綜合: "bg-purple-100 text-purple-800",
-};
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("zh-TW", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 async function getArticle(slug: string) {
   const supabase = createServiceClient();
@@ -70,8 +53,7 @@ export async function generateMetadata({
     .replace(/\s+/g, " ")
     .slice(0, 160);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sportnews.example.com";
-  const articleUrl = `${siteUrl}/news/${article.slug || slug}`;
+  const articleUrl = `${SITE_URL}/news/${article.slug || slug}`;
 
   return {
     title: `${article.title} - SportNews`,
@@ -133,13 +115,12 @@ export default async function ArticlePage({
     .limit(4);
 
   const colorClass =
-    categoryColors[article.category ?? ""] ?? "bg-gray-100 text-gray-800";
+    CATEGORY_COLORS[article.category ?? ""] ?? "bg-gray-100 text-gray-800";
 
   // Simple markdown-like rendering: split by paragraphs, handle headings
   const contentParagraphs: string[] = (article.content ?? "").split("\n").filter(Boolean);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sportnews.example.com";
-  const articleUrl = `${siteUrl}/news/${article.slug || slug}`;
+  const articleUrl = `${SITE_URL}/news/${article.slug || slug}`;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -212,7 +193,7 @@ export default async function ArticlePage({
             </Link>
           )}
           <time dateTime={article.published_at ?? ""}>
-            {formatDate(article.published_at)}
+            {formatDateFull(article.published_at)}
           </time>
           <span className="flex items-center gap-1">
             <svg
@@ -238,6 +219,20 @@ export default async function ArticlePage({
           </span>
         </div>
       </header>
+
+      {/* Featured Image */}
+      {article.images?.length > 0 && article.images[0]?.url && (
+        <div className="mb-8 rounded-xl overflow-hidden">
+          <img
+            src={article.images[0].url}
+            alt={article.images[0].caption || article.title}
+            className="w-full max-h-[480px] object-cover"
+          />
+          {article.images[0].caption && (
+            <p className="text-xs text-gray-400 mt-2">{article.images[0].caption}</p>
+          )}
+        </div>
+      )}
 
       {/* Divider */}
       <hr className="border-gray-200 mb-8" />
@@ -368,8 +363,10 @@ export default async function ArticlePage({
 
 function getCategorySlug(category: string): string {
   const map: Record<string, string> = {
+    NBA: "nba",
     籃球: "nba",
     棒球: "mlb",
+    MLB: "mlb",
     足球: "soccer",
     綜合: "general",
   };

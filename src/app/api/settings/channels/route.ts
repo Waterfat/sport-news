@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, { status: 201 });
   } catch (err) {
     return NextResponse.json(
       { error: `Internal error: ${err}` },
@@ -113,8 +113,8 @@ export async function DELETE(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
-    if (!id) {
-      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    if (!id || isNaN(Number(id))) {
+      return NextResponse.json({ error: "valid numeric id is required" }, { status: 400 });
     }
 
     const supabase = createServiceClient();

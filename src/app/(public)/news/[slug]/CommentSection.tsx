@@ -20,7 +20,7 @@ export default function CommentSection({ articleId }: { articleId: string }) {
     fetch(`/api/public/comments?article_id=${articleId}`)
       .then((res) => res.json())
       .then((data) => setComments(data.comments || []))
-      .catch(() => {});
+      .catch((err) => console.error("Failed to fetch comments:", err));
   }, [articleId]);
 
   const handleSubmit = async (e: React.FormEvent) => {

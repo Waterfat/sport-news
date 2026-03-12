@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, { status: 201 });
   } catch (err) {
     return NextResponse.json(
       { error: `Internal error: ${err}` },
@@ -60,11 +60,12 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, base_url, is_active } = body as {
+    const { id, name, base_url, is_active, crawl_images } = body as {
       id: number;
       name?: string;
       base_url?: string;
       is_active?: boolean;
+      crawl_images?: boolean;
     };
 
     if (!id) {
@@ -75,6 +76,7 @@ export async function PUT(request: Request) {
     if (name !== undefined) updateData.name = name;
     if (base_url !== undefined) updateData.base_url = base_url;
     if (is_active !== undefined) updateData.is_active = is_active;
+    if (crawl_images !== undefined) updateData.crawl_images = crawl_images;
 
     const supabase = createServiceClient();
     const { error } = await supabase
@@ -101,8 +103,8 @@ export async function DELETE(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
-    if (!id) {
-      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    if (!id || isNaN(Number(id))) {
+      return NextResponse.json({ error: "valid numeric id is required" }, { status: 400 });
     }
 
     const supabase = createServiceClient();

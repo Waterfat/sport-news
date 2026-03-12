@@ -7,15 +7,15 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
     const searchParams = request.nextUrl.searchParams;
 
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 100);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20", 10) || 20));
     const category = searchParams.get("category");
     const writerId = searchParams.get("writer_id");
     const offset = (page - 1) * limit;
 
     let query = supabase
       .from("generated_articles")
-      .select("id, title, slug, category, created_at, published_at, view_count, writer_persona_id, writer_personas(id, name)", { count: "exact" })
+      .select("id, title, slug, category, images, created_at, published_at, view_count, writer_persona_id, writer_personas(id, name)", { count: "exact" })
       .eq("status", "published")
       .order("published_at", { ascending: false })
       .range(offset, offset + limit - 1);

@@ -13,7 +13,7 @@ export default function LikeButton({ articleId }: { articleId: string }) {
         setCount(data.likes || data.count || 0);
         setLiked(data.liked || false);
       })
-      .catch(() => {});
+      .catch((err) => console.error("Failed to fetch likes:", err));
   }, [articleId]);
 
   const handleLike = async () => {
