@@ -10,6 +10,11 @@ import { TelegramArticleCTA } from "@/components/TelegramCTA";
 
 export const revalidate = 60;
 
+function getContentExcerpt(content: string | null, maxLength = 160): string {
+  if (!content) return "";
+  return content.replace(/[#*_>\-\n]/g, " ").trim().replace(/\s+/g, " ").slice(0, maxLength);
+}
+
 async function getArticle(slug: string) {
   const supabase = createServiceClient();
 
@@ -47,11 +52,7 @@ export async function generateMetadata({
     return { title: "文章未找到 - SportNews" };
   }
 
-  const description = article.content
-    ?.replace(/[#*_>\-\n]/g, " ")
-    .trim()
-    .replace(/\s+/g, " ")
-    .slice(0, 160);
+  const description = getContentExcerpt(article.content);
 
   const articleUrl = `${SITE_URL}/news/${article.slug || slug}`;
 
@@ -126,7 +127,7 @@ export default async function ArticlePage({
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     headline: article.title,
-    description: (article.content ?? "").replace(/[#*_>\-\n]/g, " ").trim().replace(/\s+/g, " ").slice(0, 160),
+    description: getContentExcerpt(article.content),
     datePublished: article.published_at,
     dateModified: article.published_at,
     author: writer ? { "@type": "Person", name: writer.name } : undefined,
@@ -273,9 +274,10 @@ export default async function ArticlePage({
           }
           if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
             return (
-              <li key={i} className="text-gray-700 leading-relaxed ml-4">
-                {trimmed.slice(2)}
-              </li>
+              <div key={i} className="flex items-start gap-2 text-gray-700 leading-relaxed ml-4">
+                <span className="select-none" aria-hidden="true">&#8226;</span>
+                <span>{trimmed.slice(2)}</span>
+              </div>
             );
           }
           if (trimmed.startsWith("> ")) {

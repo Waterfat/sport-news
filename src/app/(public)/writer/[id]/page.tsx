@@ -2,22 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-
-const categoryColors: Record<string, string> = {
-  籃球: "bg-orange-100 text-orange-800",
-  棒球: "bg-green-100 text-green-800",
-  足球: "bg-blue-100 text-blue-800",
-  綜合: "bg-purple-100 text-purple-800",
-};
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("zh-TW", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
+import { CATEGORY_COLORS, formatDateShort } from "@/lib/constants";
 
 async function getWriter(id: string) {
   const supabase = createServiceClient();
@@ -115,7 +100,7 @@ export default async function WriterPage({
         <div className="space-y-4">
           {articles.map((article) => {
             const colorClass =
-              categoryColors[article.category ?? ""] ??
+              CATEGORY_COLORS[article.category ?? ""] ??
               "bg-gray-100 text-gray-800";
             return (
               <Link
@@ -132,7 +117,7 @@ export default async function WriterPage({
                     </span>
                   )}
                   <span className="text-xs text-gray-400">
-                    {formatDate(article.published_at)}
+                    {formatDateShort(article.published_at)}
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
