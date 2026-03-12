@@ -19,10 +19,8 @@ import { resolve } from "path";
 config({ path: resolve(__dirname, "..", ".env.local") });
 
 import { createClient } from "@supabase/supabase-js";
-import { spawnSync } from "child_process";
-import { writeFileSync, readFileSync, unlinkSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
+import { matchesSpecialties, Specialties, RawArticleBase } from "./shared-matching";
+import { callClaude } from "./shared-claude";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -36,12 +34,6 @@ if (!SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-interface Specialties {
-  sports: string[];
-  leagues: string[];
-  teams: string[];
-}
-
 interface WriterPersona {
   id: string;
   name: string;
@@ -50,89 +42,9 @@ interface WriterPersona {
   specialties: Specialties;
 }
 
-interface RawArticle {
-  id: string;
-  source: string;
-  title: string;
-  content: string;
-  category: string | null;
+interface RawArticle extends RawArticleBase {
   crawled_at: string;
-}
-
-// 判斷文章是否匹配寫手專長
-function matchesSpecialties(article: RawArticle, spec: Specialties): boolean {
-  // 如果寫手沒有設定任何專長，視為全能
-  if (
-    spec.sports.length === 0 &&
-    spec.leagues.length === 0 &&
-    spec.teams.length === 0
-  ) {
-    return true;
-  }
-
-  const fullText = article.title + " " + article.content;
-
-  // 匹配球種（使用加權計數避免誤判，不依賴 category 欄位）
-  const sportKeywords: Record<string, RegExp[]> = {
-    籃球: [/\bnba\b/i, /\bbasketball\b/i, /籃球/, /\bncaam\b/i, /\bncaaw\b/i, /\bwnba\b/i, /\bmarch madness\b/i],
-    棒球: [/\bmlb\b/i, /\bbaseball\b/i, /棒球/, /大聯盟/, /中職/, /日職/, /\bwbc\b/i, /\bcpbl\b/i, /\bnpb\b/i],
-    美式足球: [/\bnfl\b/i, /美式足球/, /超級盃/, /\bsuper bowl\b/i, /\bfootball\b/i, /\btouchdown\b/i, /\bquarterback\b/i],
-    足球: [/\bsoccer\b/i, /足球/, /英超/, /西甲/, /德甲/, /義甲/, /法甲/, /歐冠/, /世界盃/, /\bmls\b/i, /\bpremier league\b/i, /\bla liga\b/i, /\bbundesliga\b/i, /\bserie a\b/i, /\bligue 1\b/i, /\buchampions league\b/i],
-    冰球: [/\bnhl\b/i, /\bhockey\b/i, /冰球/],
-    網球: [/\btennis\b/i, /網球/, /大滿貫/],
-    綜合: [],
-  };
-
-  // 加權計數：計算文章中各球種的關鍵字命中次數，判斷文章的主分類
-  const articleSportCounts: Record<string, number> = {};
-  for (const [sport, patterns] of Object.entries(sportKeywords)) {
-    if (sport === "綜合") continue;
-    let count = 0;
-    for (const re of patterns) {
-      const matches = fullText.match(new RegExp(re.source, re.flags + (re.flags.includes("g") ? "" : "g")));
-      if (matches) count += matches.length;
-    }
-    if (count > 0) articleSportCounts[sport] = count;
-  }
-
-  // 找出命中次數最高的球種作為文章主分類
-  const dominantSport = Object.entries(articleSportCounts)
-    .sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-
-  for (const sport of spec.sports) {
-    if (sport === "綜合") return true;
-    // 文章主分類必須是寫手擅長的球種
-    if (dominantSport === sport) return true;
-  }
-
-  // 匹配聯盟（使用 RegExp 精確比對）
-  const leagueKeywords: Record<string, RegExp[]> = {
-    NBA: [/\bnba\b/i],
-    MLB: [/\bmlb\b/i, /大聯盟/],
-    NFL: [/\bnfl\b/i],
-    MLS: [/\bmls\b/i],
-    英超: [/英超/, /\bpremier league\b/i, /\bepl\b/i],
-    西甲: [/西甲/, /\bla liga\b/i],
-    德甲: [/德甲/, /\bbundesliga\b/i],
-    義甲: [/義甲/, /\bserie a\b/i],
-    法甲: [/法甲/, /\bligue 1\b/i],
-    歐冠: [/歐冠/, /\buchampions league\b/i, /\bucl\b/i],
-    NHL: [/\bnhl\b/i],
-    中職: [/中職/, /\bcpbl\b/i],
-    日職: [/日職/, /\bnpb\b/i],
-  };
-
-  for (const league of spec.leagues) {
-    const patterns = leagueKeywords[league] || [new RegExp(`\\b${league}\\b`, "i")];
-    if (patterns.some((re) => re.test(fullText))) return true;
-  }
-
-  // 匹配球隊
-  for (const team of spec.teams) {
-    if (fullText.toLowerCase().includes(team.toLowerCase())) return true;
-  }
-
-  return false;
+  images: string[];
 }
 
 // 將文章按聯盟分組（給官方戰報用）
@@ -220,38 +132,19 @@ function extractNames(text: string): string[] {
   return [...new Set(filtered.map((n) => n.toLowerCase()))];
 }
 
-function callClaude(prompt: string): string {
-  const tmpPrompt = join(tmpdir(), `rewriter-prompt-${Date.now()}.txt`);
-  const tmpOutput = join(tmpdir(), `rewriter-output-${Date.now()}.txt`);
-  writeFileSync(tmpPrompt, prompt, "utf-8");
-
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
-  delete env.ANTHROPIC_API_KEY;
-
-  spawnSync(
-    "bash",
-    [
-      "-c",
-      `cat "${tmpPrompt}" | claude -p --model sonnet > "${tmpOutput}" 2>&1`,
-    ],
-    {
-      encoding: "utf-8",
-      timeout: 180000,
-      maxBuffer: 1024 * 1024,
-      env,
+// 從多篇原始文章中收集不重複的圖片 URL（最多取 5 張）
+function collectImages(articles: RawArticle[]): string[] {
+  const seen = new Set<string>();
+  const images: string[] = [];
+  for (const a of articles) {
+    for (const url of a.images || []) {
+      if (url && !seen.has(url) && images.length < 5) {
+        seen.add(url);
+        images.push(url);
+      }
     }
-  );
-
-  let output = "";
-  try {
-    output = readFileSync(tmpOutput, "utf-8");
-  } catch {}
-
-  try { unlinkSync(tmpPrompt); } catch {}
-  try { unlinkSync(tmpOutput); } catch {}
-
-  return output;
+  }
+  return images;
 }
 
 function parseResult(output: string): { title: string; content: string; category?: string } {
@@ -440,7 +333,7 @@ async function produceFromPlans(planIds: string[]) {
           title: result.title,
           content: result.content,
           category: result.category || plan.league || articles[0].category || "綜合",
-          images: [],
+          images: collectImages(articles),
           status: "draft",
         });
 
@@ -586,7 +479,7 @@ async function main() {
               title: result.title,
               content: result.content,
               category: result.category || league,
-              images: [],
+              images: collectImages(group),
               status: "draft",
             });
 
@@ -648,7 +541,7 @@ async function main() {
             title: result.title,
             content: result.content,
             category: result.category || group[0].category || "綜合",
-            images: [],
+            images: collectImages(group),
             status: "draft",
           });
 

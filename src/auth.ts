@@ -10,8 +10,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "密碼", type: "password" },
       },
       async authorize(credentials) {
-        const username = process.env.ADMIN_USERNAME || "admin";
-        const password = process.env.ADMIN_PASSWORD || "sportnews2024";
+        const username = process.env.ADMIN_USERNAME;
+        const password = process.env.ADMIN_PASSWORD;
+
+        if (!username || !password) {
+          console.error("[Auth] ADMIN_USERNAME or ADMIN_PASSWORD not set. Login will fail.");
+          return null;
+        }
 
         if (
           credentials?.username === username &&

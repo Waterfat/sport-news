@@ -105,8 +105,13 @@ export async function publishArticle(articleId: string): Promise<PublishResult> 
 function extractImageUrls(images: unknown): string[] {
   if (!images || !Array.isArray(images)) return [];
   return images
-    .map((img: string | { url?: string }) =>
-      typeof img === "string" ? img : img?.url
-    )
-    .filter((url: string | undefined): url is string => !!url);
+    .map((img: unknown) => {
+      if (typeof img === "string") return img;
+      if (typeof img === "object" && img !== null && "url" in img) {
+        const url = (img as { url?: unknown }).url;
+        return typeof url === "string" ? url : undefined;
+      }
+      return undefined;
+    })
+    .filter((url): url is string => typeof url === "string" && url.startsWith("http"));
 }

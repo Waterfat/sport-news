@@ -1,15 +1,13 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
+const PUBLIC_API_ROUTES = ["/api/cron", "/api/auth", "/api/public"];
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   // 公開 API、cron API 和 auth API 不需要登入
-  if (
-    pathname.startsWith("/api/cron") ||
-    pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/public")
-  ) {
+  if (PUBLIC_API_ROUTES.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 

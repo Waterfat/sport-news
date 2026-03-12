@@ -16,96 +16,16 @@ import { resolve } from "path";
 config({ path: resolve(__dirname, "..", ".env.local") });
 
 import { createClient } from "@supabase/supabase-js";
-import { spawnSync } from "child_process";
-import { writeFileSync, readFileSync, unlinkSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
+import { matchesSpecialties, Specialties, RawArticleBase } from "./shared-matching";
+import { callClaude } from "./shared-claude";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
 
-interface Specialties { sports: string[]; leagues: string[]; teams: string[]; }
 interface WriterPersona { id: string; name: string; style_prompt: string; writer_type: string; specialties: Specialties; max_articles: number; }
-interface RawArticle { id: string; source: string; title: string; content: string; category: string | null; crawled_at: string; }
-
-// --- Matching logic (same as local-rewriter.ts) ---
-function matchesSpecialties(article: RawArticle, spec: Specialties): boolean {
-  if (spec.sports.length === 0 && spec.leagues.length === 0 && spec.teams.length === 0) return true;
-
-  const fullText = article.title + " " + article.content;
-
-  const sportKeywords: Record<string, RegExp[]> = {
-    籃球: [/\bnba\b/i, /\bbasketball\b/i, /籃球/, /\bncaam\b/i, /\bncaaw\b/i, /\bwnba\b/i, /\bmarch madness\b/i],
-    棒球: [/\bmlb\b/i, /\bbaseball\b/i, /棒球/, /大聯盟/, /中職/, /日職/, /\bwbc\b/i],
-    美式足球: [/\bnfl\b/i, /美式足球/, /超級盃/, /\bsuper bowl\b/i, /\bfootball\b/i, /\btouchdown\b/i, /\bquarterback\b/i],
-    足球: [/\bsoccer\b/i, /足球/, /英超/, /西甲/, /德甲/, /義甲/, /法甲/, /歐冠/, /世界盃/, /\bmls\b/i, /\bpremier league\b/i],
-    冰球: [/\bnhl\b/i, /\bhockey\b/i, /冰球/],
-    網球: [/\btennis\b/i, /網球/, /大滿貫/],
-    綜合: [],
-  };
-
-  const articleSportCounts: Record<string, number> = {};
-  for (const [sport, patterns] of Object.entries(sportKeywords)) {
-    if (sport === "綜合") continue;
-    let count = 0;
-    for (const re of patterns) {
-      const matches = fullText.match(new RegExp(re.source, re.flags + (re.flags.includes("g") ? "" : "g")));
-      if (matches) count += matches.length;
-    }
-    if (count > 0) articleSportCounts[sport] = count;
-  }
-
-  const dominantSport = Object.entries(articleSportCounts)
-    .sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-
-  for (const sport of spec.sports) {
-    if (sport === "綜合") return true;
-    if (dominantSport === sport) return true;
-  }
-
-  const leagueKeywords: Record<string, RegExp[]> = {
-    NBA: [/\bnba\b/i], MLB: [/\bmlb\b/i, /大聯盟/], NFL: [/\bnfl\b/i], MLS: [/\bmls\b/i],
-    英超: [/英超/, /\bpremier league\b/i], 西甲: [/西甲/, /\bla liga\b/i],
-    德甲: [/德甲/, /\bbundesliga\b/i], 義甲: [/義甲/, /\bserie a\b/i],
-    法甲: [/法甲/, /\bligue 1\b/i], 歐冠: [/歐冠/, /\buchampions league\b/i],
-    NHL: [/\bnhl\b/i], 中職: [/中職/, /\bcpbl\b/i], 日職: [/日職/, /\bnpb\b/i],
-  };
-
-  for (const league of spec.leagues) {
-    const patterns = leagueKeywords[league] || [new RegExp(`\\b${league}\\b`, "i")];
-    if (patterns.some((re) => re.test(fullText))) return true;
-  }
-
-  for (const team of spec.teams) {
-    if (fullText.toLowerCase().includes(team.toLowerCase())) return true;
-  }
-
-  return false;
-}
-
-// --- Claude call ---
-function callClaude(prompt: string, timeout = 120000): string {
-  const tmpPrompt = join(tmpdir(), `plan-prompt-${Date.now()}.txt`);
-  const tmpOutput = join(tmpdir(), `plan-output-${Date.now()}.txt`);
-  writeFileSync(tmpPrompt, prompt, "utf-8");
-
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
-  delete env.ANTHROPIC_API_KEY;
-
-  spawnSync("bash", ["-c", `cat "${tmpPrompt}" | claude -p --model sonnet > "${tmpOutput}" 2>&1`], {
-    encoding: "utf-8", timeout, maxBuffer: 2 * 1024 * 1024, env,
-  });
-
-  let output = "";
-  try { output = readFileSync(tmpOutput, "utf-8"); } catch {}
-  try { unlinkSync(tmpPrompt); } catch {}
-  try { unlinkSync(tmpOutput); } catch {}
-
-  return output;
-}
+interface RawArticle extends RawArticleBase { crawled_at: string; }
 
 interface PlanProposal {
   title: string;
@@ -185,7 +105,7 @@ export async function generatePlans() {
   const { data: recentPublished } = await supabase
     .from("generated_articles")
     .select("title")
-    .in("status", ["published", "approved"])
+    .in("status", ["published"])
     .gte("created_at", sevenDaysAgo.toISOString())
     .order("created_at", { ascending: false })
     .limit(50);

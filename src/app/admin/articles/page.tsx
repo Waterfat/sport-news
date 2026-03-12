@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ARTICLE_STATUS_LABELS } from "@/lib/constants";
+import { ARTICLE_STATUS_LABELS, POLLING_INTERVAL_MS, POLLING_TIMEOUT_MS } from "@/lib/constants";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 300];
 
@@ -182,8 +182,8 @@ export default function ArticlesPage() {
         } catch (err) {
           console.error("Failed to poll rewrite status during plan:", err);
         }
-      }, 3000);
-      const timeout = setTimeout(() => clearInterval(interval), 600000);
+      }, POLLING_INTERVAL_MS);
+      const timeout = setTimeout(() => clearInterval(interval), POLLING_TIMEOUT_MS);
     } catch {
       alert("規劃失敗，請確認監聽器是否正在運行");
       setRunningMode(null);
@@ -232,8 +232,8 @@ export default function ArticlesPage() {
         } catch (err) {
           console.error("Failed to poll rewrite status during produce:", err);
         }
-      }, 3000);
-      const timeout = setTimeout(() => clearInterval(interval), 600000);
+      }, POLLING_INTERVAL_MS);
+      const timeout = setTimeout(() => clearInterval(interval), POLLING_TIMEOUT_MS);
     } catch {
       alert("產出失敗");
       setRunningMode(null);
@@ -321,10 +321,10 @@ export default function ArticlesPage() {
       } catch (err) {
         console.error("Failed to poll rewrite status:", err);
       }
-    }, 3000);
+    }, POLLING_INTERVAL_MS);
 
     // 最多輪詢 10 分鐘
-    const timeout = setTimeout(() => clearInterval(interval), 600000);
+    const timeout = setTimeout(() => clearInterval(interval), POLLING_TIMEOUT_MS);
   }, []);
 
   useEffect(() => {

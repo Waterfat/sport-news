@@ -1,5 +1,8 @@
 // Shared constants across the application
 
+export const POLLING_INTERVAL_MS = 3000;
+export const POLLING_TIMEOUT_MS = 600000;
+
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://sportnews.example.com";
 

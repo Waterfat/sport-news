@@ -49,8 +49,13 @@ export async function rewriteArticles(
     messages: [{ role: "user", content: userMessage }],
   });
 
-  const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
+  const firstBlock = response.content[0];
+  if (!firstBlock || firstBlock.type !== "text") {
+    throw new Error(
+      `Unexpected Claude response type: ${firstBlock?.type ?? "empty"}. Expected "text".`
+    );
+  }
+  const text = firstBlock.text;
 
   const jsonMatch = text.match(/\{[\s\S]*"title"[\s\S]*"content"[\s\S]*\}/);
   if (!jsonMatch) {
