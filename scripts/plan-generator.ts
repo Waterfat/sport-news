@@ -182,15 +182,13 @@ export async function generatePlans() {
   const columnists = personas.filter((p) => (p.writer_type || "columnist") === "columnist") as WriterPersona[];
   const officials = personas.filter((p) => p.writer_type === "official") as WriterPersona[];
 
-  // 取得前一天文章
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const start = new Date(yesterday); start.setHours(0, 0, 0, 0);
-  const end = new Date(yesterday); end.setHours(23, 59, 59, 999);
+  // 取得最近 48 小時的文章（確保跨日爬取的文章都能納入）
+  const since = new Date();
+  since.setHours(since.getHours() - 48);
 
   const { data: rawArticles } = await supabase
     .from("raw_articles").select("*")
-    .gte("crawled_at", start.toISOString()).lte("crawled_at", end.toISOString())
+    .gte("crawled_at", since.toISOString())
     .order("crawled_at", { ascending: false });
 
   if (!rawArticles?.length) { console.log("沒有昨日文章"); return; }

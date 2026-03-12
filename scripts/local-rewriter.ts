@@ -503,21 +503,16 @@ async function main() {
     `寫手: ${columnists.length} 位專欄作家, ${officials.length} 位官方戰報`
   );
 
-  // 取得前一天所有爬蟲抓到的文章
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const startOfYesterday = new Date(yesterday);
-  startOfYesterday.setHours(0, 0, 0, 0);
-  const endOfYesterday = new Date(yesterday);
-  endOfYesterday.setHours(23, 59, 59, 999);
+  // 取得最近 48 小時的文章
+  const since = new Date();
+  since.setHours(since.getHours() - 48);
 
-  console.log(`查詢範圍: ${startOfYesterday.toLocaleString("zh-TW")} ~ ${endOfYesterday.toLocaleString("zh-TW")}`);
+  console.log(`查詢範圍: ${since.toLocaleString("zh-TW")} ~ 現在`);
 
   const { data: rawArticles } = await supabase
     .from("raw_articles")
     .select("*")
-    .gte("crawled_at", startOfYesterday.toISOString())
-    .lte("crawled_at", endOfYesterday.toISOString())
+    .gte("crawled_at", since.toISOString())
     .order("crawled_at", { ascending: false });
 
   if (!rawArticles?.length) {
