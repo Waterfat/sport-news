@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 
+export const revalidate = 60;
+
 const categoryMap: Record<string, string> = {
   nba: "籃球",
   mlb: "棒球",

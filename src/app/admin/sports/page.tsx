@@ -45,6 +45,16 @@ export default function SportsSettingsPage() {
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
 
+  // 手動觸發爬蟲
+  const [crawlingId, setCrawlingId] = useState<number | null>(null);
+  const [crawlResult, setCrawlResult] = useState<{
+    id: number;
+    total: number;
+    saved: number;
+    duplicate: number;
+    filtered: number;
+  } | null>(null);
+
   const fetchData = useCallback(async () => {
     try {
       const [settingsRes, sourcesRes] = await Promise.all([
@@ -169,6 +179,29 @@ export default function SportsSettingsPage() {
     }
   }
 
+  async function triggerCrawl(source: CrawlSource) {
+    setCrawlingId(source.id);
+    setCrawlResult(null);
+    try {
+      const res = await fetch("/api/settings/sources/crawl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceId: source.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCrawlResult({ id: source.id, total: data.total, saved: data.saved, duplicate: data.duplicate || 0, filtered: data.filtered || 0 });
+      } else {
+        alert(`爬蟲失敗：${data.error || "未知錯誤"}`);
+      }
+    } catch (err) {
+      console.error("Crawl failed:", err);
+      alert("爬蟲執行失敗");
+    } finally {
+      setCrawlingId(null);
+    }
+  }
+
   async function saveEdit(id: number, oldName: string) {
     if (!editName.trim() || !editUrl.trim()) return;
     try {
@@ -220,7 +253,7 @@ export default function SportsSettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">球種設定</h1>
+        <h1 className="text-2xl font-bold">爬蟲設定</h1>
         <p className="text-gray-500 mt-1">
           管理爬蟲來源，並設定每個球種要從哪些網站爬取新聞
         </p>
@@ -275,7 +308,24 @@ export default function SportsSettingsPage() {
                       <div className="text-xs text-gray-500 truncate">
                         {source.base_url}
                       </div>
+                      {crawlResult?.id === source.id && (
+                        <div className="text-xs mt-1">
+                          <span className="text-gray-500">爬取 {crawlResult.total} 篇</span>
+                          {crawlResult.saved > 0 && <span className="text-green-600">，新增 {crawlResult.saved} 篇</span>}
+                          {crawlResult.duplicate > 0 && <span className="text-gray-400">，重複 {crawlResult.duplicate} 篇</span>}
+                          {crawlResult.filtered > 0 && <span className="text-orange-500">，過濾 {crawlResult.filtered} 篇</span>}
+                          {crawlResult.saved === 0 && crawlResult.duplicate > 0 && <span className="text-gray-400">（無新文章）</span>}
+                        </div>
+                      )}
                     </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => triggerCrawl(source)}
+                      disabled={crawlingId !== null}
+                    >
+                      {crawlingId === source.id ? "爬取中..." : "立即爬取"}
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"

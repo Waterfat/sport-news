@@ -163,6 +163,21 @@ describe("publishToTelegram - text only", () => {
     expect(body.text).not.toContain("在網站上閱讀");
   });
 
+  it("includes TG channel promo link at the end", async () => {
+    mockFetch.mockResolvedValueOnce({
+      json: async () => ({ ok: true, result: { message_id: 1 } }),
+    });
+
+    await publishToTelegram(
+      { title: "Test", content: "Content" },
+      config
+    );
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.text).toContain("https://t.me/howger_sport_news");
+    expect(body.text).toContain("跟著小豪哥一起看球");
+  });
+
   it("escapes HTML characters in title and content", async () => {
     mockFetch.mockResolvedValueOnce({
       json: async () => ({ ok: true, result: { message_id: 1 } }),

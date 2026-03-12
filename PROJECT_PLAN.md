@@ -5,7 +5,7 @@
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌───────────────┐
 │  新聞爬蟲    │───▶│  資料儲存    │───▶│  AI 審稿     │───▶│   規劃列表     │
-│  (排程每小時) │    │  (DB+圖片)   │    │  (篩選值得寫) │    │ (人工/自動挑選) │
+│  (每2小時)   │    │  (DB+圖片)   │    │  (篩選值得寫) │    │ (人工/自動挑選) │
 └─────────────┘    └─────────────┘    └─────────────┘    └───────┬───────┘
                                                                 │ 挑選或自動全選
                                                                 ▼
@@ -55,7 +55,7 @@
 | **資料庫** | PostgreSQL (Supabase) | Tokyo region，免費額度 |
 | **圖片儲存** | Supabase Storage | 爬蟲抓取的圖片存放 |
 | **爬蟲** | Node.js + Cheerio | 靜態頁面解析 |
-| **排程** | Vercel Cron | 每小時觸發爬蟲 |
+| **排程** | GitHub Actions Cron | 每 2 小時觸發爬蟲與改寫（Vercel Hobby 限制每日一次，改用 GitHub Actions） |
 | **AI 改寫** | Claude Code CLI (`claude -p --model sonnet`) | 使用 CLI 訂閱額度，非 API 計費 |
 | **即時通訊** | Supabase Realtime | 後台觸發 → Mac Mini 執行改寫 |
 | **社群發布** | Telegram Bot API | 自動推播到頻道（架構支援擴充其他平台） |
@@ -71,13 +71,15 @@ Vercel                    Supabase                 Mac Mini
 │ Next.js  │──API──────▶│PostgreSQL│◀──Realtime──│ Listener │
 │ 前台網站  │             │ Storage  │             │ 改寫腳本  │
 │ 後台管理  │             └──────────┘             │ Claude CLI│
-│ Cron 爬蟲 │                                      └──────────┘
-└──────────┘                                           │
-     │                                                 ▼
-     │ SSR/SSG                                    ┌──────────┐
-     ▼                                            │ Telegram  │
-┌──────────┐                                      │ Bot API   │
-│ 讀者瀏覽  │                                      └──────────┘
+│ API       │                  ▲                   └──────────┘
+└──────────┘                  │                        │
+     ▲                        │                        ▼
+     │ Cron 觸發         ┌──────────┐            ┌──────────┐
+     └───────────────────│ GitHub   │            │ Telegram  │
+     │ ISR (60s)         │ Actions  │            │ Bot API   │
+     ▼                   │ 每2小時   │            └──────────┘
+┌──────────┐             └──────────┘
+│ 讀者瀏覽  │
 │ Google    │
 │ 搜尋引擎  │
 └──────────┘
@@ -228,13 +230,28 @@ shared_writing_rules (
 - ESPN（英文）
 - Yahoo Sports（英文）
 - ETtoday 體育（中文）
+- NBA 官網（英文）
 
-**排程：** Vercel Cron 每小時執行
+**觸發方式：**
+
+| 方式 | 行為 | 球種過濾 |
+|------|------|----------|
+| **手動觸發**（後台爬蟲設定頁「立即爬取」按鈕） | 直接爬取該來源、直接儲存所有文章 | 不過濾 |
+| **排程自動**（GitHub Actions Cron 每 2 小時） | 根據球種設定決定要跑哪些來源，爬完後依球種過濾 | 過濾 |
+
+**球種設定的作用（僅影響排程自動爬蟲）：**
+- 決定排程時要跑哪些來源（來源需被至少一個啟用球種勾選才會跑）
+- 爬完後依球種 + 來源過濾，只存入符合設定的文章
+- **不影響手動觸發**，手動觸發一律全部爬取全部儲存
 
 **圖片處理：**
 - 爬蟲解析文章時一併抓取內嵌圖片 URL
 - 下載圖片至 Supabase Storage，記錄 Storage 路徑到 `raw_articles.images`
 - 改寫文章時沿用原文圖片
+
+**去重機制：**
+- 以文章 URL 為唯一鍵，重複文章不會重複儲存
+- 手動觸發結果顯示新增、重複、過濾各幾篇
 
 ### 3.2 AI 審稿與規劃
 
@@ -331,7 +348,7 @@ shared_writing_rules (
 - 每篇文章含 `meta_description`（AI 改寫時自動產生）
 - JSON-LD 結構化資料（Article schema）
 - Open Graph / Twitter Card meta tags（社群分享預覽）
-- Next.js ISR/SSG 確保搜尋引擎可抓取
+- Next.js ISR（`revalidate = 60`）確保搜尋引擎可抓取，新文章最慢 60 秒內出現在前台
 
 **擴充預留：**
 - 路由結構預留 `/scores`、`/live` 等路徑，未來可加入即時比分功能
@@ -351,7 +368,7 @@ shared_writing_rules (
 | `/admin/raw` | 原始文章瀏覽 |
 | `/admin/analytics` | 分析報表 |
 | `/admin/channels` | 社群頻道設定 |
-| `/admin/sports` | 運動類別開關 |
+| `/admin/sports` | 爬蟲設定：爬蟲來源管理（新增/編輯/刪除）、手動觸發單一來源爬蟲、球種開關與來源綁定 |
 | `/admin/settings` | 全域設定：共用寫作規則管理 |
 | `/login` | 後台登入 |
 
@@ -364,7 +381,7 @@ shared_writing_rules (
 - [x] 專案初始化（Next.js 16 + Supabase）
 - [x] 資料庫 schema 設計與建立
 - [x] 爬蟲模組（ESPN、Yahoo Sports、ETtoday）
-- [x] Vercel Cron 排程（每小時爬取）
+- [x] GitHub Actions Cron 排程（每 2 小時爬蟲 + 改寫）
 - [x] AI 改寫引擎（Claude Code CLI）
 - [x] 寫手人設 prompt engineering
 - [x] 加權計數球種匹配
@@ -439,7 +456,7 @@ shared_writing_rules (
 | 資料庫 | Supabase Free (500MB) | $0 |
 | 圖片儲存 | Supabase Storage Free (1GB) | $0 |
 | AI 改寫 | Claude Code CLI 訂閱 | 含在訂閱內 |
-| 排程 | Vercel Cron | $0 |
+| 排程 | GitHub Actions Cron | $0（公開 repo 免費） |
 | Telegram | Bot API | $0 |
 | **小計** | | **$0（僅 Claude 訂閱費）** |
 

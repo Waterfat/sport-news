@@ -53,6 +53,7 @@ interface PlanItem {
 interface RawArticleInfo {
   title: string;
   source: string;
+  url: string;
 }
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -431,7 +432,14 @@ export default function ArticlesPage() {
         <Card>
           <CardContent className="py-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">規劃列表 ({plans.length} 項)</h2>
+              <div>
+                <h2 className="text-lg font-semibold">規劃列表 ({plans.length} 項)</h2>
+                {plans.length > 0 && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    最後規劃時間：{new Date(plans[plans.length - 1].created_at).toLocaleString("zh-TW")}
+                  </p>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 {selectedPlanIds.size > 0 && (
                   <>
@@ -497,9 +505,16 @@ export default function ArticlesPage() {
                           {(plan.raw_article_ids || []).slice(0, 3).map((rawId) => {
                             const info = rawArticleMap[rawId];
                             return info ? (
-                              <div key={rawId} className="text-xs text-gray-500 truncate" title={info.title}>
+                              <a
+                                key={rawId}
+                                href={info.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block text-xs text-blue-600 hover:text-blue-800 hover:underline truncate"
+                                title={info.title}
+                              >
                                 <span className="text-gray-400">[{info.source}]</span> {info.title}
-                              </div>
+                              </a>
                             ) : null;
                           })}
                           {(plan.raw_article_ids || []).length > 3 && (

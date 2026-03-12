@@ -26,11 +26,11 @@ export async function GET() {
   if (allRawIds.size > 0) {
     const { data: rawArticles } = await supabase
       .from("raw_articles")
-      .select("id, title, source")
+      .select("id, title, source, url")
       .in("id", Array.from(allRawIds));
     if (rawArticles) {
       rawArticleMap = Object.fromEntries(
-        rawArticles.map((a) => [a.id, { title: a.title, source: a.source }])
+        rawArticles.map((a) => [a.id, { title: a.title, source: a.source, url: a.url }])
       );
     }
   }

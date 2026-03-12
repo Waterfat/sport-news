@@ -194,7 +194,18 @@ export async function generatePlans() {
     .order("crawled_at", { ascending: false });
 
   if (!rawArticles?.length) { console.log("沒有昨日文章"); return; }
-  console.log(`找到 ${rawArticles.length} 篇昨日文章`);
+
+  // 過濾掉垃圾文章（標題太短或只是分類名）
+  const validArticles = rawArticles.filter((a) => {
+    if (!a.title || a.title.trim().length < 10) return false;
+    // 過濾只有分類名稱的文章
+    const categoryNames = ["NBA", "MLB", "NFL", "NHL", "NCAAM", "NCAAW", "WNBA", "MLS", "Soccer", "Tennis", "Hockey"];
+    if (categoryNames.some((c) => a.title.trim().toUpperCase() === c.toUpperCase())) return false;
+    return true;
+  });
+
+  if (!validArticles.length) { console.log("沒有有效的昨日文章"); return; }
+  console.log(`找到 ${rawArticles.length} 篇昨日文章，其中 ${validArticles.length} 篇有效`);
 
   const plans: { writer_persona_id: string; title: string; raw_article_ids: string[]; league: string | null; plan_type: string; }[] = [];
 
@@ -203,7 +214,7 @@ export async function generatePlans() {
 
   // 官方戰報：先按聯盟篩選，再按主題分組
   for (const official of officials) {
-    const matched = rawArticles.filter((a) => matchesSpecialties(a as RawArticle, official.specialties));
+    const matched = validArticles.filter((a) => matchesSpecialties(a as RawArticle, official.specialties));
     if (!matched.length) continue;
 
     const leagueGroups = groupByLeague(matched as RawArticle[]);
@@ -227,7 +238,7 @@ export async function generatePlans() {
       for (const group of topicGroups) {
         if (count >= maxArticles) break;
 
-        const summaries = group.map((a) => `- ${a.title}`).join("\n");
+        const summaries = group.map((a) => `- ${a.title}\n  ${a.content.substring(0, 200)}`).join("\n\n");
         const prompt = `根據以下體育新聞素材，為一篇 ${league} 報導想一個繁體中文標題。標題要具體描述主題內容，吸引讀者點擊。球員、教練等人名保留英文原文，不要翻譯成中文。只回覆一個標題，不要其他文字。\n\n${summaries}`;
 
         const titles = callClaudeForTitles(prompt);
@@ -248,7 +259,7 @@ export async function generatePlans() {
 
   // 專欄作家
   for (const columnist of columnists) {
-    const matched = rawArticles.filter((a) => matchesSpecialties(a as RawArticle, columnist.specialties));
+    const matched = validArticles.filter((a) => matchesSpecialties(a as RawArticle, columnist.specialties));
     if (!matched.length) continue;
 
     const groups = groupByTopic(matched as RawArticle[]);
@@ -265,7 +276,7 @@ export async function generatePlans() {
         continue;
       }
 
-      const summaries = group.map((a) => `- ${a.title}`).join("\n");
+      const summaries = group.map((a) => `- ${a.title}\n  ${a.content.substring(0, 200)}`).join("\n\n");
       const sportHint = columnist.specialties.sports.length > 0 ? `你專長的領域是：${columnist.specialties.sports.join("、")}。` : "";
       const prompt = `你是專欄作家「${columnist.name}」。${sportHint}根據以下素材，想一個吸引人的繁體中文文章標題。注意正確辨別文章的運動類型，不要搞混。球員、教練等人名保留英文原文，不要翻譯成中文。只回覆一個標題，不要其他文字。\n\n${summaries}`;
 

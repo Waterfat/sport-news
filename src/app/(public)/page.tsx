@@ -2,6 +2,9 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { TelegramBanner } from "@/components/TelegramCTA";
 
+// 每 60 秒重新驗證頁面資料
+export const revalidate = 60;
+
 type ArticleWithWriter = {
   id: string;
   title: string;

@@ -71,10 +71,13 @@ async function executeTask(taskId: string) {
     })
     .eq("id", taskId);
 
-  // 記錄執行前的文章數
-  const { count: beforeCount } = await supabase
+  // 記錄執行前的最新文章時間，用來精確計算新增數量
+  const { data: latestBefore } = await supabase
     .from("generated_articles")
-    .select("*", { count: "exact", head: true });
+    .select("created_at")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const beforeTimestamp = latestBefore?.[0]?.created_at || new Date().toISOString();
 
   try {
     let script: string;
@@ -102,12 +105,13 @@ async function executeTask(taskId: string) {
     console.log(result.stdout);
     if (result.stderr) console.error(result.stderr);
 
-    // 計算新增文章數
-    const { count: afterCount } = await supabase
+    // 計算此任務實際新增的文章數（只計算任務開始後建立的文章）
+    const { count: articlesGenerated } = await supabase
       .from("generated_articles")
-      .select("*", { count: "exact", head: true });
+      .select("*", { count: "exact", head: true })
+      .gt("created_at", beforeTimestamp);
 
-    const articlesGenerated = (afterCount || 0) - (beforeCount || 0);
+    const generated = articlesGenerated || 0;
 
     if (result.status === 0) {
       await supabase
@@ -115,12 +119,12 @@ async function executeTask(taskId: string) {
         .update({
           status: "completed",
           completed_at: new Date().toISOString(),
-          articles_generated: articlesGenerated,
+          articles_generated: generated,
         })
         .eq("id", taskId);
 
       console.log(
-        `[${ts()}] 任務完成 (${mode})，產出 ${articlesGenerated} 篇文章`
+        `[${ts()}] 任務完成 (${mode})，產出 ${generated} 篇文章`
       );
     } else {
       const errorMsg = result.stderr?.substring(0, 500) || "Process exited with non-zero code";
@@ -129,7 +133,7 @@ async function executeTask(taskId: string) {
         .update({
           status: "failed",
           completed_at: new Date().toISOString(),
-          articles_generated: articlesGenerated,
+          articles_generated: generated,
           error_message: errorMsg,
         })
         .eq("id", taskId);

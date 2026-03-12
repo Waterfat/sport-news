@@ -11,7 +11,7 @@ const navItems = [
   { href: "/admin/raw", label: "原始新聞" },
   { href: "/admin/personas", label: "寫手管理" },
   { href: "/admin/trending", label: "趨勢分析" },
-  { href: "/admin/sports", label: "球種設定" },
+  { href: "/admin/sports", label: "爬蟲設定" },
   { href: "/admin/channels", label: "發布頻道" },
   { href: "/admin/analytics", label: "成效分析" },
 ];

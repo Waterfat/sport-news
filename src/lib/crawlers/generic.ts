@@ -46,7 +46,9 @@ function isLikelyArticleUrl(url: string): boolean {
     /\/page\/\d+/i,
     /\/search/i,
     /\/archive/i,
+    /-guide$/i,
     /\/guide$/i,
+    /-tracker$/i,
     /\/tracker$/i,
     /key-dates$/i,
   ];

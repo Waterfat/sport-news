@@ -3,9 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 import ViewTracker from "./ViewTracker";
-import CommentSection from "./CommentSection";
+
 import LikeButton from "./LikeButton";
 import { TelegramArticleCTA } from "@/components/TelegramCTA";
+
+export const revalidate = 60;
 
 const categoryColors: Record<string, string> = {
   籃球: "bg-orange-100 text-orange-800",
@@ -330,9 +332,6 @@ export default async function ArticlePage({
           </div>
         </div>
       )}
-
-      {/* Comments */}
-      <CommentSection articleId={article.id} />
 
       {/* Related Articles */}
       {relatedArticles && relatedArticles.length > 0 && (
