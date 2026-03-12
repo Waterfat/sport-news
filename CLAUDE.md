@@ -26,6 +26,15 @@
 - 測試檔案位置：`src/__tests__/`
 - 測試命名規則：`src/__tests__/lib/<module>.test.ts`、`src/__tests__/components/<Component>.test.tsx`
 
+## 資料庫變更規則
+
+- **所有 DB schema 變更（CREATE/ALTER/DROP/INDEX）必須透過 migration 檔案**，不得直接在 SQL Editor 手動改
+- Migration 檔案位置：`supabase/migrations/`，編號遞增（如 `009_xxx.sql`）
+- 必須使用 `IF NOT EXISTS` / `IF EXISTS` 確保 idempotent（可重複執行）
+- 新增/修改 table、column、index、constraint 都算 schema 變更
+- Migration 建立後必須 commit 進 git，確保 schema 與程式碼版本一致
+- 套用 migration 後，需驗證應用層正常運作（跑 smoke test + E2E）
+
 ## 技術棧
 
 - Next.js App Router + TypeScript
