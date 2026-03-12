@@ -29,18 +29,22 @@ interface RawArticle {
   is_processed: boolean;
 }
 
+const PAGE_SIZE_OPTIONS = [20, 50, 100, 300];
+
 export default function RawArticlesPage() {
   const [articles, setArticles] = useState<RawArticle[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [source, setSource] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [jumpInput, setJumpInput] = useState("");
 
   const fetchArticles = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({
       page: page.toString(),
-      limit: "20",
+      limit: pageSize.toString(),
     });
     if (source !== "all") params.set("source", source);
 
@@ -54,13 +58,21 @@ export default function RawArticlesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, source]);
+  }, [page, pageSize, source]);
 
   useEffect(() => {
     fetchArticles();
   }, [fetchArticles]);
 
-  const totalPages = Math.ceil(total / 20);
+  const totalPages = Math.ceil(total / pageSize);
+
+  const handleJump = () => {
+    const target = parseInt(jumpInput, 10);
+    if (target >= 1 && target <= totalPages) {
+      setPage(target);
+      setJumpInput("");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -68,6 +80,24 @@ export default function RawArticlesPage() {
         <h1 className="text-2xl font-bold">原始新聞</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-500">共 {total} 篇</span>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(v) => {
+              setPageSize(Number(v));
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  每頁 {size} 篇
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select
             value={source}
             onValueChange={(v) => {
@@ -160,6 +190,25 @@ export default function RawArticlesPage() {
             onClick={() => setPage((p) => p + 1)}
           >
             下一頁
+          </Button>
+          <span className="text-gray-300">|</span>
+          <input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={jumpInput}
+            onChange={(e) => setJumpInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleJump()}
+            placeholder="頁碼"
+            className="w-[70px] h-8 px-2 text-sm border rounded-md text-center"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleJump}
+            disabled={!jumpInput}
+          >
+            前往
           </Button>
         </div>
       )}

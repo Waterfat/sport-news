@@ -15,6 +15,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const PAGE_SIZE_OPTIONS = [20, 50, 100, 300];
 
 interface Article {
   id: string;
@@ -67,8 +76,10 @@ export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [status, setStatus] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [jumpInput, setJumpInput] = useState("");
 
   // 批次選取
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -351,7 +362,7 @@ export default function ArticlesPage() {
     setLoading(true);
     const params = new URLSearchParams({
       page: page.toString(),
-      limit: "20",
+      limit: pageSize.toString(),
     });
     if (status !== "all") params.set("status", status);
 
@@ -365,7 +376,7 @@ export default function ArticlesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, status]);
+  }, [page, pageSize, status]);
 
   useEffect(() => {
     fetchArticles();
@@ -377,13 +388,41 @@ export default function ArticlesPage() {
     setSelectedIds(new Set());
   };
 
-  const totalPages = Math.ceil(total / 20);
+  const totalPages = Math.ceil(total / pageSize);
+
+  const handleJump = () => {
+    const target = parseInt(jumpInput, 10);
+    if (target >= 1 && target <= totalPages) {
+      setPage(target);
+      setJumpInput("");
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">文章管理</h1>
-        <span className="text-sm text-gray-500">共 {total} 篇文章</span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">共 {total} 篇文章</span>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(v) => {
+              setPageSize(Number(v));
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  每頁 {size} 篇
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* 產出文章控制面板 */}
@@ -693,6 +732,25 @@ export default function ArticlesPage() {
             onClick={() => setPage((p) => p + 1)}
           >
             下一頁
+          </Button>
+          <span className="text-gray-300">|</span>
+          <input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={jumpInput}
+            onChange={(e) => setJumpInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleJump()}
+            placeholder="頁碼"
+            className="w-[70px] h-8 px-2 text-sm border rounded-md text-center"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleJump}
+            disabled={!jumpInput}
+          >
+            前往
           </Button>
         </div>
       )}
