@@ -14,6 +14,24 @@ export const CATEGORY_COLORS: Record<string, string> = {
   綜合: "bg-purple-100 text-purple-800",
 };
 
+export const CHANNEL_TYPE_LABELS: Record<string, string> = {
+  facebook: "Facebook",
+  telegram: "Telegram",
+  x_twitter: "X/Twitter",
+  line: "LINE",
+  custom: "自訂",
+};
+
+export const ARTICLE_STATUS = {
+  DRAFT: "draft",
+  PUBLISHED: "published",
+} as const;
+
+export const ARTICLE_STATUS_LABELS: Record<string, string> = {
+  draft: "未發布",
+  published: "已發布",
+};
+
 /**
  * 格式化日期 - 完整版（含時間），用於文章詳情頁
  */

@@ -6,8 +6,8 @@ export default function ViewTracker({ slug }: { slug: string }) {
   useEffect(() => {
     fetch(`/api/public/articles/${encodeURIComponent(slug)}/view`, {
       method: "POST",
-    }).catch(() => {
-      // fire and forget
+    }).catch((err) => {
+      console.error("Failed to track view:", err);
     });
   }, [slug]);
 

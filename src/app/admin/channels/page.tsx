@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CHANNEL_TYPE_LABELS } from "@/lib/constants";
 
 // --- 型別定義 ---
 
@@ -40,14 +41,6 @@ const CHANNEL_TYPES: { value: ChannelType; label: string }[] = [
   { value: "line", label: "LINE" },
   { value: "custom", label: "自訂" },
 ];
-
-const CHANNEL_TYPE_LABELS: Record<string, string> = {
-  facebook: "Facebook",
-  telegram: "Telegram",
-  x_twitter: "X/Twitter",
-  line: "LINE",
-  custom: "自訂",
-};
 
 const CHANNEL_CONFIG_FIELDS: Record<string, { key: string; label: string }[]> = {
   facebook: [

@@ -19,6 +19,7 @@ interface CrawlSource {
   name: string;
   base_url: string;
   is_active: boolean;
+  crawl_images: boolean;
 }
 
 interface SportSettings {
@@ -126,6 +127,24 @@ export default function SportsSettingsPage() {
     }
   }
 
+  async function toggleCrawlImages(id: number, crawl_images: boolean) {
+    try {
+      const res = await fetch("/api/settings/sources", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, crawl_images }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCrawlSources((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, crawl_images } : s))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to toggle crawl_images:", err);
+    }
+  }
+
   async function addSource() {
     if (!newName.trim() || !newUrl.trim()) return;
     setAdding(true);
@@ -169,7 +188,7 @@ export default function SportsSettingsPage() {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ sport_key: key, sources }),
-            });
+            }).catch((err) => console.error("Failed to update sport sources after delete:", err));
           }
         }
         setSettings(updatedSettings);
@@ -230,7 +249,7 @@ export default function SportsSettingsPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ sport_key: key, sources: newSources }),
-              });
+              }).catch((err) => console.error("Failed to update sport sources after rename:", err));
             }
           }
           setSettings(updatedSettings);
@@ -317,6 +336,16 @@ export default function SportsSettingsPage() {
                           {crawlResult.saved === 0 && crawlResult.duplicate > 0 && <span className="text-gray-400">（無新文章）</span>}
                         </div>
                       )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Switch
+                        id={`crawl-images-${source.id}`}
+                        checked={source.crawl_images !== false}
+                        onCheckedChange={(checked: boolean) => toggleCrawlImages(source.id, checked)}
+                      />
+                      <Label htmlFor={`crawl-images-${source.id}`} className="text-xs text-gray-500 whitespace-nowrap">
+                        爬圖片
+                      </Label>
                     </div>
                     <Button
                       size="sm"

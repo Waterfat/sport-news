@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -22,16 +24,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ARTICLE_STATUS_LABELS } from "@/lib/constants";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 300];
 
 interface Article {
   id: string;
   title: string;
+  content: string;
   status: string;
   created_at: string;
   published_at: string | null;
   scheduled_at: string | null;
+  images: string[];
   writer_personas: {
     name: string;
   } | null;
@@ -65,11 +70,9 @@ interface RawArticleInfo {
   url: string;
 }
 
-const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  draft: { label: "待審核", variant: "secondary" },
-  approved: { label: "已通過", variant: "default" },
-  published: { label: "已發布", variant: "outline" },
-  rejected: { label: "已退回", variant: "destructive" },
+const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  draft: "secondary",
+  published: "default",
 };
 
 export default function ArticlesPage() {
@@ -84,6 +87,13 @@ export default function ArticlesPage() {
   // 批次選取
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchLoading, setBatchLoading] = useState(false);
+
+  // 單篇發布 loading
+  const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set());
+
+  // 排程彈出
+  const [scheduleOpenId, setScheduleOpenId] = useState<string | null>(null);
+  const [scheduleDateTime, setScheduleDateTime] = useState("");
 
   // 改寫任務狀態
   const [rewriteStatus, setRewriteStatus] = useState<RewriteStatus | null>(null);
@@ -106,7 +116,9 @@ export default function ArticlesPage() {
         const data = await res.json();
         setRewriteStatus(data);
       }
-    } catch {}
+    } catch (err) {
+      console.error("Failed to fetch rewrite status:", err);
+    }
   }, []);
 
   const fetchPlans = useCallback(async () => {
@@ -117,7 +129,9 @@ export default function ArticlesPage() {
         setPlans(data.plans || []);
         setRawArticleMap(data.rawArticleMap || {});
       }
-    } catch {}
+    } catch (err) {
+      console.error("Failed to fetch plans:", err);
+    }
   }, []);
 
   useEffect(() => {
@@ -153,18 +167,23 @@ export default function ArticlesPage() {
       }
       // 輪詢等完成後刷新規劃列表
       const interval = setInterval(async () => {
-        const r = await fetch("/api/rewrite");
-        if (r.ok) {
-          const d = await r.json();
-          setRewriteStatus(d);
-          if (!d.currentTask) {
-            clearInterval(interval);
-            setRunningMode(null);
-            fetchPlans();
+        try {
+          const r = await fetch("/api/rewrite");
+          if (r.ok) {
+            const d = await r.json();
+            setRewriteStatus(d);
+            if (!d.currentTask) {
+              clearInterval(interval);
+              clearTimeout(timeout);
+              setRunningMode(null);
+              fetchPlans();
+            }
           }
+        } catch (err) {
+          console.error("Failed to poll rewrite status during plan:", err);
         }
       }, 3000);
-      setTimeout(() => clearInterval(interval), 600000);
+      const timeout = setTimeout(() => clearInterval(interval), 600000);
     } catch {
       alert("規劃失敗，請確認監聽器是否正在運行");
       setRunningMode(null);
@@ -197,19 +216,24 @@ export default function ArticlesPage() {
       setSelectedPlanIds(new Set());
       // 輪詢等完成後刷新
       const interval = setInterval(async () => {
-        const r = await fetch("/api/rewrite");
-        if (r.ok) {
-          const d = await r.json();
-          setRewriteStatus(d);
-          if (!d.currentTask) {
-            clearInterval(interval);
-            setRunningMode(null);
-            fetchPlans();
-            fetchArticles();
+        try {
+          const r = await fetch("/api/rewrite");
+          if (r.ok) {
+            const d = await r.json();
+            setRewriteStatus(d);
+            if (!d.currentTask) {
+              clearInterval(interval);
+              clearTimeout(timeout);
+              setRunningMode(null);
+              fetchPlans();
+              fetchArticles();
+            }
           }
+        } catch (err) {
+          console.error("Failed to poll rewrite status during produce:", err);
         }
       }, 3000);
-      setTimeout(() => clearInterval(interval), 600000);
+      const timeout = setTimeout(() => clearInterval(interval), 600000);
     } catch {
       alert("產出失敗");
       setRunningMode(null);
@@ -289,15 +313,18 @@ export default function ArticlesPage() {
           // 沒有進行中的任務了，停止輪詢
           if (!data.currentTask) {
             clearInterval(interval);
+            clearTimeout(timeout);
             setRunningMode(null);
             fetchArticles();
           }
         }
-      } catch {}
+      } catch (err) {
+        console.error("Failed to poll rewrite status:", err);
+      }
     }, 3000);
 
     // 最多輪詢 10 分鐘
-    setTimeout(() => clearInterval(interval), 600000);
+    const timeout = setTimeout(() => clearInterval(interval), 600000);
   }, []);
 
   useEffect(() => {
@@ -330,11 +357,11 @@ export default function ArticlesPage() {
     }
   };
 
-  const handleBatchAction = async (action: "approved" | "rejected" | "delete") => {
+  const handleBatchAction = async (action: "publish" | "delete") => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
 
-    const labels = { approved: "通過審核", rejected: "退回", delete: "刪除" };
+    const labels = { publish: "發布", delete: "刪除" };
     if (!confirm(`確定要將 ${ids.length} 篇文章${labels[action]}？`)) return;
 
     setBatchLoading(true);
@@ -355,6 +382,63 @@ export default function ArticlesPage() {
       alert("操作失敗");
     } finally {
       setBatchLoading(false);
+    }
+  };
+
+  const handlePublishOne = async (articleId: string) => {
+    setPublishingIds((prev) => new Set(prev).add(articleId));
+    try {
+      const res = await fetch("/api/articles/generated/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [articleId], action: "publish" }),
+      });
+      if (res.ok) {
+        setArticles((prev) =>
+          prev.map((a) =>
+            a.id === articleId
+              ? { ...a, status: "published", published_at: new Date().toISOString() }
+              : a
+          )
+        );
+      } else {
+        const data = await res.json();
+        alert(data.error || "發布失敗");
+      }
+    } catch {
+      alert("發布失敗");
+    } finally {
+      setPublishingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(articleId);
+        return next;
+      });
+    }
+  };
+
+  const handleScheduleOne = async (articleId: string) => {
+    if (!scheduleDateTime) return;
+    try {
+      const res = await fetch(`/api/articles/generated/${articleId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduled_at: new Date(scheduleDateTime).toISOString(),
+        }),
+      });
+      if (res.ok) {
+        setArticles((prev) =>
+          prev.map((a) =>
+            a.id === articleId
+              ? { ...a, scheduled_at: new Date(scheduleDateTime).toISOString() }
+              : a
+          )
+        );
+        setScheduleOpenId(null);
+        setScheduleDateTime("");
+      }
+    } catch {
+      alert("排程設定失敗");
     }
   };
 
@@ -584,11 +668,9 @@ export default function ArticlesPage() {
       <Tabs value={status} onValueChange={handleStatusChange}>
         <TabsList>
           <TabsTrigger value="all">全部</TabsTrigger>
-          <TabsTrigger value="draft">待審核</TabsTrigger>
-          <TabsTrigger value="approved">已通過</TabsTrigger>
+          <TabsTrigger value="draft">未發布</TabsTrigger>
           <TabsTrigger value="scheduled">排程中</TabsTrigger>
           <TabsTrigger value="published">已發布</TabsTrigger>
-          <TabsTrigger value="rejected">已退回</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -603,17 +685,9 @@ export default function ArticlesPage() {
               <Button
                 size="sm"
                 disabled={batchLoading}
-                onClick={() => handleBatchAction("approved")}
+                onClick={() => handleBatchAction("publish")}
               >
-                批次通過
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={batchLoading}
-                onClick={() => handleBatchAction("rejected")}
-              >
-                批次退回
+                批次發布
               </Button>
               <Button
                 size="sm"
@@ -641,8 +715,8 @@ export default function ArticlesPage() {
       ) : articles.length === 0 ? (
         <div className="text-center py-12 text-gray-500">暫無文章</div>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
+        <div className="border rounded-lg overflow-x-auto">
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
@@ -651,16 +725,17 @@ export default function ArticlesPage() {
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
-                <TableHead className="w-[45%]">標題</TableHead>
-                <TableHead>寫手</TableHead>
-                <TableHead>狀態</TableHead>
-                <TableHead>建立時間</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+                <TableHead className="w-[40%]">標題</TableHead>
+                <TableHead className="w-[100px]">寫手</TableHead>
+                <TableHead className="w-[80px]">狀態</TableHead>
+                <TableHead className="w-[140px]">建立時間</TableHead>
+                <TableHead className="w-[200px] text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {articles.map((article) => {
-                const statusInfo = STATUS_MAP[article.status] || STATUS_MAP.draft;
+                const statusLabel = ARTICLE_STATUS_LABELS[article.status] || ARTICLE_STATUS_LABELS.draft;
+                const statusVariant = STATUS_VARIANT[article.status] || STATUS_VARIANT.draft;
                 return (
                   <TableRow
                     key={article.id}
@@ -672,20 +747,39 @@ export default function ArticlesPage() {
                         onCheckedChange={() => toggleSelect(article.id)}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">
-                      <Link
-                        href={`/admin/articles/${article.id}`}
-                        className="hover:underline"
-                      >
-                        {article.title}
-                      </Link>
+                    <TableCell className="font-medium overflow-hidden">
+                      <div className="flex items-start gap-3">
+                        {article.images?.[0] && (
+                          <Image
+                            src={article.images[0]}
+                            alt=""
+                            width={48}
+                            height={48}
+                            className="w-12 h-12 object-cover rounded flex-shrink-0 mt-0.5"
+                            unoptimized
+                          />
+                        )}
+                        <div className="min-w-0 overflow-hidden">
+                          <Link
+                            href={`/admin/articles/${article.id}`}
+                            className="hover:underline line-clamp-1"
+                          >
+                            {article.title}
+                          </Link>
+                          {article.content && (
+                            <p className="text-xs text-gray-400 mt-1 line-clamp-1">
+                              {article.content.substring(0, 100)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="truncate">
                       {article.writer_personas?.name || "-"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusInfo.variant}>
-                        {statusInfo.label}
+                      <Badge variant={statusVariant}>
+                        {statusLabel}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-gray-500">
@@ -697,11 +791,76 @@ export default function ArticlesPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/admin/articles/${article.id}`}>
-                        <Button variant="outline" size="sm">
-                          查看
-                        </Button>
-                      </Link>
+                      <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                        {article.status === "draft" && !article.scheduled_at && (
+                          <>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              disabled={publishingIds.has(article.id)}
+                              onClick={() => handlePublishOne(article.id)}
+                            >
+                              {publishingIds.has(article.id) ? (
+                                <span className="flex items-center gap-1">
+                                  <span className="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+                                  發布中
+                                </span>
+                              ) : (
+                                "發布"
+                              )}
+                            </Button>
+                            <div className="relative">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  setScheduleOpenId(
+                                    scheduleOpenId === article.id ? null : article.id
+                                  )
+                                }
+                              >
+                                排程
+                              </Button>
+                              {scheduleOpenId === article.id && (
+                                <div className="absolute right-0 top-full mt-1 z-50 bg-white border rounded-lg shadow-lg p-3 space-y-2 w-[260px]">
+                                  <Input
+                                    type="datetime-local"
+                                    value={scheduleDateTime}
+                                    onChange={(e) => setScheduleDateTime(e.target.value)}
+                                    min={new Date().toISOString().slice(0, 16)}
+                                    className="text-sm"
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      disabled={!scheduleDateTime}
+                                      onClick={() => handleScheduleOne(article.id)}
+                                      className="flex-1"
+                                    >
+                                      確認排程
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setScheduleOpenId(null);
+                                        setScheduleDateTime("");
+                                      }}
+                                    >
+                                      取消
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                        <Link href={`/admin/articles/${article.id}`}>
+                          <Button variant="outline" size="sm">
+                            查看
+                          </Button>
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

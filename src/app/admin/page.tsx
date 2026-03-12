@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CHANNEL_TYPE_LABELS } from "@/lib/constants";
 
 interface Channel {
   id: number;
@@ -16,13 +17,12 @@ interface Stats {
   today_raw: number;
   today_generated: number;
   draft: number;
-  approved: number;
   published: number;
-  rejected: number;
-  personas: { id: string; name: string; is_active: boolean }[];
-  channels: Channel[];
   today_published: number;
   scheduled: number;
+  total_views: number;
+  personas: { id: string; name: string; is_active: boolean }[];
+  channels: Channel[];
 }
 
 export default function AdminDashboard() {
@@ -53,28 +53,19 @@ export default function AdminDashboard() {
     { title: "原始新聞總數", value: stats.raw_articles_total, color: "text-blue-600" },
     { title: "今日爬取", value: stats.today_raw, color: "text-cyan-600" },
     { title: "今日產出", value: stats.today_generated, color: "text-purple-600" },
-    { title: "待審核", value: stats.draft, color: "text-yellow-600" },
-    { title: "已通過", value: stats.approved, color: "text-green-600" },
+    { title: "未發布", value: stats.draft, color: "text-yellow-600" },
     { title: "已發布", value: stats.published, color: "text-emerald-600" },
-    { title: "已退回", value: stats.rejected, color: "text-red-600" },
     { title: "今日發布", value: stats.today_published, color: "text-indigo-600" },
     { title: "排程中", value: stats.scheduled, color: "text-orange-600" },
+    { title: "總瀏覽數", value: stats.total_views.toLocaleString(), color: "text-pink-600" },
   ];
-
-  const typeLabels: Record<string, string> = {
-    facebook: "Facebook",
-    telegram: "Telegram",
-    x_twitter: "X / Twitter",
-    line: "LINE",
-    custom: "自訂",
-  };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">儀表板</h1>
 
       {/* 統計卡片 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {cards.map((card) => (
           <Card key={card.title}>
             <CardHeader className="pb-2">
@@ -143,7 +134,7 @@ export default function AdminDashboard() {
                   >
                     <div className="font-medium text-sm">{ch.name}</div>
                     <Badge variant="outline">
-                      {typeLabels[ch.type] || ch.type}
+                      {CHANNEL_TYPE_LABELS[ch.type] || ch.type}
                     </Badge>
                   </div>
                 ))}

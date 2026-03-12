@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ARTICLE_STATUS_LABELS } from "@/lib/constants";
 
 interface ArticleDetail {
   id: string;
@@ -21,6 +22,7 @@ interface ArticleDetail {
   published_at: string | null;
   scheduled_at: string | null;
   publish_channel_ids: number[];
+  images: string[];
   writer_personas: {
     name: string;
     description: string | null;
@@ -42,12 +44,6 @@ interface PublishChannel {
   is_active: boolean;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "待審核",
-  approved: "已通過",
-  published: "已發布",
-  rejected: "已退回",
-};
 
 export default function ArticleDetailPage({
   params,
@@ -73,66 +69,52 @@ export default function ArticleDetailPage({
   const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/articles/generated/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setArticle(data.article);
-        setRawArticles(data.rawArticles || []);
-        setEditTitle(data.article.title);
-        setEditContent(data.article.content);
-        setReviewerNote(data.article.reviewer_note || "");
-        setSelectedChannelIds(data.article.publish_channel_ids || []);
+    Promise.all([
+      fetch(`/api/articles/generated/${id}`).then((res) => res.json()),
+      fetch("/api/settings/channels").then((res) => res.json()),
+    ])
+      .then(([articleData, channelData]) => {
+        setArticle(articleData.article);
+        setRawArticles(articleData.rawArticles || []);
+        setEditTitle(articleData.article.title);
+        setEditContent(articleData.article.content);
+        setReviewerNote(articleData.article.reviewer_note || "");
+
+        const channelList = Array.isArray(channelData) ? channelData : channelData.channels || [];
+        const activeChannels = channelList.filter((c: PublishChannel) => c.is_active);
+        setChannels(activeChannels);
+
+        // 文章有指定頻道就用，沒有就預設全選
+        const articleChannels = articleData.article.publish_channel_ids || [];
+        setSelectedChannelIds(
+          articleChannels.length > 0
+            ? articleChannels
+            : activeChannels.map((c: PublishChannel) => c.id)
+        );
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Fetch publish channels
-  useEffect(() => {
-    fetch("/api/settings/channels")
-      .then((res) => res.json())
-      .then((data) => {
-        // The channels API returns an array directly
-        const channelList = Array.isArray(data) ? data : data.channels || [];
-        setChannels(channelList.filter((c: PublishChannel) => c.is_active));
-      })
-      .catch(console.error);
-  }, []);
-
-  const handleAction = async (action: "approved" | "rejected" | "save") => {
+  const handleSave = async () => {
     setSaving(true);
     try {
-      const body: Record<string, unknown> = {};
-
-      if (action === "save") {
-        body.title = editTitle;
-        body.content = editContent;
-        body.reviewer_note = reviewerNote;
-      } else {
-        body.status = action;
-        body.reviewer_note = reviewerNote;
-        if (isEditing) {
-          body.title = editTitle;
-          body.content = editContent;
-        }
-      }
-
       const res = await fetch(`/api/articles/generated/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          title: editTitle,
+          content: editContent,
+        }),
       });
 
       if (res.ok) {
         const data = await res.json();
         setArticle((prev) => (prev ? { ...prev, ...data.article } : prev));
         setIsEditing(false);
-        if (action !== "save") {
-          router.push("/admin/articles");
-        }
       }
     } catch (err) {
-      console.error("Action failed:", err);
+      console.error("Save failed:", err);
     } finally {
       setSaving(false);
     }
@@ -209,6 +191,23 @@ export default function ArticleDetailPage({
     }
   };
 
+  const handleRemoveImage = async (index: number) => {
+    if (!article) return;
+    const newImages = article.images.filter((_, i) => i !== index);
+    try {
+      const res = await fetch(`/api/articles/generated/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: newImages }),
+      });
+      if (res.ok) {
+        setArticle((prev) => prev ? { ...prev, images: newImages } : prev);
+      }
+    } catch (err) {
+      console.error("Remove image failed:", err);
+    }
+  };
+
   const toggleChannel = (channelId: number) => {
     setSelectedChannelIds((prev) =>
       prev.includes(channelId)
@@ -233,7 +232,7 @@ export default function ArticleDetailPage({
           <Button variant="outline" size="sm" onClick={() => router.back()}>
             返回
           </Button>
-          <Badge variant="secondary">{STATUS_LABEL[article.status]}</Badge>
+          <Badge variant="secondary">{ARTICLE_STATUS_LABELS[article.status]}</Badge>
           {article.writer_personas && (
             <span className="text-sm text-gray-500">
               寫手：{article.writer_personas.name}
@@ -242,30 +241,13 @@ export default function ArticleDetailPage({
         </div>
         <div className="flex gap-2">
           {!isEditing && article.status === "draft" && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
-                編輯
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={saving}
-                onClick={() => handleAction("rejected")}
-              >
-                退回
-              </Button>
-              <Button
-                size="sm"
-                disabled={saving}
-                onClick={() => handleAction("approved")}
-              >
-                通過審核
-              </Button>
-            </>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+            >
+              編輯
+            </Button>
           )}
           {isEditing && (
             <>
@@ -279,7 +261,7 @@ export default function ArticleDetailPage({
               <Button
                 size="sm"
                 disabled={saving}
-                onClick={() => handleAction("save")}
+                onClick={handleSave}
               >
                 儲存修改
               </Button>
@@ -305,7 +287,7 @@ export default function ArticleDetailPage({
       )}
 
       {/* 排程資訊 */}
-      {article.status === "approved" && article.scheduled_at && (
+      {article.status === "draft" && article.scheduled_at && (
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
@@ -330,8 +312,8 @@ export default function ArticleDetailPage({
         </Card>
       )}
 
-      {/* 發布選項 - 只在 approved 且未排程時顯示 */}
-      {article.status === "approved" && !article.scheduled_at && (
+      {/* 發布選項 - 未發布且未排程時顯示 */}
+      {article.status === "draft" && !article.scheduled_at && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">發布選項</CardTitle>
@@ -429,21 +411,38 @@ export default function ArticleDetailPage({
               </>
             )}
 
-            {/* 審核備註 */}
-            {article.status === "draft" && (
+            {/* 附圖 */}
+            {article.images?.length > 0 && (
               <>
                 <Separator />
                 <div>
-                  <Label>審核備註</Label>
-                  <Textarea
-                    value={reviewerNote}
-                    onChange={(e) => setReviewerNote(e.target.value)}
-                    rows={3}
-                    placeholder="可選填退回原因或修改建議..."
-                  />
+                  <Label>附圖 ({article.images.length})</Label>
+                  <div className="flex gap-3 mt-2 flex-wrap">
+                    {article.images.map((img, i) => {
+                      const url = typeof img === "string" ? img : (img as unknown as { url: string }).url;
+                      return (
+                        <div key={i} className="relative group">
+                          <a href={url} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={url}
+                              alt={`圖片 ${i + 1}`}
+                              className="w-32 h-24 object-cover rounded border hover:opacity-80 transition-opacity"
+                            />
+                          </a>
+                          <button
+                            onClick={() => handleRemoveImage(i)}
+                            className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </>
             )}
+
           </CardContent>
         </Card>
 
