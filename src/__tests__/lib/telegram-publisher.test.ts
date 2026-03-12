@@ -149,7 +149,7 @@ describe("publishToTelegram - text only", () => {
     expect(body.text).not.toContain("在網站上閱讀");
   });
 
-  it("omits link when no site_url configured", async () => {
+  it("uses SITE_URL fallback when no site_url configured", async () => {
     mockFetch.mockResolvedValueOnce({
       json: async () => ({ ok: true, result: { message_id: 789 } }),
     });
@@ -160,7 +160,8 @@ describe("publishToTelegram - text only", () => {
     );
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.text).not.toContain("在網站上閱讀");
+    expect(body.text).toContain("在網站上閱讀");
+    expect(body.text).toContain("/news/slug");
   });
 
   it("includes TG channel promo link at the end", async () => {

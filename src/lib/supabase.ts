@@ -16,5 +16,10 @@ export function createServiceClient(): SupabaseClient {
     );
   }
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!serviceRoleKey) {
+    console.warn(
+      "Missing SUPABASE_SERVICE_ROLE_KEY — falling back to empty string. Service client will lack admin privileges."
+    );
+  }
   return createClient(supabaseUrl, serviceRoleKey);
 }

@@ -1,8 +1,4 @@
-interface Article {
-  title: string;
-  content: string;
-  slug?: string;
-}
+import type { PublishArticle } from "./types";
 
 interface TwitterConfig {
   api_key: string;
@@ -23,7 +19,7 @@ interface PublishResult {
 // In production, you would use OAuth 1.0a with HMAC-SHA1 signatures
 // for user-context actions, or use a library like 'twitter-api-v2'.
 export async function publishToTwitter(
-  article: Article,
+  article: PublishArticle,
   config: TwitterConfig
 ): Promise<PublishResult> {
   try {
@@ -34,7 +30,7 @@ export async function publishToTwitter(
     }
 
     const link = config.site_url && article.slug
-      ? `${config.site_url}/articles/${article.slug}`
+      ? `${config.site_url}/news/${article.slug}`
       : "";
 
     const maxTitleLen = link ? 250 : 280;

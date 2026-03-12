@@ -1,11 +1,5 @@
-import { TELEGRAM_CHANNEL_URL } from "@/lib/constants";
-
-interface Article {
-  title: string;
-  content: string;
-  slug?: string;
-  images?: string[];
-}
+import { SITE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/constants";
+import type { PublishArticle } from "./types";
 
 interface TelegramConfig {
   bot_token: string;
@@ -20,7 +14,7 @@ interface PublishResult {
 }
 
 export async function publishToTelegram(
-  article: Article,
+  article: PublishArticle,
   config: TelegramConfig
 ): Promise<PublishResult> {
   try {
@@ -30,8 +24,9 @@ export async function publishToTelegram(
       return { success: false, error: "Missing bot_token or chat_id" };
     }
 
-    const link = site_url && article.slug
-      ? `${site_url}/news/${article.slug}`
+    const baseUrl = site_url || SITE_URL;
+    const link = article.slug
+      ? `${baseUrl}/news/${article.slug}`
       : "";
 
     // 完整內文，不截斷

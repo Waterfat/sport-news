@@ -1,8 +1,4 @@
-interface Article {
-  title: string;
-  content: string;
-  slug?: string;
-}
+import type { PublishArticle } from "./types";
 
 interface FacebookConfig {
   page_id: string;
@@ -17,7 +13,7 @@ interface PublishResult {
 }
 
 export async function publishToFacebook(
-  article: Article,
+  article: PublishArticle,
   config: FacebookConfig
 ): Promise<PublishResult> {
   try {
@@ -28,7 +24,7 @@ export async function publishToFacebook(
     }
 
     const link = site_url && article.slug
-      ? `${site_url}/articles/${article.slug}`
+      ? `${site_url}/news/${article.slug}`
       : undefined;
 
     const contentExcerpt = article.content.length > 500

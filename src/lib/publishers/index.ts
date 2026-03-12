@@ -2,13 +2,9 @@ import { publishToFacebook } from "./facebook";
 import { publishToTwitter } from "./twitter";
 import { publishToTelegram } from "./telegram";
 import { publishToLine } from "./line";
+import type { PublishArticle } from "./types";
 
-interface Article {
-  title: string;
-  content: string;
-  slug?: string;
-  images?: string[];
-}
+export type { PublishArticle } from "./types";
 
 interface Channel {
   id: number;
@@ -30,7 +26,7 @@ interface PublishResult {
 }
 
 export async function publishToChannel(
-  article: Article,
+  article: PublishArticle,
   channel: Channel
 ): Promise<PublishResult> {
   const base = {

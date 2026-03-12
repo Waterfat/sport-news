@@ -79,8 +79,8 @@ export async function generateMetadata({
       description,
     },
     other: {
-      "article:published_time": article.published_at ?? "",
-      "article:section": article.category ?? "",
+      ...(article.published_at ? { "article:published_time": article.published_at } : {}),
+      ...(article.category ? { "article:section": article.category } : {}),
     },
   };
 }
