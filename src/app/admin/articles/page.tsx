@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { POLLING_INTERVAL_MS, POLLING_TIMEOUT_MS } from "@/lib/constants";
+import { POLLING_INTERVAL_MS, POLLING_TIMEOUT_MS, PAGE_SIZE_OPTIONS } from "@/lib/constants";
 
 import { PaginationBar } from "@/components/admin/PaginationBar";
 import { PlansTable } from "@/components/admin/PlansTable";
@@ -18,20 +18,7 @@ import { ProductionPanel, PlanLoadingCard } from "@/components/admin/ProductionP
 import { ArticlesTable } from "@/components/admin/ArticlesTable";
 import type { Article } from "@/components/admin/ArticlesTable";
 import { BatchActionsBar } from "@/components/admin/BatchActionsBar";
-
-interface RewriteStatus {
-  lastCompleted: {
-    completed_at: string;
-    articles_generated: number;
-  } | null;
-  currentTask: {
-    status: string;
-    created_at: string;
-  } | null;
-  newArticleCount: number;
-}
-
-const PAGE_SIZE_OPTIONS = [20, 50, 100, 300];
+import type { RewriteStatus } from "@/types/rewrite";
 
 export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -48,10 +35,6 @@ export default function ArticlesPage() {
 
   // 單篇發布 loading
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set());
-
-  // 排程彈出
-  const [scheduleOpenId, setScheduleOpenId] = useState<string | null>(null);
-  const [scheduleDateTime, setScheduleDateTime] = useState("");
 
   // 改寫任務狀態
   const [rewriteStatus, setRewriteStatus] = useState<RewriteStatus | null>(null);
@@ -144,7 +127,7 @@ export default function ArticlesPage() {
     }, POLLING_INTERVAL_MS);
 
     const timeout = setTimeout(() => clearInterval(interval), POLLING_TIMEOUT_MS);
-  }, []);
+  }, [fetchArticles]);
 
   // 如果頁面載入時已有進行中的任務，啟動輪詢
   useEffect(() => {
@@ -375,26 +358,25 @@ export default function ArticlesPage() {
     }
   };
 
-  const handleScheduleOne = async (articleId: string) => {
-    if (!scheduleDateTime) return;
+  const handleScheduleOne = async (articleId: string, datetime: string) => {
     try {
       const res = await fetch(`/api/articles/generated/${articleId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          scheduled_at: new Date(scheduleDateTime).toISOString(),
+          scheduled_at: new Date(datetime).toISOString(),
         }),
       });
       if (res.ok) {
         setArticles((prev) =>
           prev.map((a) =>
             a.id === articleId
-              ? { ...a, scheduled_at: new Date(scheduleDateTime).toISOString() }
+              ? { ...a, scheduled_at: new Date(datetime).toISOString() }
               : a
           )
         );
-        setScheduleOpenId(null);
-        setScheduleDateTime("");
+      } else {
+        alert("排程設定失敗");
       }
     } catch {
       alert("排程設定失敗");
@@ -493,13 +475,9 @@ export default function ArticlesPage() {
         loading={loading}
         selectedIds={selectedIds}
         publishingIds={publishingIds}
-        scheduleOpenId={scheduleOpenId}
-        scheduleDateTime={scheduleDateTime}
         onToggleSelect={toggleSelect}
         onToggleSelectAll={toggleSelectAll}
         onPublishOne={handlePublishOne}
-        onOpenSchedule={setScheduleOpenId}
-        onScheduleDateChange={setScheduleDateTime}
         onScheduleConfirm={handleScheduleOne}
       />
 

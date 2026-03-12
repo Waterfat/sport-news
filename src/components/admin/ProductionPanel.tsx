@@ -3,18 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
-interface RewriteStatus {
-  lastCompleted: {
-    completed_at: string;
-    articles_generated: number;
-  } | null;
-  currentTask: {
-    status: string;
-    created_at: string;
-  } | null;
-  newArticleCount: number;
-}
+import type { RewriteStatus } from "@/types/rewrite";
 
 interface ProductionPanelProps {
   rewriteStatus: RewriteStatus | null;

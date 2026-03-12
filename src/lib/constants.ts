@@ -64,6 +64,13 @@ export const ARTICLE_STATUS_LABELS: Record<string, string> = {
   published: "已發布",
 };
 
+export const ARTICLE_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  draft: "secondary",
+  published: "default",
+};
+
+export const PAGE_SIZE_OPTIONS = [20, 50, 100, 300];
+
 /** 排除非內容圖片（logo、tracking pixel、icon 等） */
 const IMAGE_EXCLUSION_PATTERNS = [
   "logo",

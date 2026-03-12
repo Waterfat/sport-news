@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -18,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PaginationBar } from "@/components/admin/PaginationBar";
+import { PAGE_SIZE_OPTIONS } from "@/lib/constants";
 
 interface RawArticle {
   id: string;
@@ -28,8 +29,6 @@ interface RawArticle {
   crawled_at: string;
   is_processed: boolean;
 }
-
-const PAGE_SIZE_OPTIONS = [20, 50, 100, 300];
 
 export default function RawArticlesPage() {
   const [articles, setArticles] = useState<RawArticle[]>([]);
@@ -123,32 +122,32 @@ export default function RawArticlesPage() {
       ) : articles.length === 0 ? (
         <div className="text-center py-12 text-gray-500">暫無新聞資料</div>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
+        <div className="border rounded-lg overflow-x-auto">
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[45%]">標題</TableHead>
-                <TableHead>來源</TableHead>
-                <TableHead>分類</TableHead>
-                <TableHead>狀態</TableHead>
-                <TableHead>爬取時間</TableHead>
+                <TableHead className="w-[120px]">來源</TableHead>
+                <TableHead className="w-[60px]">分類</TableHead>
+                <TableHead className="w-[70px]">狀態</TableHead>
+                <TableHead className="w-[150px]">爬取時間</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {articles.map((article) => (
                 <TableRow key={article.id}>
-                  <TableCell>
+                  <TableCell className="overflow-hidden">
                     <a
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:underline text-blue-700"
+                      className="hover:underline text-blue-700 line-clamp-1"
                     >
                       {article.title}
                     </a>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{article.source}</Badge>
+                    <Badge variant="outline" className="whitespace-nowrap text-xs">{article.source}</Badge>
                   </TableCell>
                   <TableCell className="text-sm">
                     {article.category || "-"}
@@ -156,11 +155,12 @@ export default function RawArticlesPage() {
                   <TableCell>
                     <Badge
                       variant={article.is_processed ? "secondary" : "default"}
+                      className="whitespace-nowrap"
                     >
                       {article.is_processed ? "已處理" : "未處理"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500">
+                  <TableCell className="text-sm text-gray-500 whitespace-nowrap">
                     {new Date(article.crawled_at).toLocaleString("zh-TW")}
                   </TableCell>
                 </TableRow>
@@ -170,48 +170,14 @@ export default function RawArticlesPage() {
         </div>
       )}
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            上一頁
-          </Button>
-          <span className="text-sm text-gray-500">
-            第 {page} / {totalPages} 頁
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            下一頁
-          </Button>
-          <span className="text-gray-300">|</span>
-          <input
-            type="number"
-            min={1}
-            max={totalPages}
-            value={jumpInput}
-            onChange={(e) => setJumpInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleJump()}
-            placeholder="頁碼"
-            className="w-[70px] h-8 px-2 text-sm border rounded-md text-center"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleJump}
-            disabled={!jumpInput}
-          >
-            前往
-          </Button>
-        </div>
-      )}
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        jumpInput={jumpInput}
+        onPageChange={setPage}
+        onJumpInputChange={setJumpInput}
+        onJump={handleJump}
+      />
     </div>
   );
 }

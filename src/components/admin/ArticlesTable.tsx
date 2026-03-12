@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ARTICLE_STATUS_LABELS } from "@/lib/constants";
+import { ARTICLE_STATUS_LABELS, ARTICLE_STATUS_VARIANT } from "@/lib/constants";
 
 export interface Article {
   id: string;
@@ -30,24 +31,15 @@ export interface Article {
   } | null;
 }
 
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  draft: "secondary",
-  published: "default",
-};
-
 interface ArticlesTableProps {
   articles: Article[];
   loading: boolean;
   selectedIds: Set<string>;
   publishingIds: Set<string>;
-  scheduleOpenId: string | null;
-  scheduleDateTime: string;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
   onPublishOne: (articleId: string) => void;
-  onOpenSchedule: (articleId: string | null) => void;
-  onScheduleDateChange: (value: string) => void;
-  onScheduleConfirm: (articleId: string) => void;
+  onScheduleConfirm: (articleId: string, datetime: string) => void;
 }
 
 export function ArticlesTable({
@@ -55,15 +47,13 @@ export function ArticlesTable({
   loading,
   selectedIds,
   publishingIds,
-  scheduleOpenId,
-  scheduleDateTime,
   onToggleSelect,
   onToggleSelectAll,
   onPublishOne,
-  onOpenSchedule,
-  onScheduleDateChange,
   onScheduleConfirm,
 }: ArticlesTableProps) {
+  const [scheduleOpenId, setScheduleOpenId] = useState<string | null>(null);
+  const [scheduleDateTime, setScheduleDateTime] = useState("");
   if (loading) {
     return <div className="text-center py-12 text-gray-500">載入中...</div>;
   }
@@ -93,7 +83,7 @@ export function ArticlesTable({
         <TableBody>
           {articles.map((article) => {
             const statusLabel = ARTICLE_STATUS_LABELS[article.status] || ARTICLE_STATUS_LABELS.draft;
-            const statusVariant = STATUS_VARIANT[article.status] || STATUS_VARIANT.draft;
+            const statusVariant = ARTICLE_STATUS_VARIANT[article.status] || ARTICLE_STATUS_VARIANT.draft;
             return (
               <TableRow
                 key={article.id}
@@ -172,7 +162,7 @@ export function ArticlesTable({
                             variant="outline"
                             size="sm"
                             onClick={() =>
-                              onOpenSchedule(
+                              setScheduleOpenId(
                                 scheduleOpenId === article.id ? null : article.id
                               )
                             }
@@ -184,7 +174,7 @@ export function ArticlesTable({
                               <Input
                                 type="datetime-local"
                                 value={scheduleDateTime}
-                                onChange={(e) => onScheduleDateChange(e.target.value)}
+                                onChange={(e) => setScheduleDateTime(e.target.value)}
                                 min={new Date().toISOString().slice(0, 16)}
                                 className="text-sm"
                               />
@@ -192,7 +182,11 @@ export function ArticlesTable({
                                 <Button
                                   size="sm"
                                   disabled={!scheduleDateTime}
-                                  onClick={() => onScheduleConfirm(article.id)}
+                                  onClick={() => {
+                                    onScheduleConfirm(article.id, scheduleDateTime);
+                                    setScheduleOpenId(null);
+                                    setScheduleDateTime("");
+                                  }}
                                   className="flex-1"
                                 >
                                   確認排程
@@ -201,8 +195,8 @@ export function ArticlesTable({
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => {
-                                    onOpenSchedule(null);
-                                    onScheduleDateChange("");
+                                    setScheduleOpenId(null);
+                                    setScheduleDateTime("");
                                   }}
                                 >
                                   取消
