@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, formatDateFull, SITE_URL } from "@/lib/constants";
+import { CATEGORY_COLORS, formatDateFull, getCategorySlug, SITE_URL } from "@/lib/constants";
 import ViewTracker from "./ViewTracker";
 
 import LikeButton from "./LikeButton";
@@ -361,14 +361,3 @@ export default async function ArticlePage({
   );
 }
 
-function getCategorySlug(category: string): string {
-  const map: Record<string, string> = {
-    NBA: "nba",
-    籃球: "nba",
-    棒球: "mlb",
-    MLB: "mlb",
-    足球: "soccer",
-    綜合: "general",
-  };
-  return map[category] ?? "general";
-}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { parsePagination } from "@/lib/constants";
 
 // GET: Public articles list (only published articles)
 export async function GET(request: NextRequest) {
@@ -7,11 +8,11 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
     const searchParams = request.nextUrl.searchParams;
 
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
-    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20", 10) || 20));
+    const { page, limit: rawLimit } = parsePagination(searchParams);
+    const limit = Math.min(rawLimit, 100); // public API 限制上限為 100
+    const offset = (page - 1) * limit;
     const category = searchParams.get("category");
     const writerId = searchParams.get("writer_id");
-    const offset = (page - 1) * limit;
 
     let query = supabase
       .from("generated_articles")

@@ -4,11 +4,14 @@ import { SPORTS, type SportKey } from "@/lib/sport-config";
 import { crawlGeneric } from "./generic";
 import { ensureBucket, downloadAndStoreImages } from "@/lib/image-storage";
 
+type SupabaseClient = ReturnType<typeof createServiceClient>;
+
 interface CrawlSource {
   id: number;
   name: string;
   base_url: string;
   is_active: boolean;
+  crawl_images: boolean;
 }
 
 interface SportConfig {
@@ -19,7 +22,7 @@ interface SportConfig {
 
 // 從 DB 讀取球種設定（含來源）
 async function getSportConfigs(
-  supabase: ReturnType<typeof createServiceClient>
+  supabase: SupabaseClient
 ): Promise<Map<string, SportConfig>> {
   const { data, error } = await supabase
     .from("sport_settings")
@@ -53,7 +56,7 @@ async function getSportConfigs(
 
 // 從 DB 讀取所有啟用的爬蟲來源
 async function getActiveSources(
-  supabase: ReturnType<typeof createServiceClient>
+  supabase: SupabaseClient
 ): Promise<CrawlSource[]> {
   const { data, error } = await supabase
     .from("crawl_sources")
@@ -74,8 +77,9 @@ interface CrawlResult {
 
 // 儲存文章到 DB（含圖片下載、去重計數）
 async function saveArticles(
-  supabase: ReturnType<typeof createServiceClient>,
-  articles: CrawledArticle[]
+  supabase: SupabaseClient,
+  articles: CrawledArticle[],
+  crawlImages = true
 ): Promise<{ saved: number; duplicate: number; errors: string[] }> {
   let saved = 0;
   let duplicate = 0;
@@ -100,8 +104,8 @@ async function saveArticles(
     }
 
     try {
-      let storedImages = article.images;
-      if (article.images.length > 0) {
+      let storedImages = crawlImages ? article.images : [];
+      if (crawlImages && article.images.length > 0) {
         const downloaded = await downloadAndStoreImages(article.images, article.source);
         if (downloaded.length > 0) {
           storedImages = downloaded;
@@ -168,6 +172,7 @@ export async function runAllCrawlers(): Promise<CrawlResult> {
   }
 
   const sourcesToRun = allSources.filter((s) => neededSourceNames.has(s.name));
+  const sourceImageMap = new Map(allSources.map((s) => [s.name, s.crawl_images !== false]));
   console.log(
     `[Crawler] Running sources: ${sourcesToRun.map((s) => s.name).join(", ") || "(none)"}`
   );
@@ -177,9 +182,13 @@ export async function runAllCrawlers(): Promise<CrawlResult> {
   );
 
   const allArticles: CrawledArticle[] = [];
+  const articleSourceMap = new Map<string, string>();
   results.forEach((result, index) => {
     if (result.status === "fulfilled") {
-      allArticles.push(...result.value);
+      for (const a of result.value) {
+        allArticles.push(a);
+        articleSourceMap.set(a.url, sourcesToRun[index].name);
+      }
       console.log(
         `[Crawler] ${sourcesToRun[index].name}: ${result.value.length} articles`
       );
@@ -195,7 +204,22 @@ export async function runAllCrawlers(): Promise<CrawlResult> {
   const filtered = total - filteredArticles.length;
   console.log(`[Crawler] Filtered out ${filtered} articles`);
 
-  const saveResult = await saveArticles(supabase, filteredArticles);
+  // 根據來源設定決定是否下載圖片（按來源分組）
+  const articlesBySource = new Map<string, CrawledArticle[]>();
+  for (const article of filteredArticles) {
+    const sourceName = articleSourceMap.get(article.url) || article.source;
+    if (!articlesBySource.has(sourceName)) articlesBySource.set(sourceName, []);
+    articlesBySource.get(sourceName)!.push(article);
+  }
+
+  const saveResult = { saved: 0, duplicate: 0, errors: [] as string[] };
+  for (const [sourceName, articles] of articlesBySource) {
+    const crawlImages = sourceImageMap.get(sourceName) !== false;
+    const result = await saveArticles(supabase, articles, crawlImages);
+    saveResult.saved += result.saved;
+    saveResult.duplicate += result.duplicate;
+    saveResult.errors.push(...result.errors);
+  }
   errors.push(...saveResult.errors);
 
   console.log(
@@ -222,8 +246,9 @@ export async function runSingleCrawler(sourceId: number): Promise<CrawlResult> {
   const articles = await crawlGeneric(source.name, source.base_url);
   const total = articles.length;
 
-  // 手動觸發不過濾，全部儲存
-  const saveResult = await saveArticles(supabase, articles);
+  // 手動觸發不過濾，全部儲存（但尊重 crawl_images 設定）
+  const crawlImages = source.crawl_images !== false;
+  const saveResult = await saveArticles(supabase, articles, crawlImages);
 
   return { total, saved: saveResult.saved, duplicate: saveResult.duplicate, filtered: 0, errors: saveResult.errors };
 }

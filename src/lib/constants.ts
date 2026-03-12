@@ -14,6 +14,27 @@ export const CATEGORY_COLORS: Record<string, string> = {
   綜合: "bg-purple-100 text-purple-800",
 };
 
+/** slug → 顯示名稱 */
+export const CATEGORY_LABELS: Record<string, string> = {
+  nba: "NBA",
+  mlb: "MLB",
+  soccer: "足球",
+  general: "綜合",
+};
+
+/** 分類名稱 → slug */
+export function getCategorySlug(category: string): string {
+  const map: Record<string, string> = {
+    NBA: "nba",
+    籃球: "nba",
+    棒球: "mlb",
+    MLB: "mlb",
+    足球: "soccer",
+    綜合: "general",
+  };
+  return map[category] ?? "general";
+}
+
 export const CHANNEL_TYPE_LABELS: Record<string, string> = {
   facebook: "Facebook",
   telegram: "Telegram",
@@ -56,4 +77,14 @@ export function formatDateShort(dateStr: string | null) {
     month: "short",
     day: "numeric",
   });
+}
+
+/**
+ * 解析分頁參數
+ */
+export function parsePagination(searchParams: URLSearchParams, defaultLimit = 20) {
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+  const limit = Math.max(1, Math.min(500, parseInt(searchParams.get("limit") || String(defaultLimit), 10) || defaultLimit));
+  const offset = (page - 1) * limit;
+  return { page, limit, offset };
 }

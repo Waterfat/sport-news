@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { parsePagination } from "@/lib/constants";
 
 // 取得原始新聞列表
 export async function GET(request: NextRequest) {
   const supabase = createServiceClient();
   const searchParams = request.nextUrl.searchParams;
 
-  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
-  const limit = Math.max(1, Math.min(500, parseInt(searchParams.get("limit") || "20", 10) || 20));
+  const { page, limit, offset } = parsePagination(searchParams);
   const category = searchParams.get("category");
   const source = searchParams.get("source");
-  const offset = (page - 1) * limit;
 
   let query = supabase
     .from("raw_articles")

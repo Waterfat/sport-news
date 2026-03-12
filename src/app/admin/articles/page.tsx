@@ -296,7 +296,7 @@ export default function ArticlesPage() {
       // 開始輪詢狀態
       pollRewriteStatus();
     } catch {
-      alert("觸發失敗，請確認監聯器是否正在運行");
+      alert("觸發失敗，請確認監聽器是否正在運行");
       setRunningMode(null);
     } finally {
       setTriggering(false);
