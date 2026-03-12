@@ -38,6 +38,9 @@ yarn-error.log*
 
 # playwright
 .playwright-mcp/
+/e2e-results/
+/e2e/.auth/
+/playwright-report/
 
 # typescript
 *.tsbuildinfo

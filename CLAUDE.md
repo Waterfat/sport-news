@@ -5,8 +5,19 @@
 - 每次 commit 前必須執行 `npx vitest run`，測試未通過不得 commit
 - 新增/修改 `src/lib/*.ts` 或 `src/app/api/**/*.ts` → 必須同步新增/更新對應 unit test
 - `/review` 重構完 → 執行 `/write-tests` 補齊測試覆蓋
-- **部署後必須執行 `./scripts/smoke-test.sh`**，全部通過才算部署完成。不得手動挑選驗證項目。
+- **部署後必須依序執行兩道驗證**，全部通過才算部署完成：
+  1. `./scripts/smoke-test.sh` — API 層驗證（HTTP status、認證保護、DB 連通）
+  2. `./scripts/e2e-test.sh` — 瀏覽器 E2E 驗證（頁面渲染、UI 元素、互動流程）
 - 新增 API 端點後 → 更新 `smoke-test.config.json` 對應的 protected_apis 或 public_apis
+- 新增/修改頁面後 → 更新對應的 `e2e/*.spec.ts` 測試
+
+## E2E 測試
+
+- 框架：Playwright（`npx playwright test`）
+- 測試目錄：`e2e/`
+- 執行：`./scripts/e2e-test.sh [BASE_URL]`
+- 後台測試需設定環境變數：`E2E_USERNAME` + `E2E_PASSWORD`（未設定則自動跳過）
+- 新增頁面/修改 UI 時必須同步更新 E2E 測試
 
 ## 測試指令
 
