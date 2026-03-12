@@ -2,10 +2,16 @@ import { describe, it, expect } from "vitest";
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
+  CATEGORY_DB_MAP,
   getCategorySlug,
   CHANNEL_TYPE_LABELS,
   ARTICLE_STATUS,
   ARTICLE_STATUS_LABELS,
+  ARTICLE_STATUS_VARIANT,
+  PAGE_SIZE_OPTIONS,
+  POLLING_INTERVAL_MS,
+  POLLING_TIMEOUT_MS,
+  isValidImageUrl,
   formatDateFull,
   formatDateShort,
   parsePagination,
@@ -238,5 +244,173 @@ describe("parsePagination", () => {
     const params = new URLSearchParams();
     const result = parsePagination(params, 100);
     expect(result.limit).toBe(100);
+  });
+});
+
+describe("PAGE_SIZE_OPTIONS", () => {
+  it("is an array with exactly 4 elements", () => {
+    expect(Array.isArray(PAGE_SIZE_OPTIONS)).toBe(true);
+    expect(PAGE_SIZE_OPTIONS).toHaveLength(4);
+  });
+
+  it("contains 20, 50, 100, and 300 in that order", () => {
+    expect(PAGE_SIZE_OPTIONS[0]).toBe(20);
+    expect(PAGE_SIZE_OPTIONS[1]).toBe(50);
+    expect(PAGE_SIZE_OPTIONS[2]).toBe(100);
+    expect(PAGE_SIZE_OPTIONS[3]).toBe(300);
+  });
+
+  it("contains only numeric values", () => {
+    for (const size of PAGE_SIZE_OPTIONS) {
+      expect(typeof size).toBe("number");
+    }
+  });
+});
+
+describe("POLLING_INTERVAL_MS", () => {
+  it("is a positive number", () => {
+    expect(typeof POLLING_INTERVAL_MS).toBe("number");
+    expect(POLLING_INTERVAL_MS).toBeGreaterThan(0);
+  });
+
+  it("equals 3000 (3 seconds)", () => {
+    expect(POLLING_INTERVAL_MS).toBe(3000);
+  });
+});
+
+describe("POLLING_TIMEOUT_MS", () => {
+  it("is a positive number", () => {
+    expect(typeof POLLING_TIMEOUT_MS).toBe("number");
+    expect(POLLING_TIMEOUT_MS).toBeGreaterThan(0);
+  });
+
+  it("equals 600000 (10 minutes)", () => {
+    expect(POLLING_TIMEOUT_MS).toBe(600000);
+  });
+
+  it("is greater than POLLING_INTERVAL_MS", () => {
+    expect(POLLING_TIMEOUT_MS).toBeGreaterThan(POLLING_INTERVAL_MS);
+  });
+});
+
+describe("ARTICLE_STATUS_VARIANT", () => {
+  it("maps draft to secondary", () => {
+    expect(ARTICLE_STATUS_VARIANT["draft"]).toBe("secondary");
+    expect(ARTICLE_STATUS_VARIANT["draft"]).not.toBe("default");
+  });
+
+  it("maps published to default", () => {
+    expect(ARTICLE_STATUS_VARIANT["published"]).toBe("default");
+    expect(ARTICLE_STATUS_VARIANT["published"]).not.toBe("secondary");
+  });
+
+  it("contains only valid badge variant values", () => {
+    const validVariants = ["default", "secondary", "destructive", "outline"];
+    for (const variant of Object.values(ARTICLE_STATUS_VARIANT)) {
+      expect(validVariants).toContain(variant);
+    }
+  });
+});
+
+describe("CATEGORY_DB_MAP", () => {
+  it("maps nba to NBA", () => {
+    expect(CATEGORY_DB_MAP["nba"]).toBe("NBA");
+    expect(CATEGORY_DB_MAP["nba"]).not.toBe("nba");
+  });
+
+  it("maps mlb to 棒球", () => {
+    expect(CATEGORY_DB_MAP["mlb"]).toBe("棒球");
+    expect(CATEGORY_DB_MAP["mlb"]).not.toBe("mlb");
+    expect(CATEGORY_DB_MAP["mlb"]).not.toBe("MLB");
+  });
+
+  it("maps soccer to 足球", () => {
+    expect(CATEGORY_DB_MAP["soccer"]).toBe("足球");
+    expect(CATEGORY_DB_MAP["soccer"]).not.toBe("soccer");
+  });
+
+  it("maps general to 綜合", () => {
+    expect(CATEGORY_DB_MAP["general"]).toBe("綜合");
+    expect(CATEGORY_DB_MAP["general"]).not.toBe("general");
+  });
+
+  it("has exactly 4 keys matching CATEGORY_LABELS", () => {
+    expect(Object.keys(CATEGORY_DB_MAP)).toHaveLength(4);
+    expect(Object.keys(CATEGORY_DB_MAP)).toEqual(
+      expect.arrayContaining(["nba", "mlb", "soccer", "general"])
+    );
+  });
+});
+
+describe("isValidImageUrl", () => {
+  it("returns true for a plain https content image URL", () => {
+    expect(isValidImageUrl("https://cdn.example.com/photo.jpg")).toBe(true);
+  });
+
+  it("returns true for an http content image URL", () => {
+    expect(isValidImageUrl("http://media.example.com/photo.jpg")).toBe(true);
+  });
+
+  it("returns false for an empty string", () => {
+    expect(isValidImageUrl("")).toBe(false);
+  });
+
+  it("returns false for a URL without http prefix", () => {
+    expect(isValidImageUrl("ftp://example.com/image.jpg")).toBe(false);
+    expect(isValidImageUrl("//example.com/image.jpg")).toBe(false);
+    expect(isValidImageUrl("/relative/path/image.jpg")).toBe(false);
+  });
+
+  it("returns false for a URL containing 'logo'", () => {
+    expect(isValidImageUrl("https://example.com/assets/logo.png")).toBe(false);
+    expect(isValidImageUrl("https://example.com/logo/main.png")).toBe(false);
+  });
+
+  it("returns false for a URL containing '.svg'", () => {
+    expect(isValidImageUrl("https://example.com/icon.svg")).toBe(false);
+    expect(isValidImageUrl("https://example.com/assets/arrow.SVG")).toBe(false);
+  });
+
+  it("returns false for a URL containing 'icon'", () => {
+    expect(isValidImageUrl("https://example.com/favicon-icon.png")).toBe(false);
+  });
+
+  it("returns false for a URL containing 'avatar'", () => {
+    expect(isValidImageUrl("https://example.com/users/avatar/123.png")).toBe(false);
+  });
+
+  it("returns false for a URL containing 'pixel'", () => {
+    expect(isValidImageUrl("https://tracker.example.com/pixel.gif")).toBe(false);
+  });
+
+  it("returns false for a URL containing 'tracker'", () => {
+    expect(isValidImageUrl("https://example.com/tracker/hit")).toBe(false);
+  });
+
+  it("returns false for a URL containing 'beacon'", () => {
+    expect(isValidImageUrl("https://analytics.example.com/beacon?id=1")).toBe(false);
+  });
+
+  it("returns false for a URL containing 'et_track'", () => {
+    expect(isValidImageUrl("https://example.com/et_track/img.png")).toBe(false);
+  });
+
+  it("returns false for a URL containing 'content-reactions'", () => {
+    expect(isValidImageUrl("https://example.com/content-reactions/like.png")).toBe(false);
+  });
+
+  it("returns false for a URL containing 'columnists/full'", () => {
+    expect(isValidImageUrl("https://example.com/columnists/full/author.jpg")).toBe(false);
+  });
+
+  it("pattern matching is case-insensitive", () => {
+    expect(isValidImageUrl("https://example.com/LOGO.png")).toBe(false);
+    expect(isValidImageUrl("https://example.com/Avatar/user.jpg")).toBe(false);
+    expect(isValidImageUrl("https://example.com/PIXEL.gif")).toBe(false);
+  });
+
+  it("returns true for URLs that only partially resemble excluded patterns in unrelated segments", () => {
+    // 'ecology' contains no excluded substrings, 'photography' does not contain 'logo' exactly
+    expect(isValidImageUrl("https://example.com/category/sports-photo.jpg")).toBe(true);
   });
 });
