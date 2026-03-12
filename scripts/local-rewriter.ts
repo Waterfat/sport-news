@@ -450,7 +450,14 @@ async function produceFromPlans(planIds: string[]) {
         continue;
       }
 
-      console.log(`    完成: "${result.title}"`);
+      // 標記原始素材為已處理
+      const usedIds = articles.map((a) => a.id);
+      await supabase
+        .from("raw_articles")
+        .update({ is_processed: true })
+        .in("id", usedIds);
+
+      console.log(`    完成: "${result.title}" (標記 ${usedIds.length} 篇素材為已處理)`);
       success++;
       producedPlanIds.push(plan.id);
     } catch (err) {
@@ -589,6 +596,11 @@ async function main() {
             continue;
           }
 
+          await supabase
+            .from("raw_articles")
+            .update({ is_processed: true })
+            .in("id", group.map((a) => a.id));
+
           console.log(`    完成: "${result.title}"`);
           success++;
           count++;
@@ -645,6 +657,11 @@ async function main() {
           failed++;
           continue;
         }
+
+        await supabase
+          .from("raw_articles")
+          .update({ is_processed: true })
+          .in("id", group.map((a) => a.id));
 
         console.log(`    完成: "${result.title}"`);
         success++;
