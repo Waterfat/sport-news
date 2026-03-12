@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/crawl",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/rewrite",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

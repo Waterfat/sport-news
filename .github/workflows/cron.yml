@@ -1,0 +1,46 @@
+name: Scheduled Crawl & Rewrite
+
+on:
+  schedule:
+    # 爬蟲：每 2 小時執行
+    - cron: '0 */2 * * *'
+  workflow_dispatch: # 手動觸發
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger crawl
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://sportnews-ashen.vercel.app/api/cron/crawl")
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+          echo "HTTP $http_code"
+          echo "$body"
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Crawl failed with HTTP $http_code"
+            exit 1
+          fi
+
+  rewrite:
+    runs-on: ubuntu-latest
+    needs: crawl
+    steps:
+      - name: Wait for articles to be ready
+        run: sleep 30
+
+      - name: Trigger rewrite
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://sportnews-ashen.vercel.app/api/cron/rewrite")
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+          echo "HTTP $http_code"
+          echo "$body"
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Rewrite failed with HTTP $http_code"
+            exit 1
+          fi
