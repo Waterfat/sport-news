@@ -103,6 +103,28 @@ Scenario 測試（`e2e/scenarios/`）必須涵蓋以下三層，缺一不可：
 }
 ```
 
+## 常駐服務管理
+
+### rewrite-listener（Mac Mini 本機）
+
+- 腳本位置：`scripts/rewrite-listener.ts`
+- 執行方式：`nohup npx tsx scripts/rewrite-listener.ts > /tmp/rewrite-listener.log 2>&1 &`
+- 功能：透過 Supabase Realtime 監聯 `rewrite_tasks` 表，收到 pending 任務後執行規劃（plan-generator）或產出（local-rewriter）
+- **修改 `scripts/` 下任何檔案後，必須重啟 listener**：
+  ```bash
+  # 找到並終止舊進程
+  pkill -f "rewrite-listener"
+  # 啟動新進程
+  nohup npx tsx scripts/rewrite-listener.ts > /tmp/rewrite-listener.log 2>&1 &
+  ```
+- 檢查是否存活：`ps aux | grep rewrite-listener | grep -v grep`
+- 檢查日誌：`cat /tmp/rewrite-listener.log`
+
+### 跨服務介面一致性
+
+- `scripts/` 下的 listener 與 `src/app/api/` 下的 API route 共用 DB schema，修改其中一邊的欄位名稱時，必須同步檢查另一邊
+- 特別注意 `rewrite_tasks` 表：API 寫入的欄位（如 `metadata`）必須與 listener 讀取的欄位一致
+
 ## 技術棧
 
 - Next.js App Router + TypeScript
