@@ -118,7 +118,14 @@ export function PlansTable({
                       onCheckedChange={() => onToggleSelect(plan.id)}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">{plan.title}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-start gap-2">
+                      <span>{plan.title}</span>
+                      <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-gray-100 text-xs text-gray-500 flex-shrink-0">
+                        {(plan.raw_article_ids || []).length}
+                      </span>
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden sm:table-cell">{plan.writer_personas?.name || "-"}</TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <Badge variant={plan.plan_type === "official" ? "default" : "outline"}>
