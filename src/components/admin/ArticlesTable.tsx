@@ -26,6 +26,7 @@ export interface Article {
   published_at: string | null;
   scheduled_at: string | null;
   images: string[];
+  raw_article_ids: string[] | null;
   writer_personas: {
     name: string;
   } | null;
@@ -184,24 +185,31 @@ export function ArticlesTable({
                     />
                   </TableCell>
                   <TableCell className="font-medium overflow-hidden">
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-center gap-3">
                       {article.images?.[0] && (
                         <Image
                           src={article.images[0]}
                           alt=""
                           width={48}
                           height={48}
-                          className="w-12 h-12 object-cover rounded flex-shrink-0 mt-0.5"
+                          className="w-12 h-12 object-cover rounded flex-shrink-0"
                           unoptimized
                         />
                       )}
-                      <div className="min-w-0 overflow-hidden">
-                        <Link
-                          href={`/admin/articles/${article.id}`}
-                          className="hover:underline line-clamp-1"
-                        >
-                          {article.title}
-                        </Link>
+                      <div className="min-w-0 overflow-hidden flex-1">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/articles/${article.id}`}
+                            className="hover:underline line-clamp-1"
+                          >
+                            {article.title}
+                          </Link>
+                          {(article.raw_article_ids?.length ?? 0) > 0 && (
+                            <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-gray-100 text-xs text-gray-500 flex-shrink-0">
+                              {article.raw_article_ids!.length}
+                            </span>
+                          )}
+                        </div>
                         {article.content && (
                           <p className="text-xs text-gray-400 mt-1 line-clamp-1">
                             {article.content.substring(0, 100)}
@@ -278,12 +286,19 @@ export function ArticlesTable({
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <Link
-                      href={`/admin/articles/${article.id}`}
-                      className="font-medium text-sm hover:underline line-clamp-2 flex-1"
-                    >
-                      {article.title}
-                    </Link>
+                    <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                      <Link
+                        href={`/admin/articles/${article.id}`}
+                        className="font-medium text-sm hover:underline line-clamp-2"
+                      >
+                        {article.title}
+                      </Link>
+                      {(article.raw_article_ids?.length ?? 0) > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-gray-100 text-xs text-gray-500 flex-shrink-0 mt-0.5">
+                          {article.raw_article_ids!.length}
+                        </span>
+                      )}
+                    </div>
                     <Badge variant={statusVariant} className="flex-shrink-0">
                       {statusLabel}
                     </Badge>
