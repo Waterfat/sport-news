@@ -29,10 +29,15 @@ export async function publishToTelegram(
       ? `${baseUrl}/news/${article.slug}`
       : "";
 
-    // 完整內文，不截斷
-    let text = `<b>${escapeHtml(article.title)}</b>\n\n${escapeHtml(article.content)}`;
+    // 截取前 300 字，搭配「閱讀全文」導流到網站
+    const maxLength = 300;
+    const content = article.content.length > maxLength
+      ? article.content.substring(0, maxLength) + "..."
+      : article.content;
+
+    let text = `<b>${escapeHtml(article.title)}</b>\n\n${escapeHtml(content)}`;
     if (link) {
-      text += `\n\n📖 <a href="${link}">在網站上閱讀</a>`;
+      text += `\n\n📖 <a href="${link}">閱讀全文</a>`;
     }
     text += `\n\n——————————————\n📢 <a href="${TELEGRAM_CHANNEL_URL}">跟著小豪哥一起看球</a>｜即時體育新聞直送手機`;
 
