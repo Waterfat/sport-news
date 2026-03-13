@@ -19,14 +19,14 @@ export default function PublicLayout({
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             <Link href="/" className="flex items-center">
               <Image
                 src="/logo.png"
                 alt="小豪哥體育資訊網"
-                width={200}
-                height={112}
-                className="h-14 w-auto"
+                width={240}
+                height={134}
+                className="h-12 sm:h-16 w-auto"
                 priority
               />
             </Link>
