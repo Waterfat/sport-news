@@ -23,16 +23,16 @@ export async function generateMetadata({
   const writer = await getWriter(id);
 
   if (!writer) {
-    return { title: "作者未找到 - SportNews" };
+    return { title: "作者未找到 - 小豪哥體育資訊網" };
   }
 
   return {
-    title: `${writer.name} - SportNews 作者`,
+    title: `${writer.name} - 小豪哥體育資訊網 作者`,
     description: writer.description || `閱讀 ${writer.name} 的體育報導`,
     openGraph: {
-      title: `${writer.name} - SportNews 作者`,
+      title: `${writer.name} - 小豪哥體育資訊網 作者`,
       description: writer.description || `閱讀 ${writer.name} 的體育報導`,
-      siteName: "SportNews",
+      siteName: "小豪哥體育資訊網",
     },
   };
 }

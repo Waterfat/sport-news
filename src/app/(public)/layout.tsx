@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const navLinks = [
@@ -19,11 +20,15 @@ export default function PublicLayout({
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
-            <Link
-              href="/"
-              className="text-2xl font-extrabold tracking-tight text-gray-900"
-            >
-              Sport<span className="text-blue-600">News</span>
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/logo.png"
+                alt="小豪哥體育資訊網"
+                width={160}
+                height={48}
+                className="h-10 w-auto"
+                priority
+              />
             </Link>
             <nav className="hidden sm:flex items-center gap-1">
               {navLinks.map((link) => (
@@ -94,7 +99,7 @@ export default function PublicLayout({
           </div>
           <div className="border-t border-gray-200 pt-4">
             <div className="text-sm text-gray-400 text-center">
-              &copy; {new Date().getFullYear()} SportNews. All rights reserved.
+              &copy; {new Date().getFullYear()} 小豪哥體育資訊網. All rights reserved.
             </div>
           </div>
         </div>

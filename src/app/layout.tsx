@@ -14,14 +14,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "SportNews - 體育新聞",
-    template: "%s | SportNews",
+    default: "小豪哥體育資訊網 - 體育新聞",
+    template: "%s | 小豪哥體育資訊網",
   },
   description: "最新體育新聞、NBA、MLB、足球賽事報導與深度分析",
   openGraph: {
     type: "website",
     locale: "zh_TW",
-    siteName: "SportNews",
+    siteName: "小豪哥體育資訊網",
   },
 };
 

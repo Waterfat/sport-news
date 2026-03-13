@@ -31,16 +31,16 @@ export async function generateMetadata({
   const displayLabel = CATEGORY_LABELS[slug];
 
   if (!displayLabel) {
-    return { title: "分類未找到 - SportNews" };
+    return { title: "分類未找到 - 小豪哥體育資訊網" };
   }
 
   return {
-    title: `${displayLabel}新聞 - SportNews`,
+    title: `${displayLabel}新聞 - 小豪哥體育資訊網`,
     description: `閱讀最新的${displayLabel}體育新聞報導`,
     openGraph: {
-      title: `${displayLabel}新聞 - SportNews`,
+      title: `${displayLabel}新聞 - 小豪哥體育資訊網`,
       description: `閱讀最新的${displayLabel}體育新聞報導`,
-      siteName: "SportNews",
+      siteName: "小豪哥體育資訊網",
     },
   };
 }
@@ -90,7 +90,7 @@ export default async function CategoryPage({
           <div className="text-6xl mb-6">🏟️</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">敬請期待</h2>
           <p className="text-gray-500 max-w-md">
-            {displayLabel}新聞即將上線，請持續關注 SportNews！
+            {displayLabel}新聞即將上線，請持續關注 小豪哥體育資訊網！
           </p>
           <Link
             href="/"

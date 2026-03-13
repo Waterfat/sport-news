@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,7 +41,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">SportNews 後台登入</CardTitle>
+          <Image
+            src="/logo.png"
+            alt="小豪哥體育資訊網"
+            width={180}
+            height={54}
+            className="h-12 w-auto mx-auto mb-2"
+            priority
+          />
+          <CardTitle className="text-xl">後台登入</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

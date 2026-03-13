@@ -49,7 +49,7 @@ export async function generateMetadata({
   const article = await getArticle(slug);
 
   if (!article) {
-    return { title: "文章未找到 - SportNews" };
+    return { title: "文章未找到 - 小豪哥體育資訊網" };
   }
 
   const description = getContentExcerpt(article.content);
@@ -57,7 +57,7 @@ export async function generateMetadata({
   const articleUrl = `${SITE_URL}/news/${article.slug || slug}`;
 
   return {
-    title: `${article.title} - SportNews`,
+    title: `${article.title} - 小豪哥體育資訊網`,
     description,
     alternates: {
       canonical: articleUrl,
@@ -71,7 +71,7 @@ export async function generateMetadata({
       authors: article.writer_personas?.name
         ? [article.writer_personas.name]
         : undefined,
-      siteName: "SportNews",
+      siteName: "小豪哥體育資訊網",
       locale: "zh_TW",
     },
     twitter: {
@@ -133,7 +133,7 @@ export default async function ArticlePage({
     author: writer ? { "@type": "Person", name: writer.name } : undefined,
     publisher: {
       "@type": "Organization",
-      name: "SportNews",
+      name: "小豪哥體育資訊網",
     },
     mainEntityOfPage: {
       "@type": "WebPage",

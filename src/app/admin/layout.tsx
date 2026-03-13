@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -29,8 +30,15 @@ export default function AdminLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-8">
-              <Link href="/admin" className="font-bold text-lg">
-                SportNews 後台
+              <Link href="/admin" className="flex items-center">
+                <Image
+                  src="/logo.png"
+                  alt="小豪哥體育資訊網 後台"
+                  width={120}
+                  height={36}
+                  className="h-8 w-auto"
+                  priority
+                />
               </Link>
               <nav className="flex gap-1">
                 {navItems.map((item) => (
