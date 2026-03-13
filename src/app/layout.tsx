@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     locale: "zh_TW",
     siteName: "小豪哥體育資訊網",
   },
+  viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
 };
 
 export default function RootLayout({
