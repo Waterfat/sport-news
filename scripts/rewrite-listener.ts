@@ -32,14 +32,11 @@ const PLAN_GENERATOR_SCRIPT = resolve(__dirname, "plan-generator.ts");
 let isRunning = false;
 
 // 解析任務的模式：plan（產生規劃）或 produce（根據規劃產出文章）
-function parseTaskMode(errorMessage: string | null): { mode: string; planIds?: string[] } {
-  if (!errorMessage) return { mode: "plan" };
-  try {
-    const parsed = JSON.parse(errorMessage);
-    if (parsed.mode === "produce" && Array.isArray(parsed.plan_ids)) {
-      return { mode: "produce", planIds: parsed.plan_ids };
-    }
-  } catch {}
+function parseTaskMode(metadata: Record<string, unknown> | null): { mode: string; planIds?: string[] } {
+  if (!metadata) return { mode: "plan" };
+  if (metadata.mode === "produce" && Array.isArray(metadata.plan_ids)) {
+    return { mode: "produce", planIds: metadata.plan_ids as string[] };
+  }
   return { mode: "plan" };
 }
 
@@ -54,20 +51,19 @@ async function executeTask(taskId: string) {
   // 讀取任務資料以判斷模式
   const { data: task } = await supabase
     .from("rewrite_tasks")
-    .select("error_message")
+    .select("metadata")
     .eq("id", taskId)
     .single();
 
-  const { mode, planIds } = parseTaskMode(task?.error_message);
+  const { mode, planIds } = parseTaskMode(task?.metadata);
   console.log(`[${ts()}] 開始執行任務: ${taskId} (模式: ${mode})`);
 
-  // 更新狀態為 running，清除 error_message（之前用來存 metadata）
+  // 更新狀態為 running
   await supabase
     .from("rewrite_tasks")
     .update({
       status: "running",
       started_at: new Date().toISOString(),
-      error_message: null,
     })
     .eq("id", taskId);
 
