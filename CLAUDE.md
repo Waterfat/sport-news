@@ -33,6 +33,13 @@
 - 必須使用 `IF NOT EXISTS` / `IF EXISTS` 確保 idempotent（可重複執行）
 - 新增/修改 table、column、index、constraint 都算 schema 變更
 - Migration 建立後必須 commit 進 git，確保 schema 與程式碼版本一致
+- 套用 migration 方式：透過 Supabase Management API（`SUPABASE_ACCESS_TOKEN` 存於 `.env.local`）
+  ```
+  curl -X POST "https://api.supabase.com/v1/projects/{ref}/database/query" \
+    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"query": "<SQL>"}'
+  ```
 - 套用 migration 後，需驗證應用層正常運作（跑 smoke test + E2E）
 
 ## 技術棧
