@@ -64,6 +64,45 @@ Scenario 測試（`e2e/scenarios/`）必須涵蓋以下三層，缺一不可：
   ```
 - 套用 migration 後，需驗證應用層正常運作（跑 smoke test + E2E）
 
+## iOS / In-App Browser 相容性
+
+### 滾動穿透問題（Telegram、LINE 等 in-app browser）
+
+**症狀**：iOS in-app browser 中滑動頁面時，文章內容會從瀏覽器網址列上方的透明狀態列區域穿透出來。
+
+**根因**：in-app browser 的 WebView 會偷看 document 的滾動內容並顯示在透明的狀態列區域。`theme-color`、`safe-area-inset`、CSS 遮罩等方式對 Telegram WebView 均無效。
+
+**解法 — App Shell 模式**：讓 document 本身不滾動，改用內部容器滾動：
+```html
+<div class="h-[100dvh] flex flex-col overflow-hidden">
+  <header class="flex-shrink-0">...</header>
+  <div class="flex-1 overflow-y-auto overscroll-contain">
+    <main>...</main>
+    <footer>...</footer>
+  </div>
+</div>
+```
+- 外層 `overflow-hidden` → document 不滾動 → WebView 無內容可穿透
+- 內層 `overflow-y-auto` → 只有內部容器滾動
+- `overscroll-contain` → 防止滾動穿透到外層
+
+**注意**：此模式下不能使用 `sticky` header，header 直接是 flex 容器的固定區塊。
+
+### 手機版水平導覽列 Scrollbar
+
+**症狀**：手機版導覽列水平滾動時 scrollbar 壓在文字上。
+
+**解法**：使用 `scrollbar-hide` utility class 隱藏 scrollbar，加 `pb-1` 留出底部間距：
+```css
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+```
+
 ## 技術棧
 
 - Next.js App Router + TypeScript
