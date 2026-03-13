@@ -16,7 +16,7 @@ const config = {
 };
 
 describe("publishToTelegram - text only", () => {
-  it("sends full content without truncation", async () => {
+  it("truncates content to 300 chars with ellipsis for long content", async () => {
     const longContent = "A".repeat(1000);
     mockFetch.mockResolvedValueOnce({
       json: async () => ({ ok: true, result: { message_id: 123 } }),
@@ -28,7 +28,24 @@ describe("publishToTelegram - text only", () => {
     );
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.text).toContain("A".repeat(1000));
+    expect(body.text).toContain("A".repeat(300));
+    expect(body.text).toContain("...");
+    expect(body.text).not.toContain("A".repeat(301));
+  });
+
+  it("sends short content without truncation", async () => {
+    const shortContent = "A".repeat(100);
+    mockFetch.mockResolvedValueOnce({
+      json: async () => ({ ok: true, result: { message_id: 123 } }),
+    });
+
+    await publishToTelegram(
+      { title: "Test", content: shortContent, slug: "test-slug" },
+      config
+    );
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.text).toContain("A".repeat(100));
     expect(body.text).not.toContain("...");
   });
 
@@ -46,7 +63,7 @@ describe("publishToTelegram - text only", () => {
     expect(body.text).toContain("https://sportnews.example.com/news/my-article");
   });
 
-  it("includes 在網站上閱讀 link text", async () => {
+  it("includes 閱讀全文 link text", async () => {
     mockFetch.mockResolvedValueOnce({
       json: async () => ({ ok: true, result: { message_id: 123 } }),
     });
@@ -57,7 +74,7 @@ describe("publishToTelegram - text only", () => {
     );
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.text).toContain("在網站上閱讀");
+    expect(body.text).toContain("閱讀全文");
   });
 
   it("sends HTML format with bold title", async () => {
@@ -146,7 +163,7 @@ describe("publishToTelegram - text only", () => {
     );
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.text).not.toContain("在網站上閱讀");
+    expect(body.text).not.toContain("閱讀全文");
   });
 
   it("uses SITE_URL fallback when no site_url configured", async () => {
@@ -160,7 +177,7 @@ describe("publishToTelegram - text only", () => {
     );
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.text).toContain("在網站上閱讀");
+    expect(body.text).toContain("閱讀全文");
     expect(body.text).toContain("/news/slug");
   });
 
@@ -240,7 +257,10 @@ describe("publishToTelegram - with images", () => {
   });
 
   it("sends photo without caption then text separately when caption > 1024 chars", async () => {
-    const longContent = "B".repeat(1100);
+    // Use a very long title to push total text over 1024 chars
+    // (content gets truncated to 300 chars, but title is not truncated)
+    const longTitle = "X".repeat(800);
+    const longContent = "B".repeat(400);
 
     // First call: sendPhoto (no caption)
     mockFetch.mockResolvedValueOnce({
@@ -252,7 +272,7 @@ describe("publishToTelegram - with images", () => {
     });
 
     const result = await publishToTelegram(
-      { title: "Test", content: longContent, images: ["https://storage.com/big.jpg"] },
+      { title: longTitle, content: longContent, images: ["https://storage.com/big.jpg"] },
       config
     );
 
@@ -268,7 +288,7 @@ describe("publishToTelegram - with images", () => {
     // Second call: sendMessage with full text
     expect(mockFetch.mock.calls[1][0]).toContain("/sendMessage");
     const textBody = JSON.parse(mockFetch.mock.calls[1][1].body);
-    expect(textBody.text).toContain("B".repeat(1100));
+    expect(textBody.text).toContain("X".repeat(800));
   });
 
   it("falls back to sendMessage when sendPhoto fails", async () => {

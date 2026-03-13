@@ -194,7 +194,7 @@ describe("useRewritePolling - triggerPlan", () => {
     });
   });
 
-  it("posts to /api/rewrite/plan with force=false by default", async () => {
+  it("posts to /api/rewrite/plan with force=true always", async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse() });
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ started: true }) });
     // Polling fetch — keep pending so interval doesn't spin
@@ -214,10 +214,10 @@ describe("useRewritePolling - triggerPlan", () => {
     expect(planPostCall).toBeDefined();
 
     const body = JSON.parse(planPostCall![1].body);
-    expect(body.force).toBe(false);
+    expect(body.force).toBe(true);
   });
 
-  it("posts to /api/rewrite/plan with force=true when force param is passed", async () => {
+  it("calls clearPlans callback when provided", async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse() });
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ started: true }) });
     mockFetch.mockReturnValue(new Promise(() => {}));
@@ -226,43 +226,19 @@ describe("useRewritePolling - triggerPlan", () => {
 
     await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
+    const clearPlans = vi.fn();
     await act(async () => {
-      await result.current.triggerPlan(true);
+      await result.current.triggerPlan(clearPlans);
     });
 
-    const planPostCall = mockFetch.mock.calls.find(
-      (c) => c[0] === "/api/rewrite/plan" && c[1]?.method === "POST"
-    );
-    const body = JSON.parse(planPostCall![1].body);
-    expect(body.force).toBe(true);
+    expect(clearPlans).toHaveBeenCalledOnce();
   });
 
-  it("resets runningMode to null when plan POST returns non-ok without hasExisting", async () => {
+  it("resets runningMode to null when plan POST returns non-ok", async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse() });
     mockFetch.mockResolvedValueOnce({
       ok: false,
       json: async () => ({ error: "Something went wrong" }),
-    });
-
-    const { result } = renderHook(() => useRewritePolling());
-
-    await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
-
-    await act(async () => {
-      await result.current.triggerPlan();
-    });
-
-    expect(result.current.runningMode).toBeNull();
-    expect(result.current.planTriggering).toBe(false);
-  });
-
-  it("resets runningMode when plan POST has hasExisting flag and user cancels confirm", async () => {
-    vi.mocked(confirm).mockReturnValueOnce(false);
-
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse() });
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ hasExisting: true }),
     });
 
     const { result } = renderHook(() => useRewritePolling());
