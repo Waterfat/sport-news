@@ -153,7 +153,7 @@ export function ArticlesTable({
     <>
       {/* Desktop: Table layout */}
       <div className="border rounded-lg overflow-x-auto hidden sm:block">
-        <Table>
+        <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow>
               <TableHead className="w-10">
@@ -163,10 +163,10 @@ export function ArticlesTable({
                 />
               </TableHead>
               <TableHead>標題</TableHead>
-              <TableHead className="w-[100px] hidden md:table-cell">寫手</TableHead>
-              <TableHead className="w-[80px]">狀態</TableHead>
-              <TableHead className="w-[160px] hidden lg:table-cell">建立時間</TableHead>
-              <TableHead className="w-[140px] text-right">操作</TableHead>
+              <TableHead className="w-[80px] hidden md:table-cell">寫手</TableHead>
+              <TableHead className="w-[70px]">狀態</TableHead>
+              <TableHead className="w-[140px] hidden lg:table-cell">建立時間</TableHead>
+              <TableHead className="w-[120px] text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
