@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { POLLING_INTERVAL_MS, POLLING_TIMEOUT_MS } from "@/lib/constants";
 import type { RewriteStatus } from "@/types/rewrite";
 
@@ -15,6 +15,9 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
   const [runningMode, setRunningMode] = useState<string | null>(null);
   const [planTriggering, setPlanTriggering] = useState(false);
   const [triggering, setTriggering] = useState(false);
+  // Ref to prevent the page-load effect from starting a duplicate polling loop
+  // when triggerProduce/triggerPlan has already set runningMode (state update is async)
+  const isPollingRef = useRef(false);
 
   const fetchRewriteStatus = useCallback(async () => {
     try {
@@ -34,6 +37,7 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
 
   const pollRewriteStatus = useCallback(
     (callbacks?: { onComplete?: () => void }) => {
+      isPollingRef.current = true;
       const interval = setInterval(async () => {
         try {
           const res = await fetch("/api/rewrite");
@@ -43,6 +47,7 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
             if (!data.currentTask) {
               clearInterval(interval);
               clearTimeout(timeout);
+              isPollingRef.current = false;
               setRunningMode(null);
               callbacks?.onComplete?.();
             }
@@ -52,14 +57,20 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
         }
       }, POLLING_INTERVAL_MS);
 
-      const timeout = setTimeout(() => clearInterval(interval), POLLING_TIMEOUT_MS);
+      const timeout = setTimeout(() => {
+        clearInterval(interval);
+        isPollingRef.current = false;
+      }, POLLING_TIMEOUT_MS);
     },
     []
   );
 
-  // If page loads with an active task, start polling
+  // If page loads with an active task, start polling.
+  // Guard with isPollingRef to prevent a duplicate loop when triggerProduce/triggerPlan
+  // has already called pollRewriteStatus synchronously but setRunningMode(state) hasn't
+  // re-rendered yet (stale closure race condition).
   useEffect(() => {
-    if (rewriteStatus?.currentTask && !runningMode) {
+    if (rewriteStatus?.currentTask && !runningMode && !isPollingRef.current) {
       setRunningMode("rewrite");
       pollRewriteStatus({
         onComplete: options.onPollComplete,
@@ -70,6 +81,7 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
 
   const triggerPlan = useCallback(
     async (force = false, clearPlans?: () => void) => {
+      isPollingRef.current = true;
       setPlanTriggering(true);
       setRunningMode("plan");
       if (force) {
@@ -84,6 +96,7 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
         const data = await res.json();
         if (!res.ok) {
           if (data.hasExisting) {
+            isPollingRef.current = false;
             setRunningMode(null);
             setPlanTriggering(false);
             if (confirm("已有規劃存在，是否清除並重新產生？")) {
@@ -92,6 +105,7 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
             return;
           }
           alert(data.error || "規劃產生失敗");
+          isPollingRef.current = false;
           setRunningMode(null);
           return;
         }
@@ -100,6 +114,7 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
         });
       } catch {
         alert("規劃失敗，請確認監聽器是否正在運行");
+        isPollingRef.current = false;
         setRunningMode(null);
       } finally {
         setPlanTriggering(false);
@@ -110,6 +125,7 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
 
   const triggerProduce = useCallback(
     (afterTrigger?: () => void) => {
+      isPollingRef.current = true;
       setRunningMode("produce");
       afterTrigger?.();
       pollRewriteStatus({

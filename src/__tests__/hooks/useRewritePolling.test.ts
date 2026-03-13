@@ -353,6 +353,153 @@ describe("useRewritePolling - setRunningMode", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Race condition: triggerProduce then mount-effect must NOT start duplicate polling
+// ---------------------------------------------------------------------------
+
+describe("useRewritePolling - produce does not trigger duplicate rewrite polling", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("does NOT overwrite runningMode to rewrite when triggerProduce already set it to produce", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    // Mount: no active task
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse(null) });
+
+    const onPollComplete = vi.fn();
+    const onProducePollComplete = vi.fn();
+    const { result } = renderHook(() =>
+      useRewritePolling({ onPollComplete, onProducePollComplete })
+    );
+
+    // Wait for initial fetch
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(result.current.runningMode).toBeNull();
+
+    // Simulate: triggerProduce sets runningMode to "produce" and starts polling
+    // The polling fetch returns an active task (which the page-load useEffect might try to re-poll)
+    const activeTask = { status: "running", created_at: "2024-01-01T00:00:00Z" };
+    mockFetch.mockResolvedValue({ ok: true, json: async () => makeStatusResponse(activeTask) });
+
+    act(() => {
+      result.current.triggerProduce();
+    });
+
+    expect(result.current.runningMode).toBe("produce");
+
+    // Let the first polling tick fire — this updates rewriteStatus with currentTask
+    // which triggers the page-load useEffect. The bug was: useEffect saw currentTask + runningMode==null
+    // (stale state) and started a second polling loop as "rewrite"
+    await act(async () => {
+      vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // runningMode must STILL be "produce", not "rewrite"
+    expect(result.current.runningMode).toBe("produce");
+    expect(result.current.runningMode).not.toBe("rewrite");
+
+    // onPollComplete (rewrite callback) should NOT have been called
+    expect(onPollComplete).not.toHaveBeenCalled();
+  });
+
+  it("calls onProducePollComplete (not onPollComplete) when produce finishes", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    // Mount: no active task
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse(null) });
+
+    const onPollComplete = vi.fn();
+    const onProducePollComplete = vi.fn();
+    const { result } = renderHook(() =>
+      useRewritePolling({ onPollComplete, onProducePollComplete })
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // triggerProduce with active task on first poll, then done on second
+    const activeTask = { status: "running", created_at: "2024-01-01T00:00:00Z" };
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse(activeTask) })
+      .mockResolvedValue({ ok: true, json: async () => makeStatusResponse(null) });
+
+    act(() => {
+      result.current.triggerProduce();
+    });
+
+    // First tick: still running
+    await act(async () => {
+      vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // Second tick: task done
+    await act(async () => {
+      vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    await waitFor(() => {
+      expect(result.current.runningMode).toBeNull();
+    });
+
+    // The produce callback should be called, NOT the rewrite callback
+    expect(onProducePollComplete).toHaveBeenCalled();
+    expect(onPollComplete).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Race condition: triggerPlan then mount-effect must NOT start duplicate polling
+// ---------------------------------------------------------------------------
+
+describe("useRewritePolling - plan does not trigger duplicate rewrite polling", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("does NOT overwrite runningMode to rewrite when triggerPlan already set it to plan", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    // Mount: no active task
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse(null) });
+
+    const { result } = renderHook(() => useRewritePolling());
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // triggerPlan: POST succeeds, polling starts
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ started: true }) });
+    const activeTask = { status: "running", created_at: "2024-01-01T00:00:00Z" };
+    mockFetch.mockResolvedValue({ ok: true, json: async () => makeStatusResponse(activeTask) });
+
+    await act(async () => {
+      await result.current.triggerPlan();
+    });
+
+    expect(result.current.runningMode).toBe("plan");
+
+    // Let polling tick fire
+    await act(async () => {
+      vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    // Must still be "plan", not "rewrite"
+    expect(result.current.runningMode).toBe("plan");
+    expect(result.current.runningMode).not.toBe("rewrite");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Interval cleanup on unmount (uses fake timers, isolated)
 // ---------------------------------------------------------------------------
 
