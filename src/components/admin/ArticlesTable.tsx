@@ -266,6 +266,16 @@ export function ArticlesTable({
                   onCheckedChange={() => onToggleSelect(article.id)}
                   className="mt-1 flex-shrink-0"
                 />
+                {article.images?.[0] && (
+                  <Image
+                    src={article.images[0]}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 object-cover rounded flex-shrink-0"
+                    unoptimized
+                  />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <Link
