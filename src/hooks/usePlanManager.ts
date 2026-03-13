@@ -10,6 +10,7 @@ interface UsePlanManagerOptions {
 export function usePlanManager(options: UsePlanManagerOptions = {}) {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [rawArticleMap, setRawArticleMap] = useState<Record<string, RawArticleInfo>>({});
+  const [earliestCrawledAt, setEarliestCrawledAt] = useState<string | null>(null);
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
   const [planLoading, setPlanLoading] = useState(false);
 
@@ -20,6 +21,7 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
         const data = await res.json();
         setPlans(data.plans || []);
         setRawArticleMap(data.rawArticleMap || {});
+        setEarliestCrawledAt(data.earliestCrawledAt || null);
       }
     } catch (err) {
       console.error("Failed to fetch plans:", err);
@@ -111,6 +113,7 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
   return {
     plans,
     rawArticleMap,
+    earliestCrawledAt,
     selectedPlanIds,
     planLoading,
     fetchPlans,

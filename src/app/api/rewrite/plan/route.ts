@@ -22,20 +22,30 @@ export async function GET() {
     }
   }
 
-  let rawArticleMap: Record<string, { title: string; source: string }> = {};
+  let rawArticleMap: Record<string, { title: string; source: string; url: string; crawled_at: string }> = {};
+  let earliestCrawledAt: string | null = null;
+
   if (allRawIds.size > 0) {
     const { data: rawArticles } = await supabase
       .from("raw_articles")
-      .select("id, title, source, url")
+      .select("id, title, source, url, crawled_at")
       .in("id", Array.from(allRawIds));
     if (rawArticles) {
       rawArticleMap = Object.fromEntries(
-        rawArticles.map((a) => [a.id, { title: a.title, source: a.source, url: a.url }])
+        rawArticles.map((a) => [a.id, { title: a.title, source: a.source, url: a.url, crawled_at: a.crawled_at }])
       );
+      // Find earliest crawled_at across all referenced raw articles
+      const timestamps = rawArticles
+        .map((a) => a.crawled_at)
+        .filter(Boolean)
+        .sort();
+      if (timestamps.length > 0) {
+        earliestCrawledAt = timestamps[0];
+      }
     }
   }
 
-  return NextResponse.json({ plans: data || [], rawArticleMap });
+  return NextResponse.json({ plans: data || [], rawArticleMap, earliestCrawledAt });
 }
 
 // POST: 產生規劃（呼叫 rewrite_tasks 觸發 listener）

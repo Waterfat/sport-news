@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,12 +26,14 @@ export interface RawArticleInfo {
   title: string;
   source: string;
   url: string;
+  crawled_at?: string;
 }
 
 interface PlansTableProps {
   plans: PlanItem[];
   selectedPlanIds: Set<string>;
   rawArticleMap: Record<string, RawArticleInfo>;
+  earliestCrawledAt: string | null;
   planLoading: boolean;
   rewriteCurrentTask: boolean;
   onToggleSelect: (id: string) => void;
@@ -44,7 +45,7 @@ interface PlansTableProps {
 export function PlansTable({
   plans,
   selectedPlanIds,
-  rawArticleMap,
+  earliestCrawledAt,
   planLoading,
   rewriteCurrentTask,
   onToggleSelect,
@@ -60,11 +61,16 @@ export function PlansTable({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold">規劃列表 ({plans.length} 項)</h2>
-            {plans.length > 0 && (
-              <p className="text-xs text-gray-400 mt-0.5">
-                最後規劃時間：{new Date(plans[plans.length - 1].created_at).toLocaleString("zh-TW")}
-              </p>
-            )}
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-400 mt-0.5">
+              <span>
+                規劃時間：{new Date(plans[plans.length - 1].created_at).toLocaleString("zh-TW")}
+              </span>
+              {earliestCrawledAt && (
+                <span>
+                  素材最早抓取：{new Date(earliestCrawledAt).toLocaleString("zh-TW")}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {selectedPlanIds.size > 0 && (
@@ -101,9 +107,6 @@ export function PlansTable({
                   />
                 </TableHead>
                 <TableHead>預計標題</TableHead>
-                <TableHead className="hidden sm:table-cell">寫手</TableHead>
-                <TableHead className="hidden sm:table-cell">類型</TableHead>
-                <TableHead className="hidden md:table-cell">引用原文</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -124,37 +127,6 @@ export function PlansTable({
                       <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-gray-100 text-xs text-gray-500 flex-shrink-0">
                         {(plan.raw_article_ids || []).length}
                       </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">{plan.writer_personas?.name || "-"}</TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <Badge variant={plan.plan_type === "official" ? "default" : "outline"}>
-                      {plan.plan_type === "official" ? "官方戰報" : "專欄"}
-                      {plan.league ? ` · ${plan.league}` : ""}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="space-y-1 max-w-xs">
-                      {(plan.raw_article_ids || []).slice(0, 3).map((rawId) => {
-                        const info = rawArticleMap[rawId];
-                        return info ? (
-                          <a
-                            key={rawId}
-                            href={info.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block text-xs text-blue-600 hover:text-blue-800 hover:underline truncate"
-                            title={info.title}
-                          >
-                            <span className="text-gray-400">[{info.source}]</span> {info.title}
-                          </a>
-                        ) : null;
-                      })}
-                      {(plan.raw_article_ids || []).length > 3 && (
-                        <div className="text-xs text-gray-400">
-                          ...還有 {plan.raw_article_ids.length - 3} 篇
-                        </div>
-                      )}
                     </div>
                   </TableCell>
                 </TableRow>

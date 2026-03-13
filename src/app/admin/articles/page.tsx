@@ -250,6 +250,7 @@ export default function ArticlesPage() {
         plans={planManager.plans}
         selectedPlanIds={planManager.selectedPlanIds}
         rawArticleMap={planManager.rawArticleMap}
+        earliestCrawledAt={planManager.earliestCrawledAt}
         planLoading={planManager.planLoading}
         rewriteCurrentTask={!!rewritePolling.rewriteStatus?.currentTask}
         onToggleSelect={planManager.togglePlanSelect}
