@@ -163,10 +163,10 @@ export function ArticlesTable({
                 />
               </TableHead>
               <TableHead>標題</TableHead>
-              <TableHead className="w-[80px] hidden md:table-cell">寫手</TableHead>
+              <TableHead className="w-[100px] hidden md:table-cell">寫手</TableHead>
               <TableHead className="w-[70px]">狀態</TableHead>
-              <TableHead className="w-[140px] hidden lg:table-cell">建立時間</TableHead>
-              <TableHead className="w-[120px] text-right">操作</TableHead>
+              <TableHead className="w-[150px] hidden lg:table-cell">建立時間</TableHead>
+              <TableHead className="w-[180px] text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -235,7 +235,7 @@ export function ArticlesTable({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                    <div className="flex items-center justify-end gap-1.5">
                       <ArticleActions
                         article={article}
                         publishingIds={publishingIds}
