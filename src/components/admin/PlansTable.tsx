@@ -100,8 +100,8 @@ export function PlansTable({
                     onCheckedChange={onToggleSelectAll}
                   />
                 </TableHead>
-                <TableHead className="w-[40%]">預計標題</TableHead>
-                <TableHead>寫手</TableHead>
+                <TableHead>預計標題</TableHead>
+                <TableHead className="hidden sm:table-cell">寫手</TableHead>
                 <TableHead className="hidden sm:table-cell">類型</TableHead>
                 <TableHead className="hidden md:table-cell">引用原文</TableHead>
               </TableRow>
@@ -119,7 +119,7 @@ export function PlansTable({
                     />
                   </TableCell>
                   <TableCell className="font-medium">{plan.title}</TableCell>
-                  <TableCell>{plan.writer_personas?.name || "-"}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{plan.writer_personas?.name || "-"}</TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <Badge variant={plan.plan_type === "official" ? "default" : "outline"}>
                       {plan.plan_type === "official" ? "官方戰報" : "專欄"}

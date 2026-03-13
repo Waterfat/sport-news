@@ -73,11 +73,11 @@ export function ArticlesTable({
                 onCheckedChange={onToggleSelectAll}
               />
             </TableHead>
-            <TableHead className="w-[40%]">標題</TableHead>
+            <TableHead>標題</TableHead>
             <TableHead className="w-[100px] hidden md:table-cell">寫手</TableHead>
-            <TableHead className="w-[80px]">狀態</TableHead>
+            <TableHead className="w-[60px] sm:w-[80px]">狀態</TableHead>
             <TableHead className="w-[140px] hidden sm:table-cell">建立時間</TableHead>
-            <TableHead className="w-[200px] text-right">操作</TableHead>
+            <TableHead className="w-[200px] text-right hidden sm:table-cell">操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -103,19 +103,19 @@ export function ArticlesTable({
                         alt=""
                         width={48}
                         height={48}
-                        className="w-12 h-12 object-cover rounded flex-shrink-0 mt-0.5"
+                        className="w-12 h-12 object-cover rounded flex-shrink-0 mt-0.5 hidden sm:block"
                         unoptimized
                       />
                     )}
                     <div className="min-w-0 overflow-hidden">
                       <Link
                         href={`/admin/articles/${article.id}`}
-                        className="hover:underline line-clamp-1"
+                        className="hover:underline line-clamp-2 sm:line-clamp-1"
                       >
                         {article.title}
                       </Link>
                       {article.content && (
-                        <p className="text-xs text-gray-400 mt-1 line-clamp-1">
+                        <p className="text-xs text-gray-400 mt-1 line-clamp-1 hidden sm:block">
                           {article.content.substring(0, 100)}
                         </p>
                       )}
@@ -138,8 +138,8 @@ export function ArticlesTable({
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                <TableCell className="text-right hidden sm:table-cell">
+                  <div className="flex flex-wrap items-center justify-end gap-1.5">
                     {article.status === "draft" && !article.scheduled_at && (
                       <>
                         <Button
@@ -170,7 +170,7 @@ export function ArticlesTable({
                             排程
                           </Button>
                           {scheduleOpenId === article.id && (
-                            <div className="absolute right-0 top-full mt-1 z-50 bg-white border rounded-lg shadow-lg p-3 space-y-2 w-[260px]">
+                            <div className="fixed sm:absolute right-4 sm:right-0 top-auto sm:top-full mt-1 z-50 bg-white border rounded-lg shadow-lg p-3 space-y-2 w-[calc(100vw-2rem)] sm:w-[260px] max-w-[260px]">
                               <Input
                                 type="datetime-local"
                                 value={scheduleDateTime}

@@ -68,12 +68,12 @@ export function PublishOptionsCard({
           </Button>
 
           {/* 排程發布 */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Input
               type="datetime-local"
               value={scheduledDateTime}
               onChange={(e) => onScheduledDateTimeChange(e.target.value)}
-              className="w-auto"
+              className="w-full sm:w-auto"
               min={new Date().toISOString().slice(0, 16)}
             />
             <Button
