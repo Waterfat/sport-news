@@ -44,7 +44,7 @@ test.describe("儀表板", () => {
     });
 
     await expect(page.getByText("寫手陣容")).toBeVisible();
-    await expect(page.getByText("發布頻道")).toBeVisible();
+    await expect(page.locator("main").getByText("發布頻道")).toBeVisible();
   });
 });
 
@@ -65,7 +65,7 @@ test.describe("後台導覽列", () => {
     await expect(header.getByRole("link", { name: "文章管理" })).toBeVisible();
     await expect(header.getByRole("link", { name: "原始新聞" })).toBeVisible();
     await expect(header.getByRole("link", { name: "寫手管理" })).toBeVisible();
-    await expect(header.getByRole("link", { name: "爬蟲設定" })).toBeVisible();
+    await expect(header.getByRole("link", { name: "球種與來源" })).toBeVisible();
     await expect(header.getByRole("link", { name: "發布頻道" })).toBeVisible();
     await expect(header.getByRole("link", { name: "成效分析" })).toBeVisible();
 

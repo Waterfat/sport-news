@@ -1,6 +1,6 @@
 /**
  * User Story E2E: 後台 CRUD 操作流程
- * 模擬管理者對寫手、頻道、爬蟲設定的完整操作
+ * 模擬管理者對寫手、頻道、球種與來源的完整操作
  */
 import { test, expect } from "@playwright/test";
 
@@ -112,14 +112,14 @@ test.describe("頻道管理 CRUD", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 爬蟲設定
+// 球種與來源
 // ---------------------------------------------------------------------------
-test.describe("爬蟲設定管理", () => {
+test.describe("球種與來源管理", () => {
   test.beforeEach(skipIfNoCredentials);
 
   test("管理者可以查看爬蟲來源與運動設定", async ({ page }) => {
     await page.goto("/admin/sports");
-    await expect(page.getByRole("heading", { name: "爬蟲設定" })).toBeVisible({
+    await expect(page.getByRole("heading", { name: "球種與來源" })).toBeVisible({
       timeout: 15_000,
     });
 
@@ -209,10 +209,10 @@ test.describe("管理者完整巡覽流程", () => {
     await page.waitForURL("**/admin/personas", { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: "寫手管理" })).toBeVisible();
 
-    // 5. 進入爬蟲設定
-    await page.locator("header").getByRole("link", { name: "爬蟲設定" }).click();
+    // 5. 進入球種與來源
+    await page.locator("header").getByRole("link", { name: "球種與來源" }).click();
     await page.waitForURL("**/admin/sports", { timeout: 10_000 });
-    await expect(page.getByRole("heading", { name: "爬蟲設定" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "球種與來源" })).toBeVisible();
 
     // 6. 進入發布頻道
     await page.locator("header").getByRole("link", { name: "發布頻道" }).click();
