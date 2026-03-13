@@ -74,9 +74,9 @@ export function ArticlesTable({
               />
             </TableHead>
             <TableHead className="w-[40%]">標題</TableHead>
-            <TableHead className="w-[100px]">寫手</TableHead>
+            <TableHead className="w-[100px] hidden md:table-cell">寫手</TableHead>
             <TableHead className="w-[80px]">狀態</TableHead>
-            <TableHead className="w-[140px]">建立時間</TableHead>
+            <TableHead className="w-[140px] hidden sm:table-cell">建立時間</TableHead>
             <TableHead className="w-[200px] text-right">操作</TableHead>
           </TableRow>
         </TableHeader>
@@ -122,7 +122,7 @@ export function ArticlesTable({
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="truncate">
+                <TableCell className="truncate hidden md:table-cell">
                   {article.writer_personas?.name || "-"}
                 </TableCell>
                 <TableCell>
@@ -130,7 +130,7 @@ export function ArticlesTable({
                     {statusLabel}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm text-gray-500">
+                <TableCell className="text-sm text-gray-500 hidden sm:table-cell">
                   <div>{new Date(article.created_at).toLocaleString("zh-TW")}</div>
                   {article.scheduled_at && (
                     <div className="text-blue-600 text-xs mt-1">

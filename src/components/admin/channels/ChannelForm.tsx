@@ -47,8 +47,8 @@ export function ChannelForm({
         <CardTitle>新增頻道</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-[200px]">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="w-full sm:w-[200px]">
             <Label className="text-sm text-gray-600 mb-1 block">
               頻道名稱
             </Label>
@@ -58,7 +58,7 @@ export function ChannelForm({
               placeholder="例：官方 Telegram 頻道"
             />
           </div>
-          <div className="w-[180px]">
+          <div className="w-full sm:w-[180px]">
             <Label className="text-sm text-gray-600 mb-1 block">
               頻道類型
             </Label>

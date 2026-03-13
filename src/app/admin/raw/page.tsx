@@ -75,9 +75,9 @@ export default function RawArticlesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">原始新聞</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <span className="text-sm text-gray-500">共 {total} 篇</span>
           <Select
             value={pageSize.toString()}
@@ -128,9 +128,9 @@ export default function RawArticlesPage() {
               <TableRow>
                 <TableHead className="w-[45%]">標題</TableHead>
                 <TableHead className="w-[120px]">來源</TableHead>
-                <TableHead className="w-[60px]">分類</TableHead>
+                <TableHead className="w-[60px] hidden md:table-cell">分類</TableHead>
                 <TableHead className="w-[70px]">狀態</TableHead>
-                <TableHead className="w-[150px]">爬取時間</TableHead>
+                <TableHead className="w-[150px] hidden sm:table-cell">爬取時間</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -149,7 +149,7 @@ export default function RawArticlesPage() {
                   <TableCell>
                     <Badge variant="outline" className="whitespace-nowrap text-xs">{article.source}</Badge>
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-sm hidden md:table-cell">
                     {article.category || "-"}
                   </TableCell>
                   <TableCell>
@@ -160,7 +160,7 @@ export default function RawArticlesPage() {
                       {article.is_processed ? "已處理" : "未處理"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-500 whitespace-nowrap">
+                  <TableCell className="text-sm text-gray-500 whitespace-nowrap hidden sm:table-cell">
                     {new Date(article.crawled_at).toLocaleString("zh-TW")}
                   </TableCell>
                 </TableRow>

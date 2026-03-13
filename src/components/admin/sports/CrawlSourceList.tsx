@@ -70,15 +70,15 @@ export function CrawlSourceList({
           {crawlSources.map((source) => (
             <div
               key={source.id}
-              className="flex items-center gap-3 p-3 border rounded-lg"
+              className="flex flex-wrap items-center gap-3 p-3 border rounded-lg"
             >
               {editingId === source.id ? (
-                <>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
                   <Input
                     value={editName}
                     onChange={(e) => onEditNameChange(e.target.value)}
                     placeholder="來源名稱"
-                    className="w-[160px]"
+                    className="w-full sm:w-[160px]"
                   />
                   <Input
                     value={editUrl}
@@ -86,20 +86,22 @@ export function CrawlSourceList({
                     placeholder="網址"
                     className="flex-1"
                   />
-                  <Button
-                    size="sm"
-                    onClick={() => onSaveEdit(source.id, source.name)}
-                  >
-                    儲存
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={onCancelEdit}
-                  >
-                    取消
-                  </Button>
-                </>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => onSaveEdit(source.id, source.name)}
+                    >
+                      儲存
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={onCancelEdit}
+                    >
+                      取消
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <div className="flex-1 min-w-0">
@@ -157,12 +159,12 @@ export function CrawlSourceList({
         </div>
 
         {/* 新增來源 */}
-        <div className="flex items-center gap-3 p-3 border border-dashed rounded-lg">
+        <div className="flex flex-col sm:flex-row gap-3 p-3 border border-dashed rounded-lg">
           <Input
             value={newName}
             onChange={(e) => onNewNameChange(e.target.value)}
             placeholder="來源名稱（例：BBC Sport）"
-            className="w-[200px]"
+            className="w-full sm:w-[200px]"
           />
           <Input
             value={newUrl}

@@ -113,7 +113,7 @@ export default function AnalyticsPage() {
           {data.views_by_day.length === 0 ? (
             <p className="text-gray-400 text-sm">尚無瀏覽資料</p>
           ) : (
-            <div className="flex items-end gap-1 h-48">
+            <div className="flex items-end gap-1 h-48 overflow-x-auto min-w-0">
               {data.views_by_day.map((day) => (
                 <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
                   <span className="text-xs text-gray-500">
@@ -187,9 +187,9 @@ export default function AnalyticsPage() {
               <div className="space-y-4">
                 {categoryEntries.map(([category, stats]) => (
                   <div key={category} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">{category}</span>
-                      <span className="text-gray-500">
+                    <div className="flex flex-wrap justify-between gap-1 text-sm">
+                      <span className="font-medium break-all">{category}</span>
+                      <span className="text-gray-500 whitespace-nowrap">
                         {stats.views} 次 / {stats.articles} 篇
                       </span>
                     </div>

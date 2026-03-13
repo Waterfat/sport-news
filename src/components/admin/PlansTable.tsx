@@ -57,7 +57,7 @@ export function PlansTable({
   return (
     <Card>
       <CardContent className="py-4 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold">規劃列表 ({plans.length} 項)</h2>
             {plans.length > 0 && (
@@ -90,7 +90,7 @@ export function PlansTable({
           </div>
         </div>
 
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -102,8 +102,8 @@ export function PlansTable({
                 </TableHead>
                 <TableHead className="w-[40%]">預計標題</TableHead>
                 <TableHead>寫手</TableHead>
-                <TableHead>類型</TableHead>
-                <TableHead>引用原文</TableHead>
+                <TableHead className="hidden sm:table-cell">類型</TableHead>
+                <TableHead className="hidden md:table-cell">引用原文</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,13 +120,13 @@ export function PlansTable({
                   </TableCell>
                   <TableCell className="font-medium">{plan.title}</TableCell>
                   <TableCell>{plan.writer_personas?.name || "-"}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge variant={plan.plan_type === "official" ? "default" : "outline"}>
                       {plan.plan_type === "official" ? "官方戰報" : "專欄"}
                       {plan.league ? ` · ${plan.league}` : ""}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="space-y-1 max-w-xs">
                       {(plan.raw_article_ids || []).slice(0, 3).map((rawId) => {
                         const info = rawArticleMap[rawId];
