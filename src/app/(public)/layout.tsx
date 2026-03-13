@@ -15,9 +15,9 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="h-[100dvh] flex flex-col bg-white overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm pt-[env(safe-area-inset-top)]">
+      <header className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm pt-[env(safe-area-inset-top)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center">
@@ -57,13 +57,15 @@ export default function PublicLayout({
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8">
-        {children}
-      </main>
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        {/* Main Content */}
+        <main className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-8">
+          {children}
+        </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-50 border-t border-gray-200">
+        {/* Footer */}
+        <footer className="bg-gray-50 border-t border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
           <div className="grid sm:grid-cols-2 gap-6 mb-6">
             <div>
@@ -104,6 +106,7 @@ export default function PublicLayout({
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

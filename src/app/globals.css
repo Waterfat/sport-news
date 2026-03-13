@@ -125,20 +125,6 @@
   }
 }
 
-/* iOS in-app browser: white overlay to cover status bar bleed-through */
-html::before {
-  content: "";
-  display: block;
-  position: fixed;
-  top: -200px;
-  left: 0;
-  right: 0;
-  height: 200px;
-  background: white;
-  z-index: 10000;
-  pointer-events: none;
-}
-
 html {
   background-color: white;
 }
