@@ -34,6 +34,33 @@ Scenario 測試（`e2e/scenarios/`）必須涵蓋以下三層，缺一不可：
 - 使用 `page.waitForResponse()` 攔截 API 回應，斷言 HTTP status
 - 驗證操作後 UI 狀態正確變化（如 loading 狀態、成功提示）
 
+## CSS 佈局變更驗證 SOP
+
+Vitest + jsdom 無法渲染 CSS，佈局問題只能靠視覺驗證。以下為強制流程：
+
+### 觸發條件
+
+修改以下任一項時，必須執行視覺驗證：
+- `table-fixed` / 欄位寬度（`w-[Npx]`）
+- flex / grid 容器屬性（`flex-wrap`、`gap`、`grid-cols`）
+- `overflow`、`truncate`、`line-clamp` 等裁切行為
+- 響應式斷點（`hidden sm:block`、`sm:hidden`）
+
+### 驗證步驟
+
+1. **先算再寫**：設定固定寬度前，先估算內容所需最小寬度（元素數 × 單個寬度 + gap），留 15-20% buffer
+2. **PC 截圖**（1440×900）：確認所有欄位可見、按鈕不換行、文字不異常截斷
+3. **手機截圖**（430×932）：確認 card layout 或響應式切換正常
+4. **必須用 `browser_take_screenshot`**，不能只看 `browser_snapshot`（DOM 樹看不到換行、溢出）
+
+### 常見陷阱
+
+| 問題 | 原因 | 預防 |
+|------|------|------|
+| 按鈕換行 | `flex-wrap` + 容器寬度不足 | 計算最小寬度，移除不必要的 `flex-wrap` |
+| 欄位被推出畫面 | `table-fixed` 固定欄位寬度總和過大 | 加總所有固定寬度，確認 < 表格寬度 |
+| 文字截斷看不到 | `truncate` + 欄位太窄 | 用真實資料長度估算，不要用短字串測試 |
+
 ## 測試指令
 
 - 執行測試：`npx vitest run`
