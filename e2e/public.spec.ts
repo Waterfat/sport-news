@@ -12,7 +12,7 @@ test.describe("首頁", () => {
     await page.goto("/");
 
     // Site branding in header
-    await expect(page.getByRole("link", { name: /SportNews/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /小豪哥體育資訊網/i }).first()).toBeVisible();
 
     // Navigation links
     const nav = page.locator("header nav").first();
@@ -31,7 +31,7 @@ test.describe("首頁", () => {
   test("Footer 存在", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("footer")).toBeVisible();
-    await expect(page.locator("footer").getByText("SportNews")).toBeVisible();
+    await expect(page.locator("footer").getByText("小豪哥體育資訊網")).toBeVisible();
   });
 });
 
@@ -42,7 +42,7 @@ test.describe("登入頁", () => {
   test("載入成功並顯示表單欄位", async ({ page }) => {
     await page.goto("/login");
 
-    await expect(page.getByText("SportNews 後台登入")).toBeVisible();
+    await expect(page.getByText("後台登入")).toBeVisible();
 
     // Username field
     const usernameInput = page.getByLabel("帳號");

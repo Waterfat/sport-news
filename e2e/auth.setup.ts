@@ -25,7 +25,7 @@ setup("authenticate", async ({ page }) => {
   }
 
   await page.goto("/login");
-  await expect(page.getByText("SportNews 後台登入")).toBeVisible();
+  await expect(page.getByText("後台登入")).toBeVisible();
 
   await page.getByLabel("帳號").fill(username);
   await page.getByLabel("密碼").fill(password);

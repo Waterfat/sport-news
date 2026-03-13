@@ -9,7 +9,7 @@ import { test, expect } from "@playwright/test";
 // ---------------------------------------------------------------------------
 test("錯誤帳密顯示錯誤訊息", async ({ page }) => {
   await page.goto("/login");
-  await expect(page.getByText("SportNews 後台登入")).toBeVisible();
+  await expect(page.getByText("後台登入")).toBeVisible();
 
   await page.getByLabel("帳號").fill("wrong_user");
   await page.getByLabel("密碼").fill("wrong_password");
@@ -48,5 +48,5 @@ test("未登入存取 /admin 會重導向至 /login", async ({ page }) => {
 
   // Should end up on the login page
   await page.waitForURL(/\/login/, { timeout: 10_000 });
-  await expect(page.getByText("SportNews 後台登入")).toBeVisible();
+  await expect(page.getByText("後台登入")).toBeVisible();
 });
