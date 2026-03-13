@@ -48,6 +48,20 @@ export async function POST(request: NextRequest) {
     force = body?.force === true;
   } catch {}
 
+  // 先檢查是否有正在執行的任務（避免先刪 plans 再發現 task 還在跑）
+  const { data: running } = await supabase
+    .from("rewrite_tasks")
+    .select("id")
+    .in("status", ["pending", "running"])
+    .limit(1);
+
+  if (running && running.length > 0) {
+    return NextResponse.json(
+      { error: "有任務正在執行中" },
+      { status: 409 }
+    );
+  }
+
   // 檢查是否已有規劃
   const { count: existingCount } = await supabase
     .from("rewrite_plans")
@@ -63,20 +77,6 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-  }
-
-  // 檢查是否有正在執行的任務
-  const { data: running } = await supabase
-    .from("rewrite_tasks")
-    .select("id")
-    .in("status", ["pending", "running"])
-    .limit(1);
-
-  if (running && running.length > 0) {
-    return NextResponse.json(
-      { error: "有任務正在執行中" },
-      { status: 409 }
-    );
   }
 
   // 建立規劃任務（plan mode）
