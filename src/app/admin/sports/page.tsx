@@ -229,6 +229,25 @@ export default function SportsSettingsPage() {
     }
   }
 
+  async function saveTitlePrompt(sportKey: SportKey, title_prompt: string) {
+    try {
+      const res = await fetch("/api/settings/sports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sport_key: sportKey, title_prompt }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSettings((prev) => ({
+          ...prev,
+          [sportKey]: { ...prev[sportKey], title_prompt },
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to save title prompt:", err);
+    }
+  }
+
   function handleStartEdit(source: CrawlSource) {
     setEditingId(source.id);
     setEditName(source.name);
@@ -246,9 +265,9 @@ export default function SportsSettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">爬蟲設定</h1>
+        <h1 className="text-2xl font-bold">球種與來源</h1>
         <p className="text-gray-500 mt-1">
-          管理爬蟲來源，並設定每個球種要從哪些網站爬取新聞
+          管理爬蟲來源、球種設定與標題風格提詞
         </p>
       </div>
 
@@ -291,10 +310,12 @@ export default function SportsSettingsPage() {
                 isEnabled={isEnabled}
                 isUpdating={isUpdating}
                 selectedSources={selectedSources}
+                titlePrompt={settings[key]?.title_prompt || ""}
                 crawlSources={crawlSources}
                 updating={updating}
                 onToggleSport={toggleSport}
                 onToggleSource={toggleSource}
+                onSaveTitlePrompt={saveTitlePrompt}
               />
             );
           }
