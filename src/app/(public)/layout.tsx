@@ -99,7 +99,7 @@ export default function PublicLayout({
           </div>
           <div className="border-t border-gray-200 pt-4">
             <div className="text-sm text-gray-400 text-center">
-              &copy; {new Date().getFullYear()} 小豪哥體育資訊網. All rights reserved.
+              &copy; 2019 小豪哥體育資訊網. All rights reserved.
             </div>
           </div>
         </div>
