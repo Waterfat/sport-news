@@ -128,6 +128,75 @@ test.describe("規劃 → 產出文章流程", () => {
       }
     }
   });
+
+  test("產出文章時後端不會回傳 schema / column 錯誤", async ({ page }) => {
+    await page.goto("/admin/articles");
+    await expect(page.getByRole("heading", { name: "文章管理" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 找到規劃表格
+    const plansTable = page.locator("table").filter({ hasText: /預測標題|規劃/ });
+    if (!(await plansTable.isVisible({ timeout: 5000 }).catch(() => false))) {
+      test.skip(true, "目前沒有規劃項目，跳過產出測試");
+      return;
+    }
+
+    const planCheckbox = plansTable.locator("tbody input[type='checkbox']").first();
+    if (!(await planCheckbox.isVisible())) {
+      test.skip(true, "規劃表格無可選取項目");
+      return;
+    }
+
+    // 選取第一個規劃項目
+    await planCheckbox.click();
+
+    const produceButton = page.getByRole("button", { name: /產出文章/ });
+    await expect(produceButton).toBeVisible();
+
+    // 監聽 dialog（confirm + 可能的 alert 錯誤）
+    const dialogs: { type: string; message: string }[] = [];
+    page.on("dialog", async (dialog) => {
+      dialogs.push({ type: dialog.type(), message: dialog.message() });
+      await dialog.accept(); // confirm → 確定；alert → 關閉
+    });
+
+    // 同時監聽產出 API 回應
+    const responsePromise = page.waitForResponse(
+      (res) => res.url().includes("/api/rewrite/plan/produce"),
+      { timeout: 15_000 }
+    );
+
+    // 點擊「產出文章」
+    await produceButton.click();
+
+    // 等待 API 回應
+    const response = await responsePromise;
+    const status = response.status();
+
+    // 驗證：API 不應回傳 500（schema error 會是 500）
+    expect(status, `產出 API 回傳 ${status}，預期 201 或 409`).not.toBe(500);
+
+    // 驗證：不應出現含有 schema/column 錯誤的 alert
+    const errorDialog = dialogs.find(
+      (d) =>
+        d.type === "alert" &&
+        (/column|schema|not found|產出失敗/i.test(d.message))
+    );
+    expect(
+      errorDialog,
+      `出現錯誤 alert: "${errorDialog?.message ?? ""}"`
+    ).toBeUndefined();
+
+    // 如果 201 成功，驗證 UI 進入產出中狀態
+    if (status === 201) {
+      await expect(
+        page.getByRole("button", { name: "產出中..." }).or(
+          page.getByText("文章產出中")
+        )
+      ).toBeVisible({ timeout: 5000 });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -19,6 +19,21 @@
 - 後台測試需設定環境變數：`E2E_USERNAME` + `E2E_PASSWORD`（未設定時腳本會主動詢問，不得自動跳過）
 - 新增頁面/修改 UI 時必須同步更新 E2E 測試
 
+### E2E 測試三層覆蓋原則
+
+Scenario 測試（`e2e/scenarios/`）必須涵蓋以下三層，缺一不可：
+
+1. **UI 結構驗證**：頁面載入、元素可見、導航正確
+2. **互動流程驗證**：按鈕點擊、表單填寫、篩選切換、狀態變化
+3. **實際操作 + 後端回應驗證**：觸發真實 API 呼叫，驗證不出現 500 錯誤、schema 錯誤、error alert/toast
+
+第 3 層是最容易遺漏也最關鍵的一層。只驗證「按鈕存在」而不點擊執行，無法發現 DB schema 不同步、API 參數錯誤等後端問題。
+
+**實作方式**：
+- 監聽 `page.on("dialog")` 捕捉 alert 錯誤訊息
+- 使用 `page.waitForResponse()` 攔截 API 回應，斷言 HTTP status
+- 驗證操作後 UI 狀態正確變化（如 loading 狀態、成功提示）
+
 ## 測試指令
 
 - 執行測試：`npx vitest run`
