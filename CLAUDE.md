@@ -55,6 +55,13 @@ Scenario 測試（`e2e/scenarios/`）必須涵蓋以下三層，缺一不可：
     -H "Content-Type: application/json" \
     -d '{"query": "<SQL>"}'
   ```
+- **套用 migration 後必須重載 PostgREST schema cache**（否則 REST API 看不到新 column）：
+  ```
+  curl -X POST "https://api.supabase.com/v1/projects/{ref}/database/query" \
+    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"query": "NOTIFY pgrst, '\''reload schema'\'';"}'
+  ```
 - 套用 migration 後，需驗證應用層正常運作（跑 smoke test + E2E）
 
 ## 技術棧
