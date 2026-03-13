@@ -41,8 +41,6 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
     async (onStartPolling: () => void) => {
       const ids = Array.from(selectedPlanIds);
       if (ids.length === 0) return;
-      if (!confirm(`確定要產出 ${ids.length} 篇規劃文章？`)) return;
-
       setPlanLoading(true);
       try {
         const res = await fetch("/api/rewrite/plan/produce", {
