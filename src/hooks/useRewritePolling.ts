@@ -80,30 +80,19 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
   }, [rewriteStatus?.currentTask?.status]);
 
   const triggerPlan = useCallback(
-    async (force = false, clearPlans?: () => void) => {
+    async (clearPlans?: () => void) => {
       isPollingRef.current = true;
       setPlanTriggering(true);
       setRunningMode("plan");
-      if (force) {
-        clearPlans?.();
-      }
+      clearPlans?.();
       try {
         const res = await fetch("/api/rewrite/plan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ force }),
+          body: JSON.stringify({ force: true }),
         });
         const data = await res.json();
         if (!res.ok) {
-          if (data.hasExisting) {
-            isPollingRef.current = false;
-            setRunningMode(null);
-            setPlanTriggering(false);
-            if (confirm("已有規劃存在，是否清除並重新產生？")) {
-              triggerPlan(true, clearPlans);
-            }
-            return;
-          }
           alert(data.error || "規劃產生失敗");
           isPollingRef.current = false;
           setRunningMode(null);

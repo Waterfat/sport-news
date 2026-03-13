@@ -190,7 +190,7 @@ export default function ArticlesPage() {
   };
 
   const handleTriggerPlan = () => {
-    rewritePolling.triggerPlan(false, planManager.clearPlans);
+    rewritePolling.triggerPlan(planManager.clearPlans);
   };
 
   const handlePlanProduce = () => {
