@@ -44,9 +44,9 @@ export default function LoginPage() {
           <Image
             src="/logo.png"
             alt="小豪哥體育資訊網"
-            width={180}
-            height={54}
-            className="h-12 w-auto mx-auto mb-2"
+            width={240}
+            height={134}
+            className="h-20 w-auto mx-auto mb-2"
             priority
           />
           <CardTitle className="text-xl">後台登入</CardTitle>

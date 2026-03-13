@@ -34,9 +34,9 @@ export default function AdminLayout({
                 <Image
                   src="/logo.png"
                   alt="小豪哥體育資訊網 後台"
-                  width={120}
-                  height={36}
-                  className="h-8 w-auto"
+                  width={160}
+                  height={89}
+                  className="h-10 w-auto"
                   priority
                 />
               </Link>

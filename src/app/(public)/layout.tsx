@@ -24,9 +24,9 @@ export default function PublicLayout({
               <Image
                 src="/logo.png"
                 alt="小豪哥體育資訊網"
-                width={160}
-                height={48}
-                className="h-10 w-auto"
+                width={200}
+                height={112}
+                className="h-14 w-auto"
                 priority
               />
             </Link>
