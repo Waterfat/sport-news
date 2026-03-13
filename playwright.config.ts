@@ -57,5 +57,16 @@ export default defineConfig({
         storageState: "e2e/.auth/user.json",
       },
     },
+
+    // User story scenario tests — depend on auth-setup
+    {
+      name: "scenarios",
+      testDir: "./e2e/scenarios",
+      dependencies: ["auth-setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/user.json",
+      },
+    },
   ],
 });
