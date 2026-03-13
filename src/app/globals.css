@@ -125,6 +125,11 @@
   }
 }
 
+/* iOS safe area: prevent content bleeding through status bar */
+html {
+  background-color: white;
+}
+
 /* Hide scrollbar but keep scroll functionality */
 @layer utilities {
   .scrollbar-hide {
