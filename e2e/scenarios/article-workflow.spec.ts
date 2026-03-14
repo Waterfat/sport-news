@@ -129,6 +129,118 @@ test.describe("規劃 → 產出文章流程", () => {
     }
   });
 
+  test("按下規劃後，任務成功完成且規劃列表出現", async ({ page }) => {
+    // 此測試依賴 Mac Mini listener 正在運行
+    test.setTimeout(180_000); // 規劃需要 AI 呼叫，給 3 分鐘
+
+    await page.goto("/admin/articles");
+    await expect(page.getByRole("heading", { name: "文章管理" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const planButton = page.getByRole("button", { name: /規劃/ });
+    await expect(planButton).toBeVisible();
+
+    // 如果按鈕顯示「規劃中...」或「產出中...」，代表有任務進行中，跳過
+    const buttonText = await planButton.textContent();
+    if (buttonText?.includes("中...")) {
+      test.skip(true, "已有任務進行中，跳過規劃測試");
+      return;
+    }
+
+    // 監聽 dialog 錯誤
+    const dialogs: { type: string; message: string }[] = [];
+    page.on("dialog", async (dialog) => {
+      dialogs.push({ type: dialog.type(), message: dialog.message() });
+      await dialog.accept();
+    });
+
+    // 攔截 POST /api/rewrite/plan 回應
+    const planApiPromise = page.waitForResponse(
+      (res) => res.url().includes("/api/rewrite/plan") && res.request().method() === "POST",
+      { timeout: 15_000 }
+    );
+
+    // 點擊「規劃」
+    await planButton.click();
+
+    // 第 1 層：驗證 API 回應
+    const planApiResponse = await planApiPromise;
+    const planApiStatus = planApiResponse.status();
+
+    // 409 = 已有任務或已有規劃存在，非錯誤但無法繼續測試
+    if (planApiStatus === 409) {
+      test.skip(true, "已有任務或規劃存在 (409)，跳過");
+      return;
+    }
+    expect(planApiStatus, `規劃 API 應回傳 201，實際 ${planApiStatus}`).toBe(201);
+
+    // 不應出現錯誤 alert
+    const errorAfterTrigger = dialogs.find(
+      (d) => d.type === "alert" && /失敗|error/i.test(d.message)
+    );
+    expect(errorAfterTrigger, `觸發規劃後出現錯誤: "${errorAfterTrigger?.message}"`).toBeUndefined();
+
+    // 第 2 層：UI 應進入「規劃中」狀態
+    await expect(
+      page.getByRole("button", { name: "規劃中..." })
+    ).toBeVisible({ timeout: 5_000 });
+
+    // 第 3 層：Polling 等待任務完成，驗證 listener 實際執行結果
+    // 直接 polling GET /api/rewrite 檢查 task 狀態
+    let taskCompleted = false;
+    let taskFailed = false;
+    let taskError = "";
+    const maxWait = 150_000; // 2.5 分鐘
+    const pollInterval = 5_000;
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWait) {
+      await page.waitForTimeout(pollInterval);
+
+      const statusRes = await page.evaluate(async () => {
+        const res = await fetch("/api/rewrite");
+        return res.json();
+      });
+
+      if (!statusRes.currentTask) {
+        // 任務已結束（completed 或 failed）
+        taskCompleted = true;
+        break;
+      }
+
+      if (statusRes.currentTask.status === "failed") {
+        taskFailed = true;
+        taskError = statusRes.currentTask.error_message || "unknown error";
+        break;
+      }
+    }
+
+    // 任務不應停在 pending（代表 listener 沒跑）
+    expect(taskCompleted || taskFailed, "任務超時未完成，listener 可能未運行").toBe(true);
+    expect(taskFailed, `規劃任務失敗: ${taskError}`).toBe(false);
+
+    // 驗證規劃 API 可正常回應
+    const plansRes = await page.evaluate(async () => {
+      const res = await fetch("/api/rewrite/plan");
+      return res.json();
+    });
+
+    // plans 可能為空（素材都跟已發布文章重複時是合理結果）
+    expect(Array.isArray(plansRes.plans), "規劃 API 應回傳 plans 陣列").toBe(true);
+
+    // 如果有規劃項目，UI 上規劃表格應出現
+    if (plansRes.plans.length > 0) {
+      await page.reload();
+      await expect(page.getByRole("heading", { name: "文章管理" })).toBeVisible({
+        timeout: 15_000,
+      });
+
+      const plansTable = page.locator("table").filter({ hasText: /預測標題|規劃/ });
+      await expect(plansTable).toBeVisible({ timeout: 10_000 });
+    }
+  });
+
   test("產出文章時後端不會回傳 schema / column 錯誤", async ({ page }) => {
     await page.goto("/admin/articles");
     await expect(page.getByRole("heading", { name: "文章管理" })).toBeVisible({

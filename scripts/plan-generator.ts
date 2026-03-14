@@ -47,6 +47,8 @@ function parseAIPlan(output: string): PlanProposal[] {
     return parsed.filter((p: PlanProposal) => p.title && Array.isArray(p.source_indices));
   } catch (e) {
     console.error("JSON 解析失敗:", e);
+    console.error("原始 AI 回傳（前 1000 字元）:", output.substring(0, 1000));
+    console.error("Regex 匹配結果（前 500 字元）:", jsonMatch[0].substring(0, 500));
     return [];
   }
 }
@@ -175,12 +177,13 @@ ${publishedSection}${titleStyleSection}
 1. 多篇來自不同來源但報導同一事件的素材，必須合併為一個規劃項目（例如：ESPN 和 ETtoday 都在報導同一場比賽）
 2. 同一事件的不同角度（例如：得分紀錄、賽後反應、女友見證）可以合併成一篇綜合報導，或拆成最多 2 篇（主報導 + 花絮）
 3. 每個規劃項目必須引用所有相關的素材編號
-4. 標題必須是繁體中文，球員/教練等人名保留英文原文
-5. 最多產出 ${maxArticles} 個規劃項目
-6. Fantasy、選秀預測、排名等列表型內容可以跳過，優先報導實際賽事和新聞事件
-7. 與已發布文章主題相同或高度相似的內容，必須跳過不規劃
-8. 必須包含 1～2 篇「綜合報導」：從當天多個不同主題的素材中，挑選 3～5 個亮點整合成一篇綜合摘要（例如「今日 NBA 三大焦點」、「本週聯盟大事紀」），這類文章的 source_indices 應引用多篇不同主題的素材
-9. 只回覆 JSON，不要其他文字
+4. **每篇素材只能被一個規劃項目引用，不可重複使用**。例如素材 [0] 已被規劃 A 引用，則規劃 B 不可再引用 [0]。唯一例外是「綜合報導」可以引用其他規劃已使用的素材作為摘要來源
+5. 標題必須是繁體中文，球員/教練等人名保留英文原文
+6. 最多產出 ${maxArticles} 個規劃項目
+7. Fantasy、選秀預測、排名等列表型內容可以跳過，優先報導實際賽事和新聞事件
+8. 與已發布文章主題相同或高度相似的內容，必須跳過不規劃
+9. 必須包含 1～2 篇「綜合報導」：從當天多個不同主題的素材中，挑選 3～5 個亮點整合成一篇綜合摘要（例如「今日 NBA 三大焦點」、「本週聯盟大事紀」），這類文章的 source_indices 應引用多篇不同主題的素材
+10. 只回覆 JSON，不要其他文字
 
 素材清單：
 ${articleList}
@@ -205,6 +208,9 @@ ${articleList}
 
     console.log(`[${persona.name}] AI 規劃了 ${proposals.length} 篇文章`);
 
+    // 追蹤本輪已被引用的素材，避免多個規劃重複使用同一篇原始文章
+    const usedInThisRound = new Set<string>();
+
     for (const proposal of proposals) {
       // 將 source_indices 轉換為實際的 raw_article_ids
       const rawIds = proposal.source_indices
@@ -216,6 +222,15 @@ ${articleList}
         continue;
       }
 
+      // 檢查是否有獨佔素材（至少 1 篇素材未被其他規劃使用）
+      const exclusiveRawIds = rawIds.filter((id) => !usedInThisRound.has(id));
+      if (exclusiveRawIds.length === 0) {
+        console.log(`  跳過「${proposal.title}」- 所有素材已被其他規劃引用`);
+        continue;
+      }
+
+      // 保留完整的 rawIds 給文章產出（可以引用共享素材作為背景），
+      // 但只有獨佔素材會被標記為「已使用」
       allPlans.push({
         writer_persona_id: persona.id,
         title: proposal.title,
@@ -224,7 +239,11 @@ ${articleList}
         plan_type: proposal.plan_type || persona.writer_type,
       });
 
-      console.log(`  ✓ ${proposal.title} (${rawIds.length} 篇素材)`);
+      for (const id of rawIds) {
+        usedInThisRound.add(id);
+      }
+
+      console.log(`  ✓ ${proposal.title} (${rawIds.length} 篇素材，其中 ${exclusiveRawIds.length} 篇獨佔)`);
     }
   }
 

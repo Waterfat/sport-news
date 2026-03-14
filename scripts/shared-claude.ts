@@ -17,11 +17,12 @@ export function callClaude(prompt: string, timeout = 180000): string {
   delete env.CLAUDECODE;
   delete env.ANTHROPIC_API_KEY;
 
+  const tmpStderr = join(tmpdir(), `claude-stderr-${Date.now()}.txt`);
   spawnSync(
     "bash",
     [
       "-c",
-      `cat "${tmpPrompt}" | claude -p --model sonnet > "${tmpOutput}" 2>&1`,
+      `cat "${tmpPrompt}" | claude -p --model sonnet > "${tmpOutput}" 2>"${tmpStderr}"`,
     ],
     {
       encoding: "utf-8",
@@ -30,6 +31,15 @@ export function callClaude(prompt: string, timeout = 180000): string {
       env,
     }
   );
+
+  // Log stderr separately if present
+  try {
+    const stderrContent = readFileSync(tmpStderr, "utf-8").trim();
+    if (stderrContent) {
+      console.error("[callClaude stderr]", stderrContent.substring(0, 500));
+    }
+  } catch {}
+  try { unlinkSync(tmpStderr); } catch {}
 
   let output = "";
   try {
