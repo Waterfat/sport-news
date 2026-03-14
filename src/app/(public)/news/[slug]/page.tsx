@@ -317,7 +317,7 @@ export default async function ArticlePage({
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-12">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-full bg-blue-600 ring-2 ring-blue-600 ring-offset-2 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-              {writer.name.charAt(0)}
+              {writer.name.charAt(1) || writer.name.charAt(0)}
             </div>
             <div>
               <Link
