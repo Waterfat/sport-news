@@ -83,6 +83,12 @@ const IMAGE_EXCLUSION_PATTERNS = [
   "pixel",
   "tracker",
   "beacon",
+  "headshot",
+  "author",
+  "byline",
+  "/staff/",
+  "/writers/",
+  "/columnist/",
 ];
 
 export function isValidImageUrl(url: string): boolean {

@@ -176,9 +176,16 @@ async function crawlArticle(
     const content = paragraphs.join("\n\n");
     if (!content || content.length < 100) return null;
 
-    // 提取圖片
+    // 提取圖片（排除記者大頭照、作者照片等非文章內容圖片）
+    const authorExcludePatterns = /author|byline|headshot|writer|staff|contributor|columnist|avatar|profile/i;
     const images: string[] = [];
     $("article img, main img, .article-body img, .story-body img, .story img, .article_content img, .caas-body img, .content img").each((_, el) => {
+      // 檢查 img 自身及父元素的 class，排除記者照片
+      const imgClass = $(el).attr("class") || "";
+      const parentClass = $(el).parent().attr("class") || "";
+      const grandparentClass = $(el).parent().parent().attr("class") || "";
+      if (authorExcludePatterns.test(imgClass + " " + parentClass + " " + grandparentClass)) return;
+
       const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-original");
       if (src && isValidImageUrl(src) && !images.includes(src)) {
         images.push(src);

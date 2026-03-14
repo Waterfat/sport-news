@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { isValidImageUrl } from "@/lib/constants";
 import type { Crawler, CrawledArticle } from "./types";
 
 const ETTODAY_SPORT_URL = "https://sports.ettoday.net";
@@ -78,10 +79,15 @@ async function crawlArticle(url: string): Promise<CrawledArticle | null> {
   const content = paragraphs.join("\n\n");
   if (!content || content.length < 50) return null;
 
+  const authorExclude = /author|byline|headshot|writer|staff|contributor|avatar|journalist/i;
   const images: string[] = [];
   $(".story img, .article_content img").each((_, el) => {
+    const imgClass = $(el).attr("class") || "";
+    const parentClass = $(el).parent().attr("class") || "";
+    if (authorExclude.test(imgClass + " " + parentClass)) return;
+
     const src = $(el).attr("src");
-    if (src && src.startsWith("http") && !src.includes("logo")) {
+    if (src && isValidImageUrl(src)) {
       images.push(src);
     }
   });

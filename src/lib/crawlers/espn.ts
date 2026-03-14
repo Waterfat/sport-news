@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { isValidImageUrl } from "@/lib/constants";
 import type { Crawler, CrawledArticle } from "./types";
 
 const ESPN_BASE_URL = "https://www.espn.com";
@@ -105,11 +106,16 @@ async function crawlArticle(
   const content = paragraphs.join("\n\n");
   if (!content || content.length < 100) return null;
 
-  // 取得圖片
+  // 取得圖片（排除記者大頭照）
+  const authorExclude = /author|byline|headshot|writer|staff|contributor|avatar/i;
   const images: string[] = [];
   $("article img, .article-body img, picture img").each((_, el) => {
+    const imgClass = $(el).attr("class") || "";
+    const parentClass = $(el).parent().attr("class") || "";
+    if (authorExclude.test(imgClass + " " + parentClass)) return;
+
     const src = $(el).attr("src") || $(el).attr("data-default-src");
-    if (src && src.startsWith("http") && !src.includes("logo")) {
+    if (src && isValidImageUrl(src)) {
       images.push(src);
     }
   });
