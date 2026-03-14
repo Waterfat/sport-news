@@ -1,13 +1,58 @@
 # Sport News 專案規則
 
+## 需求處理流程
+
+收到**需要修改程式碼**的功能需求或架構變更時，**預設先進入 Plan Mode**，不可直接修改程式碼。純討論、問答、規劃不需要進入 Plan Mode。
+
+### Plan Mode 流程
+
+1. 讀取相關程式碼，理解現有架構
+2. 向使用者說明：
+   - 我理解的需求（確認沒有誤解）
+   - 受影響的檔案與模組
+   - 具體改法與重構計畫
+   - 可能的風險或副作用
+   - 是否需要重啟服務、清除 session 等（參考「變更影響對照表」）
+3. 使用者確認或調整後，才退出 Plan Mode 開始實作
+
+### 可跳過 Plan Mode 的情況
+
+- 明確的 bug fix（如「這個按鈕壞了」、「這個 API 回傳錯誤」）
+- 使用者明確說「直接改」
+- 純文字、設定檔、環境變數修改
+- 使用者指示非常具體且範圍明確
+
+### 變更影響對照表
+
+| 修改範圍 | 需要的動作 |
+|----------|-----------|
+| `scripts/` 下的檔案 | 重啟 rewrite-listener |
+| `.env.local` | 重啟 dev server |
+| `src/auth.ts` 或 auth 相關 | 線上需重新部署使 session 生效 |
+| Vercel 環境變數 | 必須重新部署才生效 |
+| DB migration | 套用 SQL + NOTIFY pgrst reload schema |
+| `package.json` 依賴變更 | npm install + 重啟 dev server |
+| CSS 佈局變更 | 需截圖驗證（PC 1440×900 + 手機 430×932） |
+| 新增 API 端點 | 更新 `smoke-test.config.json` |
+| 新增/修改頁面 | 更新 E2E 測試 |
+
+## Skill 專案設定（供 /dev、/deploy、/review 讀取）
+
+| 設定項 | 值 |
+|--------|-----|
+| 正式環境 URL | `https://howger-sport.com` |
+| 本地開發 URL | `http://localhost:3000` |
+| 部署方式 | `npx vercel --prod`（Vercel，push main 會自動部署，未觸發時手動執行） |
+| 統一 QA 指令 | `./scripts/qa.sh <URL>`（串接 vitest + smoke + E2E） |
+| 共用常數檔案 | `src/lib/constants.ts` |
+| 跨服務介面 | `scripts/` ↔ `src/app/api/` 共用 DB schema（特別是 `rewrite_tasks` 表） |
+
 ## 強制開發流程
 
-- 每次 commit 前必須執行 `npx vitest run`，測試未通過不得 commit
+- 每次 commit 前必須執行統一 QA：`./scripts/qa.sh`，未通過不得 commit
 - 新增/修改 `src/lib/*.ts` 或 `src/app/api/**/*.ts` → 必須同步新增/更新對應 unit test
 - `/review` 重構完 → 執行 `/write-tests` 補齊測試覆蓋
-- **部署後必須依序執行兩道驗證**，全部通過才算部署完成：
-  1. `./scripts/smoke-test.sh` — API 層驗證（HTTP status、認證保護、DB 連通）
-  2. `./scripts/e2e-test.sh` — 瀏覽器 E2E 驗證（頁面渲染、UI 元素、互動流程）
+- **部署後必須對正式環境執行統一 QA**：`./scripts/qa.sh https://howger-sport.com`
 - 新增 API 端點後 → 更新 `smoke-test.config.json` 對應的 protected_apis 或 public_apis
 - 新增/修改頁面後 → 更新對應的 `e2e/*.spec.ts` 測試
 
