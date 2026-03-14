@@ -8,6 +8,13 @@ export const revalidate = 60;
 
 const comingSoonCategories = new Set(["mlb", "soccer", "general"]);
 
+const CATEGORY_BANNERS: Record<string, string> = {
+  nba: "/images/category-nba.jpg",
+  mlb: "/images/category-mlb.jpg",
+  soccer: "/images/category-soccer.jpg",
+  general: "/images/category-general.jpg",
+};
+
 type ArticleWithWriter = {
   id: string;
   title: string;
@@ -61,40 +68,45 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const colorClass = CATEGORY_COLORS[categoryName] ?? "bg-gray-100 text-gray-800";
+  const colorClass = CATEGORY_COLORS[categoryName] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
+  const bannerImage = CATEGORY_BANNERS[slug];
 
   // 敬請期待分類
   if (comingSoonCategories.has(slug)) {
     return (
       <div>
-        <div className="mb-8">
-          <nav className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-            <Link href="/" className="hover:text-gray-700 transition-colors">
-              首頁
-            </Link>
-            <span>/</span>
-            <span className="text-gray-900 font-medium">{displayLabel}</span>
-          </nav>
-          <div className="flex items-center gap-3">
-            <span
-              className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${colorClass}`}
-            >
-              {displayLabel}
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              {displayLabel}新聞
-            </h1>
+        {/* Category Banner */}
+        {bannerImage && (
+          <div className="relative rounded-2xl overflow-hidden mb-8 h-[160px] sm:h-[200px]">
+            <img src={bannerImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative z-10 flex items-center h-full px-6 sm:px-10">
+              <div>
+                <span className={`inline-block px-3 py-1 text-sm font-semibold ${colorClass} mb-2`}>
+                  {displayLabel}
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                  {displayLabel}新聞
+                </h1>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="text-6xl mb-6">🏟️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">敬請期待</h2>
-          <p className="text-gray-500 max-w-md">
+        )}
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="rounded-2xl overflow-hidden mb-6 max-w-md">
+            <img
+              src="/images/coming-soon-sports.jpg"
+              alt="敬請期待"
+              className="w-full h-auto"
+            />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">敬請期待</h2>
+          <p className="text-slate-500 max-w-md">
             {displayLabel}新聞即將上線，請持續關注 小豪哥體育資訊網！
           </p>
           <Link
             href="/"
-            className="mt-8 px-6 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            className="mt-8 px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
             回到首頁
           </Link>
@@ -131,33 +143,41 @@ export default async function CategoryPage({
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-8">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-          <Link href="/" className="hover:text-gray-700 transition-colors">
+      {/* Category Banner */}
+      {bannerImage && (
+        <div className="relative rounded-2xl overflow-hidden mb-8 h-[160px] sm:h-[200px]">
+          <img src={bannerImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative z-10 flex items-center h-full px-6 sm:px-10">
+            <div>
+              <span className={`inline-block px-3 py-1 text-sm font-semibold ${colorClass} mb-2`}>
+                {displayLabel}
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                {displayLabel}新聞
+              </h1>
+              <p className="text-white/80 mt-1 text-sm">
+                共 {totalCount} 篇報導
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm mb-6">
+        <span className="inline-flex items-center gap-2 bg-slate-100 rounded-full px-4 py-1.5">
+          <Link href="/" className="text-slate-500 hover:text-blue-600 transition-colors">
             首頁
           </Link>
-          <span>/</span>
-          <span className="text-gray-900 font-medium">{displayLabel}</span>
-        </nav>
-        <div className="flex items-center gap-3">
-          <span
-            className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${colorClass}`}
-          >
-            {displayLabel}
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            {displayLabel}新聞
-          </h1>
-        </div>
-        <p className="text-gray-500 mt-2">
-          共 {totalCount} 篇報導
-        </p>
-      </div>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-700 font-medium">{displayLabel}</span>
+        </span>
+      </nav>
 
       {/* Articles */}
       {!articles || articles.length === 0 ? (
-        <p className="text-gray-500 py-12 text-center">
+        <p className="text-slate-500 py-12 text-center">
           此分類目前沒有文章。
         </p>
       ) : (
@@ -169,21 +189,23 @@ export default async function CategoryPage({
               <Link
                 key={article.id}
                 href={`/news/${article.slug || article.id}`}
-                className="group block rounded-xl border border-gray-200 bg-white p-5 hover:shadow-lg hover:border-gray-300 transition-all duration-200"
+                className="group block rounded-xl border border-slate-200 bg-white p-5 hover:shadow-md hover:border-blue-300 transition-all duration-200"
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
+                    <h2 className="text-lg font-semibold text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
                       {article.title}
                     </h2>
-                    <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                    <p className="text-sm text-slate-500 line-clamp-2 mb-3">
                       {article.content
                         ?.replace(/[#*_>\-\n]/g, " ")
                         .slice(0, 160)}
                     </p>
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
                       {writerName && <span>{writerName}</span>}
+                      {writerName && <span>&middot;</span>}
                       <span>{formatDateShort(article.published_at)}</span>
+                      <span>&middot;</span>
                       <span>{article.view_count ?? 0} views</span>
                     </div>
                   </div>
@@ -207,7 +229,7 @@ export default async function CategoryPage({
           {currentPage > 1 && (
             <Link
               href={`/category/${slug}?page=${currentPage - 1}`}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:border-blue-300 hover:text-blue-600 transition-colors"
             >
               上一頁
             </Link>
@@ -229,17 +251,17 @@ export default async function CategoryPage({
               }, [])
               .map((item, i) =>
                 item === "ellipsis" ? (
-                  <span key={`e${i}`} className="px-2 text-gray-400">
+                  <span key={`e${i}`} className="px-2 text-slate-400">
                     ...
                   </span>
                 ) : (
                   <Link
                     key={item}
                     href={`/category/${slug}?page=${item}`}
-                    className={`w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg transition-colors ${
+                    className={`w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg border transition-colors ${
                       item === currentPage
-                        ? "bg-gray-900 text-white"
-                        : "text-gray-700 hover:bg-gray-100"
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "text-slate-600 border-slate-300 hover:border-blue-300 hover:text-blue-600"
                     }`}
                   >
                     {item}
@@ -250,7 +272,7 @@ export default async function CategoryPage({
           {currentPage < totalPages && (
             <Link
               href={`/category/${slug}?page=${currentPage + 1}`}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:border-blue-300 hover:text-blue-600 transition-colors"
             >
               下一頁
             </Link>

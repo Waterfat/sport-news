@@ -44,14 +44,12 @@ export default async function HomePage() {
         const heroImage = hero.images?.[0]?.url;
         return (
           <Link href={getArticleHref(hero)} className="block group mb-10">
-            <article className="relative rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 p-8 sm:p-12 text-white overflow-hidden min-h-[280px] flex items-end">
-              {heroImage && (
-                <img
-                  src={heroImage}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-              )}
+            <article className="relative rounded-2xl bg-gradient-to-br from-slate-800 to-slate-700 p-8 sm:p-12 text-white overflow-hidden min-h-[280px] flex items-end">
+              <img
+                src={heroImage || "/images/hero-sports-bg.jpg"}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
               <div className="relative z-10">
                 {hero.category && (
@@ -65,11 +63,13 @@ export default async function HomePage() {
                 <p className="text-gray-300 text-sm sm:text-base line-clamp-2 max-w-2xl mb-4">
                   {hero.content?.replace(/[#*_>\-\n]/g, " ").slice(0, 200)}
                 </p>
-                <div className="flex items-center gap-3 text-xs text-gray-400">
+                <div className="flex items-center gap-2 text-xs text-gray-400">
                   {hero.writer_personas?.name && (
                     <span>{hero.writer_personas.name}</span>
                   )}
+                  <span>&middot;</span>
                   <span>{formatDateShort(hero.published_at)}</span>
+                  <span>&middot;</span>
                   <span>{hero.view_count ?? 0} views</span>
                 </div>
               </div>
@@ -85,14 +85,14 @@ export default async function HomePage() {
 
       {/* Recent Articles */}
       <section>
-        <h2 className="text-xl font-bold text-gray-900 mb-6">最新報導</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-6 border-l-4 border-blue-600 pl-3">最新報導</h2>
         {gridArticles.length === 0 ? (
-          <p className="text-gray-500">目前沒有已發布的文章。</p>
+          <p className="text-slate-500">目前沒有已發布的文章。</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {gridArticles.map((article) => {
               const writerName = article.writer_personas?.name;
-              const colorClass = CATEGORY_COLORS[article.category ?? ""] ?? "bg-gray-100 text-gray-800";
+              const colorClass = CATEGORY_COLORS[article.category ?? ""] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
               const thumbnail = article.images?.[0]?.url;
 
               return (
@@ -101,9 +101,9 @@ export default async function HomePage() {
                   href={getArticleHref(article)}
                   className="group block"
                 >
-                  <article className="h-full rounded-xl border border-gray-200 bg-white overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all duration-200">
+                  <article className="h-full rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md hover:border-blue-300 transition-all duration-200">
                     {thumbnail && (
-                      <div className="aspect-video bg-gray-100">
+                      <div className="aspect-video bg-slate-100">
                         <img
                           src={thumbnail}
                           alt=""
@@ -115,22 +115,22 @@ export default async function HomePage() {
                       <div className="flex items-center gap-2 mb-3">
                         {article.category && (
                           <span
-                            className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${colorClass}`}
+                            className={`inline-block px-2 py-0.5 text-xs font-medium ${colorClass}`}
                           >
                             {article.category}
                           </span>
                         )}
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-slate-400">
                           {formatDateShort(article.published_at)}
                         </span>
                       </div>
-                      <h3 className="text-base font-semibold text-gray-900 leading-snug mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-base font-semibold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
                         {article.title}
                       </h3>
-                      <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                      <p className="text-sm text-slate-500 line-clamp-2 mb-3">
                         {article.content?.replace(/[#*_>\-\n]/g, " ").slice(0, 120)}
                       </p>
-                      <div className="flex items-center justify-between text-xs text-gray-400">
+                      <div className="flex items-center justify-between text-xs text-slate-400">
                         {writerName && <span>{writerName}</span>}
                         <span>{article.view_count ?? 0} views</span>
                       </div>

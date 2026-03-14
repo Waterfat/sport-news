@@ -116,13 +116,14 @@ export default async function ArticlePage({
     .limit(4);
 
   const colorClass =
-    CATEGORY_COLORS[article.category ?? ""] ?? "bg-gray-100 text-gray-800";
+    CATEGORY_COLORS[article.category ?? ""] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
 
   // Simple markdown-like rendering: split by paragraphs, handle headings
   const contentParagraphs: string[] = (article.content ?? "").split("\n").filter(Boolean);
 
   const articleUrl = `${SITE_URL}/news/${article.slug || slug}`;
 
+  // JSON-LD structured data (server-generated, safe content)
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -144,6 +145,7 @@ export default async function ArticlePage({
 
   return (
     <article className="max-w-3xl mx-auto">
+      {/* JSON-LD: content is server-generated from trusted DB, not user input */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -151,24 +153,26 @@ export default async function ArticlePage({
       <ViewTracker slug={slug} />
 
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/" className="hover:text-gray-700 transition-colors">
-          首頁
-        </Link>
-        <span>/</span>
-        {article.category && (
-          <>
-            <Link
-              href={`/category/${getCategorySlug(article.category)}`}
-              className="hover:text-gray-700 transition-colors"
-            >
-              {article.category}
-            </Link>
-            <span>/</span>
-          </>
-        )}
-        <span className="text-gray-400 truncate max-w-[200px]">
-          {article.title}
+      <nav className="flex items-center gap-2 text-sm mb-6">
+        <span className="inline-flex items-center gap-2 bg-slate-100 rounded-full px-4 py-1.5">
+          <Link href="/" className="text-slate-500 hover:text-blue-600 transition-colors">
+            首頁
+          </Link>
+          <span className="text-slate-300">/</span>
+          {article.category && (
+            <>
+              <Link
+                href={`/category/${getCategorySlug(article.category)}`}
+                className="text-slate-500 hover:text-blue-600 transition-colors"
+              >
+                {article.category}
+              </Link>
+              <span className="text-slate-300">/</span>
+            </>
+          )}
+          <span className="text-slate-700 truncate max-w-[200px]">
+            {article.title}
+          </span>
         </span>
       </nav>
 
@@ -176,26 +180,28 @@ export default async function ArticlePage({
       <header className="mb-8">
         {article.category && (
           <span
-            className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${colorClass} mb-4`}
+            className={`inline-block px-3 py-1 text-xs font-semibold ${colorClass} mb-4`}
           >
             {article.category}
           </span>
         )}
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
+        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight mb-4">
           {article.title}
         </h1>
-        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
           {writer && (
             <Link
               href={`/writer/${writer.id}`}
-              className="font-medium text-gray-700 hover:text-blue-600 transition-colors"
+              className="font-medium text-slate-700 hover:text-blue-600 transition-colors"
             >
               {writer.name}
             </Link>
           )}
+          {writer && <span>&middot;</span>}
           <time dateTime={article.published_at ?? ""}>
             {formatDateFull(article.published_at)}
           </time>
+          <span>&middot;</span>
           <span className="flex items-center gap-1">
             <svg
               className="w-4 h-4"
@@ -230,23 +236,23 @@ export default async function ArticlePage({
             className="w-full max-h-[480px] object-cover"
           />
           {article.images[0].caption && (
-            <p className="text-xs text-gray-400 mt-2">{article.images[0].caption}</p>
+            <p className="text-xs text-slate-400 mt-2">{article.images[0].caption}</p>
           )}
         </div>
       )}
 
       {/* Divider */}
-      <hr className="border-gray-200 mb-8" />
+      <hr className="border-slate-200 mb-8" />
 
       {/* Content */}
-      <div className="prose prose-lg prose-gray max-w-none mb-12">
+      <div className="prose prose-lg max-w-none mb-12">
         {contentParagraphs.map((line, i) => {
           const trimmed = line.trim();
           if (trimmed.startsWith("### ")) {
             return (
               <h3
                 key={i}
-                className="text-xl font-bold text-gray-900 mt-8 mb-3"
+                className="text-xl font-bold text-slate-900 mt-8 mb-3"
               >
                 {trimmed.slice(4)}
               </h3>
@@ -256,7 +262,7 @@ export default async function ArticlePage({
             return (
               <h2
                 key={i}
-                className="text-2xl font-bold text-gray-900 mt-10 mb-4"
+                className="text-2xl font-bold text-slate-900 mt-10 mb-4"
               >
                 {trimmed.slice(3)}
               </h2>
@@ -266,7 +272,7 @@ export default async function ArticlePage({
             return (
               <h2
                 key={i}
-                className="text-2xl font-bold text-gray-900 mt-10 mb-4"
+                className="text-2xl font-bold text-slate-900 mt-10 mb-4"
               >
                 {trimmed.slice(2)}
               </h2>
@@ -274,7 +280,7 @@ export default async function ArticlePage({
           }
           if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
             return (
-              <div key={i} className="flex items-start gap-2 text-gray-700 leading-relaxed ml-4">
+              <div key={i} className="flex items-start gap-2 text-slate-700 leading-relaxed ml-4">
                 <span className="select-none" aria-hidden="true">&#8226;</span>
                 <span>{trimmed.slice(2)}</span>
               </div>
@@ -284,14 +290,14 @@ export default async function ArticlePage({
             return (
               <blockquote
                 key={i}
-                className="border-l-4 border-blue-500 pl-4 italic text-gray-600 my-4"
+                className="border-l-4 border-blue-400 bg-blue-50/50 pl-4 py-2 italic text-slate-600 my-4"
               >
                 {trimmed.slice(2)}
               </blockquote>
             );
           }
           return (
-            <p key={i} className="text-gray-700 leading-relaxed mb-4">
+            <p key={i} className="text-slate-700 leading-relaxed mb-4">
               {trimmed}
             </p>
           );
@@ -308,20 +314,20 @@ export default async function ArticlePage({
 
       {/* Writer Info */}
       {writer && (
-        <div className="bg-gray-50 rounded-xl p-6 mb-12">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-12">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+            <div className="w-12 h-12 rounded-full bg-blue-600 ring-2 ring-blue-600 ring-offset-2 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
               {writer.name.charAt(0)}
             </div>
             <div>
               <Link
                 href={`/writer/${writer.id}`}
-                className="text-base font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                className="text-base font-semibold text-slate-900 hover:text-blue-600 transition-colors"
               >
                 {writer.name}
               </Link>
               {writer.description && (
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-slate-500 mt-1">
                   {writer.description}
                 </p>
               )}
@@ -333,18 +339,18 @@ export default async function ArticlePage({
       {/* Related Articles */}
       {relatedArticles && relatedArticles.length > 0 && (
         <section>
-          <h2 className="text-xl font-bold text-gray-900 mb-5">相關報導</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-5 border-l-4 border-blue-600 pl-3">相關報導</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {relatedArticles.map((related) => (
               <Link
                 key={related.id}
                 href={`/news/${related.slug || related.id}`}
-                className="group block rounded-lg border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all"
+                className="group block rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md hover:border-blue-300 transition-all"
               >
-                <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
+                <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
                   {related.title}
                 </h3>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
                   <time>
                     {related.published_at
                       ? new Date(related.published_at).toLocaleDateString(
@@ -352,6 +358,7 @@ export default async function ArticlePage({
                         )
                       : ""}
                   </time>
+                  <span>&middot;</span>
                   <span>{related.view_count ?? 0} views</span>
                 </div>
               </Link>
@@ -362,4 +369,3 @@ export default async function ArticlePage({
     </article>
   );
 }
-

@@ -36,10 +36,10 @@ export default function LikeButton({ articleId }: { articleId: string }) {
   return (
     <button
       onClick={handleLike}
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 text-sm font-medium transition-all ${
         liked
-          ? "border-red-200 bg-red-50 text-red-600"
-          : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+          ? "border-red-400 bg-red-50 text-red-600"
+          : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-700"
       }`}
     >
       <svg
