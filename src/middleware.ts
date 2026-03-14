@@ -2,8 +2,17 @@ import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
 const PUBLIC_API_ROUTES = ["/api/cron", "/api/auth", "/api/public"];
+const CANONICAL_HOST = "howger-sport.com";
 
 export default auth((req) => {
+  const host = req.headers.get("host") || "";
+  if (host !== CANONICAL_HOST && host.includes("vercel.app")) {
+    const url = new URL(req.url);
+    url.host = CANONICAL_HOST;
+    url.protocol = "https";
+    return NextResponse.redirect(url, 301);
+  }
+
   const { pathname } = req.nextUrl;
 
   // 公開 API、cron API 和 auth API 不需要登入
@@ -25,5 +34,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
