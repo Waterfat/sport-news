@@ -20,6 +20,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://howger-sport.com"),
   title: {
     default: "小豪哥體育資訊網 - 體育新聞",
     template: "%s | 小豪哥體育資訊網",
