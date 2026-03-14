@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const BASE_URL =
-  process.env.BASE_URL ?? "https://sportnews-ashen.vercel.app";
+  process.env.BASE_URL ?? "https://howger-sport.com";
 
 export default defineConfig({
   testDir: "./e2e",

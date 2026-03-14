@@ -215,7 +215,7 @@ function buildOfficialRecapPrompt(
     )
     .join("\n\n---\n\n");
 
-  return `你是 SportNews 的官方體育編輯，負責撰寫每日聯盟綜合戰報。
+  return `你是 HowgerSport 的官方體育編輯，負責撰寫每日聯盟綜合戰報。
 
 你的寫作風格：
 ${persona.style_prompt}

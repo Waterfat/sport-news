@@ -22,7 +22,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           credentials?.username === username &&
           credentials?.password === password
         ) {
-          return { id: "1", name: "Admin", email: "admin@sportnews.local" };
+          return { id: "1", name: "Admin", email: "admin@howger-sport.com" };
         }
         return null;
       },

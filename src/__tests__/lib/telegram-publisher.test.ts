@@ -12,7 +12,7 @@ beforeEach(() => {
 const config = {
   bot_token: "test-token",
   chat_id: "@test_channel",
-  site_url: "https://sportnews.example.com",
+  site_url: "https://howger-sport.com",
 };
 
 describe("publishToTelegram - text only", () => {
@@ -60,7 +60,7 @@ describe("publishToTelegram - text only", () => {
     );
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-    expect(body.text).toContain("https://sportnews.example.com/news/my-article");
+    expect(body.text).toContain("https://howger-sport.com/news/my-article");
   });
 
   it("includes 閱讀全文 link text", async () => {

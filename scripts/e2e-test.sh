@@ -13,7 +13,7 @@ cd "$REPO_ROOT"
 if [ -n "${1:-}" ]; then
   export BASE_URL="$1"
 fi
-BASE_URL="${BASE_URL:-https://sportnews-ashen.vercel.app}"
+BASE_URL="${BASE_URL:-https://howger-sport.com}"
 
 # ── Check Playwright is installed ─────────────────────────────
 if ! npx playwright --version &>/dev/null; then
