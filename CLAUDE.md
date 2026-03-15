@@ -42,7 +42,7 @@
 |--------|-----|
 | 正式環境 URL | `https://howger-sport.com` |
 | 本地開發 URL | `http://localhost:3000` |
-| 部署方式 | `npx vercel --prod`（Vercel，push main 會自動部署，未觸發時手動執行） |
+| 部署方式 | push main 自動部署（Vercel）；push hook 會自動提醒等待部署 + 跑 QA；未觸發時用 `/deploy manual` 手動部署 |
 | 統一 QA 指令 | `./scripts/qa.sh <URL>`（串接 vitest + smoke + E2E） |
 | 共用常數檔案 | `src/lib/constants.ts` |
 | 跨服務介面 | `scripts/` ↔ `src/app/api/` 共用 DB schema（特別是 `rewrite_tasks` 表） |

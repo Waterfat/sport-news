@@ -3,6 +3,7 @@ import Link from "next/link";
 
 const navLinks = [
   { href: "/", label: "首頁" },
+  { href: "/scores", label: "即時比分" },
   { href: "/category/nba", label: "NBA" },
   { href: "/category/mlb", label: "MLB" },
   { href: "/category/soccer", label: "足球" },

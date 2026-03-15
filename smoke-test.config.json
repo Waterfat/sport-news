@@ -3,7 +3,8 @@
 
   "pages_200": [
     "/",
-    "/login"
+    "/login",
+    "/scores"
   ],
 
   "auth": {
@@ -18,6 +19,8 @@
 
   "public_apis": [
     "/api/public/articles?limit=1",
+    "/api/public/scoreboard/leagues",
+    "/api/public/scoreboard?league=nba",
     "/robots.txt",
     "/sitemap.xml"
   ],

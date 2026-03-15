@@ -2,6 +2,13 @@
 
 export const POLLING_INTERVAL_MS = 3000;
 export const POLLING_TIMEOUT_MS = 600000;
+export const SCOREBOARD_POLLING_MS = 30_000;
+
+export const SPORT_KEY_LABELS: Record<string, string> = {
+  basketball: "籃球",
+  baseball: "棒球",
+  soccer: "足球",
+};
 
 export const SITE_URL =
   (process.env.NEXT_PUBLIC_SITE_URL || "https://howger-sport.com").trim();

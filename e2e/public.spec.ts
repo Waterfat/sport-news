@@ -91,6 +91,70 @@ test.describe("文章頁", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Scores page (即時比分)
+// ---------------------------------------------------------------------------
+test.describe("即時比分頁", () => {
+  test("Leagues API 回傳正確格式", async ({ request }) => {
+    const resp = await request.get("/api/public/scoreboard/leagues");
+    expect(resp.ok()).toBeTruthy();
+    const json = await resp.json();
+    expect(json).toHaveProperty("leagues");
+    expect(Array.isArray(json.leagues)).toBeTruthy();
+    if (json.leagues.length > 0) {
+      expect(json.leagues[0]).toHaveProperty("key");
+      expect(json.leagues[0]).toHaveProperty("label");
+    }
+  });
+
+  test("Scoreboard API 回傳比分資料", async ({ request }) => {
+    // First get available leagues
+    const leaguesResp = await request.get("/api/public/scoreboard/leagues");
+    const leaguesJson = await leaguesResp.json();
+    if (leaguesJson.leagues.length === 0) {
+      test.skip(true, "No enabled leagues — skipping scoreboard API test");
+      return;
+    }
+    const firstLeague = leaguesJson.leagues[0].key;
+
+    const resp = await request.get(`/api/public/scoreboard?league=${firstLeague}`);
+    expect(resp.ok()).toBeTruthy();
+    const json = await resp.json();
+    expect(json).toHaveProperty("league", firstLeague);
+    expect(json).toHaveProperty("label");
+    expect(json).toHaveProperty("games");
+    expect(Array.isArray(json.games)).toBeTruthy();
+  });
+
+  test("頁面載入並顯示即時比分標題或空狀態", async ({ page }) => {
+    await page.goto("/scores");
+
+    // Should show either the heading or the "coming soon" state
+    const heading = page.getByRole("heading", { name: "即時比分" });
+    const comingSoon = page.getByText("即時比分功能即將上線");
+    const either = heading.or(comingSoon);
+    await expect(either.first()).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("導覽列包含即時比分連結", async ({ page }) => {
+    await page.goto("/");
+    const nav = page.locator("header nav").first();
+    await expect(nav.getByRole("link", { name: "即時比分" })).toBeVisible();
+  });
+
+  test("Scoreboard API 不接受無效聯賽", async ({ request }) => {
+    const resp = await request.get("/api/public/scoreboard?league=invalid_xxx");
+    expect(resp.ok()).toBeFalsy();
+    expect(resp.status()).toBe(404);
+  });
+
+  test("Scoreboard API 缺少 league 參數回傳 400", async ({ request }) => {
+    const resp = await request.get("/api/public/scoreboard");
+    expect(resp.ok()).toBeFalsy();
+    expect(resp.status()).toBe(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // SEO / crawler files
 // ---------------------------------------------------------------------------
 test.describe("SEO 檔案", () => {
