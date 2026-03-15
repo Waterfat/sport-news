@@ -38,8 +38,8 @@ export default auth((req) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 其他 API（settings 等）需要 admin 登入
-  if (pathname.startsWith("/api/settings") && !req.auth) {
+  // 其他 API（settings、dashboard、articles 等）需要登入
+  if (pathname.startsWith("/api") && !req.auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
