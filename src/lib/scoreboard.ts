@@ -102,12 +102,14 @@ function parseGames(data: any): Game[] {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export async function fetchScoreboard(espnEndpoint: string): Promise<Game[]> {
-  const cached = getCached(espnEndpoint);
+export async function fetchScoreboard(espnEndpoint: string, date?: string): Promise<Game[]> {
+  const cacheKey = date ? `${espnEndpoint}:${date}` : espnEndpoint;
+  const cached = getCached(cacheKey);
   if (cached) return cached;
 
   try {
-    const url = `${ESPN_BASE}/${espnEndpoint}/scoreboard`;
+    let url = `${ESPN_BASE}/${espnEndpoint}/scoreboard`;
+    if (date) url += `?dates=${date}`;
     const res = await fetch(url, { next: { revalidate: 0 } });
     if (!res.ok) {
       console.error(`ESPN API error: ${res.status} for ${espnEndpoint}`);
@@ -115,7 +117,7 @@ export async function fetchScoreboard(espnEndpoint: string): Promise<Game[]> {
     }
     const data = await res.json();
     const games = parseGames(data);
-    setCache(espnEndpoint, games);
+    setCache(cacheKey, games);
     return games;
   } catch (err) {
     console.error(`ESPN API fetch failed for ${espnEndpoint}:`, err);

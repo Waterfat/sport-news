@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const games = await fetchScoreboard(data.espn_endpoint);
+    const date = request.nextUrl.searchParams.get("date") ?? undefined;
+    const games = await fetchScoreboard(data.espn_endpoint, date);
 
     return NextResponse.json({
       league: data.league_key,

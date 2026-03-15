@@ -152,7 +152,7 @@ export default function ScoreboardClient({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {data.games.map((game) => (
-            <ScoreCard key={game.id} game={game} />
+            <ScoreCard key={game.id} game={game} league={activeLeague} />
           ))}
         </div>
       )}

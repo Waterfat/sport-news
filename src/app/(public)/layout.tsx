@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { UserMenu } from "@/components/auth/UserMenu";
 
 const navLinks = [
   { href: "/", label: "首頁" },
@@ -8,6 +9,8 @@ const navLinks = [
   { href: "/category/mlb", label: "MLB" },
   { href: "/category/soccer", label: "足球" },
   { href: "/category/general", label: "綜合" },
+  { href: "/standings/nba", label: "排名" },
+  { href: "/odds", label: "賠率" },
 ];
 
 export default function PublicLayout({
@@ -21,7 +24,7 @@ export default function PublicLayout({
       <header className="flex-shrink-0 bg-white/90 backdrop-blur-sm border-b border-slate-200 pt-[env(safe-area-inset-top)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center flex-shrink-0">
               <Image
                 src="/logo.png"
                 alt="小豪哥體育資訊網"
@@ -31,29 +34,37 @@ export default function PublicLayout({
                 priority
               />
             </Link>
-            <nav className="hidden sm:flex items-center gap-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
+            <div className="hidden sm:flex items-center gap-1">
+              <nav className="flex items-center gap-1">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+              <div className="ml-2 pl-2 border-l border-slate-200">
+                <UserMenu />
+              </div>
+            </div>
             {/* Mobile nav */}
-            <nav className="flex sm:hidden items-center gap-0.5 overflow-x-auto scrollbar-hide pb-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="px-2 py-1 text-xs font-medium text-slate-600 rounded hover:text-blue-600 hover:bg-blue-50 transition-colors whitespace-nowrap"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
+            <div className="flex sm:hidden items-center gap-2">
+              <nav className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-1">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="px-2 py-1 text-xs font-medium text-slate-600 rounded hover:text-blue-600 hover:bg-blue-50 transition-colors whitespace-nowrap"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+              <UserMenu />
+            </div>
           </div>
         </div>
       </header>

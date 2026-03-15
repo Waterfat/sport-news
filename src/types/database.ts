@@ -74,3 +74,36 @@ export interface PublishLog {
   published_url: string | null;
   published_at: string;
 }
+
+// ---------- 會員系統 ----------
+
+export interface Member {
+  id: string;
+  email: string | null;
+  name: string | null;
+  avatar_url: string | null;
+  role: "member" | "admin";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemberAccount {
+  id: string;
+  member_id: string;
+  provider: "google" | "line";
+  provider_account_id: string;
+  access_token: string | null;
+  refresh_token: string | null;
+  expires_at: number | null;
+  created_at: string;
+}
+
+export interface MemberPreferences {
+  member_id: string;
+  favorite_teams: Array<{ sport: string; teamId: string; name: string }>;
+  favorite_leagues: string[];
+  notification_line: boolean;
+  notification_telegram: boolean;
+  created_at: string;
+  updated_at: string;
+}

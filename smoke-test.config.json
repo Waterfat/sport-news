@@ -4,7 +4,10 @@
   "pages_200": [
     "/",
     "/login",
-    "/scores"
+    "/scores",
+    "/standings/nba",
+    "/odds",
+    "/settings"
   ],
 
   "auth": {
@@ -21,6 +24,7 @@
     "/api/public/articles?limit=1",
     "/api/public/scoreboard/leagues",
     "/api/public/scoreboard?league=nba",
+    "/api/public/standings?league=nba",
     "/robots.txt",
     "/sitemap.xml"
   ],

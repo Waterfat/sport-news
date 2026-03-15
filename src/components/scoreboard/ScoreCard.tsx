@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { Game, TeamInfo } from "@/lib/scoreboard";
 
 function formatTaiwanTime(dateStr: string): string {
@@ -59,7 +60,7 @@ function TeamRow({ team, isWinner }: { team: TeamInfo; isWinner: boolean }) {
   );
 }
 
-export default function ScoreCard({ game }: { game: Game }) {
+export default function ScoreCard({ game, league }: { game: Game; league?: string }) {
   const homeScore = parseInt(game.homeTeam.score) || 0;
   const awayScore = parseInt(game.awayTeam.score) || 0;
   const isFinishedOrLive = game.status !== "scheduled";
@@ -73,8 +74,8 @@ export default function ScoreCard({ game }: { game: Game }) {
         ? "border-l-4 border-l-slate-300"
         : "border-l-4 border-l-blue-400";
 
-  return (
-    <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden ${borderClass}`}>
+  const content = (
+    <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden ${borderClass} ${league ? "hover:shadow-md transition-shadow cursor-pointer" : ""}`}>
       {/* Status */}
       <div className="px-4 pt-3 pb-2">
         <StatusBadge game={game} />
@@ -95,4 +96,14 @@ export default function ScoreCard({ game }: { game: Game }) {
       )}
     </div>
   );
+
+  if (league) {
+    return (
+      <Link href={`/game/${league}/${game.id}`}>
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
