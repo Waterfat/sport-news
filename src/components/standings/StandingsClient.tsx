@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -115,7 +116,10 @@ export function StandingsClient({
                                 }
                               >
                                 <td className="py-2 px-3">
-                                  <div className="flex items-center gap-2">
+                                  <Link
+                                    href={`/team/${league}/${entry.teamId}`}
+                                    className="flex items-center gap-2 hover:text-blue-600 transition-colors"
+                                  >
                                     {entry.logo && (
                                       <img
                                         src={entry.logo}
@@ -126,7 +130,7 @@ export function StandingsClient({
                                     <span className="font-medium">
                                       {entry.teamName}
                                     </span>
-                                  </div>
+                                  </Link>
                                 </td>
                                 {statKeys.map((key) => (
                                   <td

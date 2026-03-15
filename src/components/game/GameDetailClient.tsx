@@ -22,13 +22,21 @@ interface Play {
   awayScore: string;
 }
 
-interface OddsLine {
+interface GameOdds {
   provider: string;
   details: string;
   overUnder: number;
   spread: number;
-  homeMoneyLine: number;
-  awayMoneyLine: number;
+  homeMoneyLine: string;
+  awayMoneyLine: string;
+}
+
+interface TeamInfo {
+  name: string;
+  abbreviation: string;
+  logo: string;
+  score: string;
+  record: string;
 }
 
 interface GameInfo {
@@ -36,8 +44,9 @@ interface GameInfo {
   date: string;
   status: "in_progress" | "final" | "scheduled";
   statusDetail: string;
-  homeTeam: { name: string; abbreviation: string; logo: string; score: string };
-  awayTeam: { name: string; abbreviation: string; logo: string; score: string };
+  homeTeam: TeamInfo;
+  awayTeam: TeamInfo;
+  odds?: GameOdds;
 }
 
 export function GameDetailClient({
@@ -51,27 +60,24 @@ export function GameDetailClient({
   const [game, setGame] = useState<GameInfo | null>(null);
   const [plays, setPlays] = useState<Play[]>([]);
   const [totalPlays, setTotalPlays] = useState(0);
-  const [odds, setOdds] = useState<OddsLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("summary");
 
   const isMember = !!session?.user;
 
-  // 取得比賽基本資料
+  // Fetch game info from scoreboard
   useEffect(() => {
     fetch(`/api/public/scoreboard?league=${sport}`)
       .then((r) => r.json())
       .then((d) => {
-        const g = (d.games ?? []).find(
-          (g: GameInfo) => g.id === eventId
-        );
+        const g = (d.games ?? []).find((g: GameInfo) => g.id === eventId);
         if (g) setGame(g);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [sport, eventId]);
 
-  // 取得 PBP
+  // Fetch PBP when tab switches
   useEffect(() => {
     if (tab !== "pbp") return;
 
@@ -85,20 +91,6 @@ export function GameDetailClient({
         setPlays(d.plays ?? []);
         setTotalPlays(d.totalCount ?? 0);
       })
-      .catch(() => {});
-  }, [tab, eventId, sport, isMember]);
-
-  // 取得賠率
-  useEffect(() => {
-    if (tab !== "odds") return;
-
-    const endpoint = isMember
-      ? `/api/member/game?eventId=${eventId}&league=${sport}&type=odds`
-      : `/api/public/game?eventId=${eventId}&league=${sport}&type=odds`;
-
-    fetch(endpoint)
-      .then((r) => r.json())
-      .then((d) => setOdds(d.odds ?? []))
       .catch(() => {});
   }, [tab, eventId, sport, isMember]);
 
@@ -130,7 +122,6 @@ export function GameDetailClient({
 
   return (
     <div className="space-y-6">
-      {/* 返回 */}
       <Link
         href="/scores"
         className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600"
@@ -139,44 +130,42 @@ export function GameDetailClient({
         返回比分
       </Link>
 
-      {/* 比賽標題 */}
+      {/* Game Header */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                {game.awayTeam.logo && (
-                  <img
-                    src={game.awayTeam.logo}
-                    alt=""
-                    className="w-12 h-12 mx-auto"
-                  />
-                )}
-                <p className="text-sm font-medium mt-1">
-                  {game.awayTeam.name}
-                </p>
+          <div className="flex items-center justify-center gap-6">
+            <Link href={`/team/${sport}/${game.awayTeam.abbreviation}`} className="text-center hover:opacity-80">
+              {game.awayTeam.logo && (
+                <img src={game.awayTeam.logo} alt="" className="w-14 h-14 mx-auto" />
+              )}
+              <p className="text-sm font-medium mt-1">{game.awayTeam.name}</p>
+              {game.awayTeam.record && (
+                <p className="text-xs text-slate-400">{game.awayTeam.record}</p>
+              )}
+            </Link>
+            <div className="text-center">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl font-bold text-slate-900">
+                  {game.awayTeam.score}
+                </span>
+                <span className="text-slate-400 text-lg">-</span>
+                <span className="text-3xl font-bold text-slate-900">
+                  {game.homeTeam.score}
+                </span>
               </div>
-              <div className="text-3xl font-bold text-slate-900">
-                {game.awayTeam.score}
-              </div>
-              <div className="text-slate-400 text-lg">-</div>
-              <div className="text-3xl font-bold text-slate-900">
-                {game.homeTeam.score}
-              </div>
-              <div className="text-center">
-                {game.homeTeam.logo && (
-                  <img
-                    src={game.homeTeam.logo}
-                    alt=""
-                    className="w-12 h-12 mx-auto"
-                  />
-                )}
-                <p className="text-sm font-medium mt-1">
-                  {game.homeTeam.name}
-                </p>
-              </div>
+              <Badge className={`mt-2 ${statusColor}`}>
+                {game.statusDetail}
+              </Badge>
             </div>
-            <Badge className={statusColor}>{game.statusDetail}</Badge>
+            <Link href={`/team/${sport}/${game.homeTeam.abbreviation}`} className="text-center hover:opacity-80">
+              {game.homeTeam.logo && (
+                <img src={game.homeTeam.logo} alt="" className="w-14 h-14 mx-auto" />
+              )}
+              <p className="text-sm font-medium mt-1">{game.homeTeam.name}</p>
+              {game.homeTeam.record && (
+                <p className="text-xs text-slate-400">{game.homeTeam.record}</p>
+              )}
+            </Link>
           </div>
         </CardContent>
       </Card>
@@ -189,28 +178,62 @@ export function GameDetailClient({
           <TabsTrigger value="odds">賠率</TabsTrigger>
         </TabsList>
 
-        {/* 摘要 */}
+        {/* Summary */}
         <TabsContent value="summary">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">比賽摘要</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 text-center text-sm">
-                <div>
-                  <p className="text-2xl font-bold">{game.awayTeam.score}</p>
-                  <p className="text-slate-500">{game.awayTeam.abbreviation}</p>
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">比分</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 text-center text-sm">
+                  <div>
+                    <p className="text-3xl font-bold">{game.awayTeam.score}</p>
+                    <p className="text-slate-500">{game.awayTeam.abbreviation}</p>
+                  </div>
+                  <div className="flex items-center justify-center text-slate-400 text-lg">
+                    VS
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold">{game.homeTeam.score}</p>
+                    <p className="text-slate-500">{game.homeTeam.abbreviation}</p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-center text-slate-400">
-                  VS
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{game.homeTeam.score}</p>
-                  <p className="text-slate-500">{game.homeTeam.abbreviation}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Quick Odds */}
+            {game.odds && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">賽前賠率</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4 text-center text-sm">
+                    <div>
+                      <p className="font-medium text-slate-600">Spread</p>
+                      <p className="text-lg">{game.odds.details || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-600">O/U</p>
+                      <p className="text-lg">{game.odds.overUnder || "-"}</p>
+                    </div>
+                    <MemberGate message="登入查看 Money Line">
+                      <div>
+                        <p className="font-medium text-slate-600">ML</p>
+                        <p className="text-lg">
+                          {game.odds.awayMoneyLine} / {game.odds.homeMoneyLine}
+                        </p>
+                      </div>
+                    </MemberGate>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2 text-center">
+                    來源：{game.odds.provider}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
         {/* PBP */}
@@ -244,8 +267,6 @@ export function GameDetailClient({
                   </Card>
                 ))}
               </div>
-
-              {/* 未登入且還有更多 → 顯示 MemberGate */}
               {!isMember && totalPlays > plays.length && (
                 <div className="mt-4">
                   <MemberGate
@@ -259,61 +280,66 @@ export function GameDetailClient({
           )}
         </TabsContent>
 
-        {/* 賠率 */}
+        {/* Odds */}
         <TabsContent value="odds">
-          {odds.length === 0 ? (
+          {game.odds ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">賠率詳情</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-slate-50">
+                      <th className="text-left py-2 px-3">項目</th>
+                      <th className="text-center py-2 px-3">數值</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="py-2 px-3 text-slate-600">Spread</td>
+                      <td className="text-center py-2 px-3">{game.odds.details}</td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="py-2 px-3 text-slate-600">Over/Under</td>
+                      <td className="text-center py-2 px-3">{game.odds.overUnder}</td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="py-2 px-3 text-slate-600">來源</td>
+                      <td className="text-center py-2 px-3">{game.odds.provider}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <MemberGate message="登入查看完整 Money Line 賠率">
+                  <table className="w-full text-sm mt-4">
+                    <thead>
+                      <tr className="border-b bg-slate-50">
+                        <th className="text-left py-2 px-3">Money Line</th>
+                        <th className="text-center py-2 px-3">客隊</th>
+                        <th className="text-center py-2 px-3">主隊</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="py-2 px-3 text-slate-600">Close</td>
+                        <td className="text-center py-2 px-3 font-medium">
+                          {game.odds.awayMoneyLine}
+                        </td>
+                        <td className="text-center py-2 px-3 font-medium">
+                          {game.odds.homeMoneyLine}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </MemberGate>
+              </CardContent>
+            </Card>
+          ) : (
             <Card>
               <CardContent className="p-6 text-center text-slate-500">
                 暫無賠率資料
               </CardContent>
             </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-0">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-slate-50">
-                      <th className="text-left py-2 px-3">來源</th>
-                      <th className="text-center py-2 px-3">Spread</th>
-                      <th className="text-center py-2 px-3">O/U</th>
-                      {isMember && (
-                        <th className="text-center py-2 px-3">ML</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {odds.map((o, i) => (
-                      <tr key={i} className="border-b last:border-0">
-                        <td className="py-2 px-3">{o.provider}</td>
-                        <td className="text-center py-2 px-3">{o.details}</td>
-                        <td className="text-center py-2 px-3">
-                          {o.overUnder}
-                        </td>
-                        {isMember && (
-                          <td className="text-center py-2 px-3 text-xs">
-                            {o.awayMoneyLine > 0
-                              ? `+${o.awayMoneyLine}`
-                              : o.awayMoneyLine}{" "}
-                            /{" "}
-                            {o.homeMoneyLine > 0
-                              ? `+${o.homeMoneyLine}`
-                              : o.homeMoneyLine}
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
-          )}
-
-          {!isMember && (
-            <div className="mt-4">
-              <MemberGate message="登入查看完整賠率分析">
-                <span />
-              </MemberGate>
-            </div>
           )}
         </TabsContent>
       </Tabs>

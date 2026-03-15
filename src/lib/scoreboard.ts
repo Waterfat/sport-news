@@ -12,6 +12,15 @@ export interface TeamInfo {
   record: string;
 }
 
+export interface GameOdds {
+  provider: string;
+  details: string;
+  overUnder: number;
+  spread: number;
+  homeMoneyLine: string;
+  awayMoneyLine: string;
+}
+
 export interface Game {
   id: string;
   date: string;
@@ -19,6 +28,7 @@ export interface Game {
   statusDetail: string;
   homeTeam: TeamInfo;
   awayTeam: TeamInfo;
+  odds?: GameOdds;
 }
 
 export interface ScoreboardResponse {
@@ -90,6 +100,21 @@ function parseGames(data: any): Game[] {
     const home = competitors.find((c: any) => c.homeAway === "home") ?? competitors[0] ?? {};
     const away = competitors.find((c: any) => c.homeAway === "away") ?? competitors[1] ?? {};
 
+    // Parse odds if available
+    const oddsData = competition.odds?.[0];
+    let odds: GameOdds | undefined;
+    if (oddsData) {
+      const ml = oddsData.moneyline ?? {};
+      odds = {
+        provider: String(oddsData.provider?.name ?? ""),
+        details: String(oddsData.details ?? ""),
+        overUnder: Number(oddsData.overUnder ?? 0),
+        spread: Number(oddsData.spread ?? 0),
+        homeMoneyLine: String(ml.home?.close?.odds ?? ml.homeClose ?? ""),
+        awayMoneyLine: String(ml.away?.close?.odds ?? ml.awayClose ?? ""),
+      };
+    }
+
     return {
       id: String(event.id ?? ""),
       date: String(event.date ?? ""),
@@ -97,6 +122,7 @@ function parseGames(data: any): Game[] {
       statusDetail: String(event.status?.type?.shortDetail ?? ""),
       homeTeam: parseTeam(home),
       awayTeam: parseTeam(away),
+      odds,
     };
   });
 }

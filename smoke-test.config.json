@@ -25,6 +25,8 @@
     "/api/public/scoreboard/leagues",
     "/api/public/scoreboard?league=nba",
     "/api/public/standings?league=nba",
+    "/api/public/team?sport=nba&id=13",
+    "/api/public/team?sport=nba&id=13&type=roster",
     "/robots.txt",
     "/sitemap.xml"
   ],
