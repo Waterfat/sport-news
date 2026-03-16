@@ -69,6 +69,7 @@ export default function ArticlesPage() {
     },
     onPlanPollComplete: () => {
       planManager.fetchPlans();
+      fetchArticles();
     },
     onProducePollComplete: () => {
       planManager.fetchPlans();
