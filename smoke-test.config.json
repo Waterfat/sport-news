@@ -51,6 +51,22 @@
     {
       "label": "NextAuth providers 包含 google 和 line",
       "command": "curl -s {{BASE_URL}}/api/auth/providers | python3 -c \"import sys,json; p=json.load(sys.stdin); assert 'google' in p, 'missing google'; assert 'line' in p, 'missing line'\""
+    },
+    {
+      "label": "主域名 /admin redirect 到 admin subdomain",
+      "command": "STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-redirs 0 {{BASE_URL}}/admin) && LOCATION=$(curl -s -o /dev/null -w '%{redirect_url}' --max-redirs 0 {{BASE_URL}}/admin) && [ \"$STATUS\" = \"307\" ] && echo \"$LOCATION\" | grep -q 'admin.howger-sport.com/admin'"
+    },
+    {
+      "label": "Admin subdomain /login 回 200",
+      "command": "curl -s -o /dev/null -w '%{http_code}' https://admin.howger-sport.com/login | grep -q '200'"
+    },
+    {
+      "label": "Admin subdomain / redirect 到主域名",
+      "command": "LOCATION=$(curl -s -o /dev/null -w '%{redirect_url}' --max-redirs 0 https://admin.howger-sport.com/) && echo \"$LOCATION\" | grep -q 'howger-sport.com'"
+    },
+    {
+      "label": "Admin subdomain /scores redirect 到主域名",
+      "command": "LOCATION=$(curl -s -o /dev/null -w '%{redirect_url}' --max-redirs 0 https://admin.howger-sport.com/scores) && echo \"$LOCATION\" | grep -q 'howger-sport.com/scores'"
     }
   ]
 }

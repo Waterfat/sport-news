@@ -148,10 +148,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return true;
       }
 
-      // admin 頁面需要 admin 角色
+      // admin 頁面：auth 檢查全部由 middleware 處理（含 subdomain redirect）
       if (pathname.startsWith("/admin")) {
-        if (!auth) return false;
-        // 角色檢查在 middleware 層做
         return true;
       }
 
