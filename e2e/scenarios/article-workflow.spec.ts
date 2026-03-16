@@ -112,7 +112,7 @@ test.describe("規劃 → 產出文章流程", () => {
     await expect(planButton).toBeVisible();
 
     // 如果有規劃列表，檢查 PlansTable 結構
-    const plansTable = page.locator("table").filter({ hasText: /預測標題|規劃/ });
+    const plansTable = page.locator("table").filter({ hasText: /預計標題|預測標題|規劃/ });
     if (await plansTable.isVisible({ timeout: 3000 }).catch(() => false)) {
       // 規劃表格有 checkbox
       const planCheckbox = plansTable.locator("tbody input[type='checkbox']").first();
@@ -236,7 +236,7 @@ test.describe("規劃 → 產出文章流程", () => {
         timeout: 15_000,
       });
 
-      const plansTable = page.locator("table").filter({ hasText: /預測標題|規劃/ });
+      const plansTable = page.locator("table").filter({ hasText: /預計標題|預測標題|規劃/ });
       await expect(plansTable).toBeVisible({ timeout: 10_000 });
     }
   });
@@ -248,7 +248,7 @@ test.describe("規劃 → 產出文章流程", () => {
     });
 
     // 找到規劃表格
-    const plansTable = page.locator("table").filter({ hasText: /預測標題|規劃/ });
+    const plansTable = page.locator("table").filter({ hasText: /預計標題|預測標題|規劃/ });
     if (!(await plansTable.isVisible({ timeout: 5000 }).catch(() => false))) {
       test.skip(true, "目前沒有規劃項目，跳過產出測試");
       return;
