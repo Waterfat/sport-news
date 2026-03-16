@@ -43,6 +43,14 @@
     {
       "label": "Public Articles API 含 total 欄位",
       "command": "curl -s {{BASE_URL}}/api/public/articles?limit=1 | python3 -c \"import sys,json; assert isinstance(json.load(sys.stdin).get('total'),int)\""
+    },
+    {
+      "label": "Google OAuth client_id 有效",
+      "command": "CSRF=$(curl -s -c /tmp/smoke-oauth-jar {{BASE_URL}}/api/auth/csrf | python3 -c \"import sys,json; print(json.load(sys.stdin)['csrfToken'])\") && GOOGLE_URL=$(curl -s -X POST -b /tmp/smoke-oauth-jar -c /tmp/smoke-oauth-jar -d \"csrfToken=$CSRF\" '{{BASE_URL}}/api/auth/signin/google' -o /dev/null -w '%{redirect_url}' --max-redirs 0 2>/dev/null) && GOOGLE_REDIRECT=$(curl -s -o /dev/null -w '%{redirect_url}' \"$GOOGLE_URL\" 2>/dev/null) && echo \"$GOOGLE_REDIRECT\" | grep -qv 'oauth/error'; rm -f /tmp/smoke-oauth-jar"
+    },
+    {
+      "label": "NextAuth providers 包含 google 和 line",
+      "command": "curl -s {{BASE_URL}}/api/auth/providers | python3 -c \"import sys,json; p=json.load(sys.stdin); assert 'google' in p, 'missing google'; assert 'line' in p, 'missing line'\""
     }
   ]
 }
