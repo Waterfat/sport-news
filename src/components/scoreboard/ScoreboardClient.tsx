@@ -117,10 +117,10 @@ export default function ScoreboardClient({
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900 truncate min-w-0">
           {isToday ? "即時比分" : "歷史比分"}
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <DatePicker
             currentDate={selectedDate}
             onDateChange={setSelectedDate}

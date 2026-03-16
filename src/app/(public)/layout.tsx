@@ -51,8 +51,8 @@ export default function PublicLayout({
               </div>
             </div>
             {/* Mobile nav */}
-            <div className="flex sm:hidden items-center gap-2">
-              <nav className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-1">
+            <div className="flex sm:hidden items-center gap-2 min-w-0">
+              <nav className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-1 min-w-0 flex-1">
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}

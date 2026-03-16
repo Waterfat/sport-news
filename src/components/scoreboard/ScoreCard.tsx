@@ -50,7 +50,7 @@ function TeamRow({ team, isWinner }: { team: TeamInfo; isWinner: boolean }) {
         loading="lazy"
       />
       <span className="text-sm font-medium text-slate-700 w-10">{team.abbreviation}</span>
-      <span className={`text-sm flex-1 ${isWinner ? "font-semibold text-slate-900" : "text-slate-600"}`}>
+      <span className={`text-sm flex-1 min-w-0 truncate ${isWinner ? "font-semibold text-slate-900" : "text-slate-600"}`}>
         {team.name}
       </span>
       <span className={`text-lg tabular-nums ${isWinner ? "font-bold text-slate-900" : "text-slate-600"}`}>
