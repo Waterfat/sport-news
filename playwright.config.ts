@@ -2,6 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 
 const BASE_URL =
   process.env.BASE_URL ?? "https://howger-sport.com";
+const ADMIN_BASE_URL =
+  process.env.ADMIN_BASE_URL ??
+  (BASE_URL.includes("localhost")
+    ? BASE_URL
+    : BASE_URL.replace("://", "://admin."));
 
 export default defineConfig({
   testDir: "./e2e",
@@ -30,7 +35,7 @@ export default defineConfig({
     {
       name: "auth-setup",
       testMatch: /auth\.setup\.ts/,
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], baseURL: ADMIN_BASE_URL },
     },
 
     // Public tests — no auth required
@@ -54,6 +59,7 @@ export default defineConfig({
       dependencies: ["auth-setup"],
       use: {
         ...devices["Desktop Chrome"],
+        baseURL: ADMIN_BASE_URL,
         storageState: "e2e/.auth/user.json",
       },
     },
@@ -65,6 +71,7 @@ export default defineConfig({
       dependencies: ["auth-setup"],
       use: {
         ...devices["Desktop Chrome"],
+        baseURL: ADMIN_BASE_URL,
         storageState: "e2e/.auth/user.json",
       },
     },

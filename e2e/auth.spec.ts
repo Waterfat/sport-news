@@ -46,7 +46,7 @@ test("按下 Enter 即可送出表單", async ({ page }) => {
 test("未登入存取 /admin 會重導向至 /login", async ({ page }) => {
   await page.goto("/admin");
 
-  // Should end up on the login page
+  // Main domain /admin redirects to admin subdomain, then to /login
   await page.waitForURL(/\/login/, { timeout: 10_000 });
   await expect(page.getByText("後台登入")).toBeVisible();
 });
