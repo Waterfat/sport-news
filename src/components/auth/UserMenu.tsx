@@ -24,8 +24,8 @@ export function UserMenu() {
     return <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />;
   }
 
-  // 未登入 → 顯示登入按鈕
-  if (!session?.user) {
+  // 未登入或 admin → 前台顯示登入按鈕（admin 帳號不是前台會員）
+  if (!session?.user || session.user.role === "admin") {
     return (
       <>
         <Button

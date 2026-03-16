@@ -30,8 +30,8 @@ export function MemberGate({
   const { data: session } = useSession();
   const [loginOpen, setLoginOpen] = useState(false);
 
-  // 已登入 → 顯示完整內容
-  if (session?.user) {
+  // 已登入會員 → 顯示完整內容（admin 不算會員）
+  if (session?.user?.role === "member") {
     return <>{children}</>;
   }
 
@@ -91,8 +91,8 @@ export function MemberGateList<T>({
 }) {
   const { data: session } = useSession();
 
-  // 已登入 → 顯示全部
-  if (session?.user) {
+  // 已登入會員 → 顯示全部（admin 不算會員）
+  if (session?.user?.role === "member") {
     return (
       <div className={className}>
         {items.map((item, i) => renderItem(item, i))}
