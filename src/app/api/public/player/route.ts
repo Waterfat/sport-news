@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSportPath } from "@/lib/espn/client";
+import { fetchPlayerGameLog } from "@/lib/espn/player";
 
 const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 
 export async function GET(request: NextRequest) {
   const sport = request.nextUrl.searchParams.get("sport") || "nba";
   const id = request.nextUrl.searchParams.get("id");
+  const type = request.nextUrl.searchParams.get("type");
 
   if (!id) {
     return NextResponse.json({ error: "id required" }, { status: 400 });
@@ -14,6 +16,11 @@ export async function GET(request: NextRequest) {
   const sportPath = getSportPath(sport);
 
   try {
+    if (type === "gamelog") {
+      const gamelog = await fetchPlayerGameLog(sport, sport, id);
+      return NextResponse.json({ gamelog });
+    }
+
     // Try fetching athlete from the athletes endpoint
     const res = await fetch(`${ESPN_BASE}/${sportPath}/athletes/${id}`, {
       next: { revalidate: 600 },

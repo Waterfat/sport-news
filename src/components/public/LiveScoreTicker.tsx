@@ -17,20 +17,23 @@ function TickerGameCard({ game, league }: { game: Game; league: string }) {
   return (
     <Link
       href={`/game/${league}/${game.id}`}
-      className="flex-shrink-0 w-[150px] rounded-lg border border-slate-200 bg-white p-2.5 hover:border-blue-300 hover:shadow-sm active:scale-[0.97] transition-all duration-150"
+      className={`flex-shrink-0 w-[150px] rounded-xl border bg-card p-2.5 hover:shadow-lg hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 ${
+        isLive ? "border-live/40 ring-1 ring-live/20" : "border-border hover:border-brand/40"
+      }`}
     >
       {/* Status badge */}
       <div className="flex items-center justify-between mb-1.5">
         {isLive ? (
-          <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded animate-pulse">
+          <span className="flex items-center gap-1 text-[10px] font-bold text-live">
+            <span className="w-1.5 h-1.5 rounded-full bg-live animate-live-blink" />
             LIVE
           </span>
         ) : isFinal ? (
-          <span className="text-[10px] font-medium text-slate-500">
+          <span className="text-[10px] font-medium text-muted-foreground">
             終場
           </span>
         ) : (
-          <span className="text-[10px] text-slate-400">
+          <span className="text-[10px] text-muted-foreground">
             {new Date(game.date).toLocaleTimeString("zh-TW", {
               hour: "2-digit",
               minute: "2-digit",
@@ -45,11 +48,11 @@ function TickerGameCard({ game, league }: { game: Game; league: string }) {
           {game.awayTeam.logo && (
             <img src={game.awayTeam.logo} alt="" className="w-4 h-4 flex-shrink-0" />
           )}
-          <span className="truncate font-medium text-slate-700">
+          <span className="truncate font-medium text-foreground">
             {game.awayTeam.abbreviation}
           </span>
         </div>
-        <span className={`font-bold tabular-nums ${isLive ? "text-red-600" : "text-slate-900"}`}>
+        <span className={`font-bold tabular-nums ${isLive ? "text-live" : "text-foreground"}`}>
           {game.awayTeam.score}
         </span>
       </div>
@@ -60,11 +63,11 @@ function TickerGameCard({ game, league }: { game: Game; league: string }) {
           {game.homeTeam.logo && (
             <img src={game.homeTeam.logo} alt="" className="w-4 h-4 flex-shrink-0" />
           )}
-          <span className="truncate font-medium text-slate-700">
+          <span className="truncate font-medium text-foreground">
             {game.homeTeam.abbreviation}
           </span>
         </div>
-        <span className={`font-bold tabular-nums ${isLive ? "text-red-600" : "text-slate-900"}`}>
+        <span className={`font-bold tabular-nums ${isLive ? "text-live" : "text-foreground"}`}>
           {game.homeTeam.score}
         </span>
       </div>
@@ -138,8 +141,8 @@ export function LiveScoreTicker({ leagues }: { leagues: League[] }) {
   return (
     <section className="mb-6">
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-sm font-semibold text-slate-700">即時比分</span>
-        <Link href="/scores" className="text-xs text-blue-600 hover:underline">
+        <span className="text-sm font-semibold text-foreground">即時比分</span>
+        <Link href="/scores" className="text-xs text-brand hover:underline">
           查看全部
         </Link>
       </div>
@@ -147,7 +150,7 @@ export function LiveScoreTicker({ leagues }: { leagues: League[] }) {
       {loading ? (
         <div className="flex gap-3 overflow-hidden">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-[150px] h-[82px] rounded-lg bg-slate-100 animate-pulse" />
+            <div key={i} className="flex-shrink-0 w-[150px] h-[82px] rounded-xl bg-muted animate-pulse" />
           ))}
         </div>
       ) : (
@@ -158,7 +161,7 @@ export function LiveScoreTicker({ leagues }: { leagues: League[] }) {
             ))}
           </div>
           {/* 右側漸層遮罩提示可滾動 */}
-          <div className="absolute top-0 right-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none" />
+          <div className="absolute top-0 right-0 bottom-1 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
         </div>
       )}
     </section>

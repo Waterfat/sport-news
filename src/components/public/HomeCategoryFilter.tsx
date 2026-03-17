@@ -23,8 +23,8 @@ export function HomeCategoryFilter({
           onClick={() => onChange(cat.key)}
           className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors duration-150 ${
             active === cat.key
-              ? "bg-blue-600 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              ? "bg-brand text-brand-foreground"
+              : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
           }`}
         >
           {cat.label}

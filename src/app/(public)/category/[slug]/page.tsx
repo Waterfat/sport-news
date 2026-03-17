@@ -29,6 +29,28 @@ type ArticleWithWriter = {
 
 const ITEMS_PER_PAGE = 20;
 
+function getExcerpt(content: string | null): string {
+  if (!content) return "";
+  const lines = content.split("\n").filter(Boolean);
+  const firstParagraph = lines.find(
+    (line) =>
+      !line.startsWith("#") &&
+      !line.startsWith("-") &&
+      !line.startsWith(">") &&
+      line.trim().length > 20
+  );
+  if (firstParagraph) {
+    return firstParagraph
+      .replace(/[#*_\[\]()>`~]/g, "")
+      .trim()
+      .slice(0, 160);
+  }
+  return content
+    .replace(/[#*_>\-\n\[\]()>`~]/g, " ")
+    .trim()
+    .slice(0, 160);
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -57,10 +79,10 @@ export default async function CategoryPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
   const { slug } = await params;
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, sort: sortParam } = await searchParams;
   const categoryName = CATEGORY_DB_MAP[slug];
   const displayLabel = CATEGORY_LABELS[slug];
 
@@ -68,8 +90,9 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const colorClass = CATEGORY_COLORS[categoryName] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
+  const colorClass = CATEGORY_COLORS[categoryName] ?? "bg-muted text-muted-foreground border border-border rounded-lg";
   const bannerImage = CATEGORY_BANNERS[slug];
+  const sortBy = sortParam === "popular" ? "popular" : "latest";
 
   // 敬請期待分類
   if (comingSoonCategories.has(slug)) {
@@ -100,13 +123,13 @@ export default async function CategoryPage({
               className="w-full h-auto"
             />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">敬請期待</h2>
-          <p className="text-slate-500 max-w-md">
+          <h2 className="text-2xl font-bold text-foreground mb-3">敬請期待</h2>
+          <p className="text-muted-foreground max-w-md">
             {displayLabel}新聞即將上線，請持續關注 小豪哥體育資訊網！
           </p>
           <Link
             href="/"
-            className="mt-8 px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="mt-8 px-6 py-2.5 bg-brand text-brand-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-colors"
           >
             回到首頁
           </Link>
@@ -130,7 +153,8 @@ export default async function CategoryPage({
   const totalCount = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
 
-  // Get paginated articles
+  // Get paginated articles with sort
+  const orderColumn = sortBy === "popular" ? "view_count" : "published_at";
   const { data: articles } = await supabase
     .from("generated_articles")
     .select(
@@ -138,8 +162,16 @@ export default async function CategoryPage({
     )
     .eq("status", "published")
     .eq("category", categoryName)
-    .order("published_at", { ascending: false })
+    .order(orderColumn, { ascending: false })
     .range(offset, offset + ITEMS_PER_PAGE - 1);
+
+  const buildUrl = (params: Record<string, string | number>) => {
+    const searchParts: string[] = [];
+    for (const [k, v] of Object.entries(params)) {
+      searchParts.push(`${k}=${v}`);
+    }
+    return `/category/${slug}?${searchParts.join("&")}`;
+  };
 
   return (
     <div>
@@ -164,20 +196,46 @@ export default async function CategoryPage({
         </div>
       )}
 
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm mb-6">
-        <span className="inline-flex items-center gap-2 bg-slate-100 rounded-full px-4 py-1.5">
-          <Link href="/" className="text-slate-500 hover:text-blue-600 transition-colors">
-            首頁
+      {/* Breadcrumb + Sort */}
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        <nav className="flex items-center gap-2 text-sm">
+          <span className="inline-flex items-center gap-2 bg-muted rounded-full px-4 py-1.5">
+            <Link href="/" className="text-muted-foreground hover:text-brand transition-colors">
+              首頁
+            </Link>
+            <span className="text-muted-foreground/40">/</span>
+            <span className="text-foreground font-medium">{displayLabel}</span>
+          </span>
+        </nav>
+
+        {/* Sort buttons */}
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+          <Link
+            href={buildUrl({ sort: "latest", page: 1 })}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              sortBy === "latest"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            最新
           </Link>
-          <span className="text-slate-300">/</span>
-          <span className="text-slate-700 font-medium">{displayLabel}</span>
-        </span>
-      </nav>
+          <Link
+            href={buildUrl({ sort: "popular", page: 1 })}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              sortBy === "popular"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            最熱門
+          </Link>
+        </div>
+      </div>
 
       {/* Articles */}
       {!articles || articles.length === 0 ? (
-        <p className="text-slate-500 py-12 text-center">
+        <p className="text-muted-foreground py-12 text-center">
           此分類目前沒有文章。
         </p>
       ) : (
@@ -189,22 +247,26 @@ export default async function CategoryPage({
               <Link
                 key={article.id}
                 href={`/news/${article.slug || article.id}`}
-                className="group block rounded-xl border border-slate-200 bg-white p-5 hover:shadow-md hover:border-blue-300 transition-all duration-200"
+                className="group block rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-brand/30 transition-all duration-200"
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-semibold text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
+                    <h2 className="text-lg font-semibold text-foreground line-clamp-2 group-hover:text-brand transition-colors mb-2">
                       {article.title}
                     </h2>
-                    <p className="text-sm text-slate-500 line-clamp-2 mb-3">
-                      {article.content
-                        ?.replace(/[#*_>\-\n]/g, " ")
-                        .slice(0, 160)}
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                      {getExcerpt(article.content)}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       {writerName && <span>{writerName}</span>}
                       {writerName && <span>&middot;</span>}
                       <span>{formatRelativeTime(article.published_at)}</span>
+                      {sortBy === "popular" && article.view_count != null && article.view_count > 0 && (
+                        <>
+                          <span>&middot;</span>
+                          <span>{article.view_count} 次瀏覽</span>
+                        </>
+                      )}
                     </div>
                   </div>
                   <img
@@ -224,8 +286,8 @@ export default async function CategoryPage({
         <nav className="flex items-center justify-center gap-2 mt-8">
           {currentPage > 1 && (
             <Link
-              href={`/category/${slug}?page=${currentPage - 1}`}
-              className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:border-blue-300 hover:text-blue-600 transition-colors"
+              href={buildUrl({ sort: sortBy, page: currentPage - 1 })}
+              className="px-4 py-2 text-sm font-medium text-muted-foreground bg-card border border-border rounded-lg hover:border-brand/30 hover:text-brand transition-colors"
             >
               上一頁
             </Link>
@@ -247,17 +309,17 @@ export default async function CategoryPage({
               }, [])
               .map((item, i) =>
                 item === "ellipsis" ? (
-                  <span key={`e${i}`} className="px-2 text-slate-400">
+                  <span key={`e${i}`} className="px-2 text-muted-foreground">
                     ...
                   </span>
                 ) : (
                   <Link
                     key={item}
-                    href={`/category/${slug}?page=${item}`}
+                    href={buildUrl({ sort: sortBy, page: item })}
                     className={`w-10 h-10 flex items-center justify-center text-sm font-medium rounded-lg border transition-colors ${
                       item === currentPage
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "text-slate-600 border-slate-300 hover:border-blue-300 hover:text-blue-600"
+                        ? "bg-brand text-brand-foreground border-brand"
+                        : "text-muted-foreground border-border hover:border-brand/30 hover:text-brand"
                     }`}
                   >
                     {item}
@@ -267,8 +329,8 @@ export default async function CategoryPage({
           </div>
           {currentPage < totalPages && (
             <Link
-              href={`/category/${slug}?page=${currentPage + 1}`}
-              className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:border-blue-300 hover:text-blue-600 transition-colors"
+              href={buildUrl({ sort: sortBy, page: currentPage + 1 })}
+              className="px-4 py-2 text-sm font-medium text-muted-foreground bg-card border border-border rounded-lg hover:border-brand/30 hover:text-brand transition-colors"
             >
               下一頁
             </Link>

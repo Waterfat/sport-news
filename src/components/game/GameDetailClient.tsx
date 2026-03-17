@@ -8,6 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MemberGate } from "@/components/auth/MemberGate";
 import { ArrowLeft } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
 
 interface Play {
   id: string;
@@ -79,6 +89,54 @@ interface TeamLeadersData {
   leaders: GameLeader[];
 }
 
+interface InjuryPlayer {
+  name: string;
+  status: string;
+  description: string;
+}
+
+interface TeamInjuriesData {
+  team: string;
+  teamLogo: string;
+  players: InjuryPlayer[];
+}
+
+interface WinProbPoint {
+  homeWinPct: number;
+  playId: string;
+  secondsLeft: number;
+}
+
+interface SeasonSeriesGame {
+  date: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: string;
+  awayScore: string;
+  status: string;
+}
+
+interface PickCenterItem {
+  provider: string;
+  details: string;
+  homeWinPct: number;
+  awayWinPct: number;
+}
+
+function getGameApiBase(isMember: boolean) {
+  return isMember ? "/api/member/game" : "/api/public/game";
+}
+
+/** Convert secondsLeft to game progress label (Q1-Q4 for NBA) */
+function formatGameProgress(secondsLeft: number, totalSeconds: number): string {
+  const elapsed = totalSeconds - secondsLeft;
+  const pct = (elapsed / totalSeconds) * 100;
+  if (pct <= 25) return "Q1";
+  if (pct <= 50) return "Q2";
+  if (pct <= 75) return "Q3";
+  return "Q4";
+}
+
 export function GameDetailClient({
   sport,
   eventId,
@@ -92,10 +150,15 @@ export function GameDetailClient({
   const [totalPlays, setTotalPlays] = useState(0);
   const [boxscore, setBoxscore] = useState<BoxScoreData | null>(null);
   const [leaders, setLeaders] = useState<TeamLeadersData[]>([]);
+  const [injuries, setInjuries] = useState<TeamInjuriesData[]>([]);
+  const [winProb, setWinProb] = useState<WinProbPoint[]>([]);
+  const [seasonSeries, setSeasonSeries] = useState<SeasonSeriesGame[]>([]);
+  const [pickCenter, setPickCenter] = useState<PickCenterItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("summary");
 
   const isMember = !!session?.user;
+  const apiBase = getGameApiBase(isMember);
 
   // Fetch game info from scoreboard
   useEffect(() => {
@@ -111,51 +174,69 @@ export function GameDetailClient({
 
   // Fetch leaders on mount
   useEffect(() => {
-    const endpoint = isMember
-      ? `/api/member/game?eventId=${eventId}&league=${sport}&type=leaders`
-      : `/api/public/game?eventId=${eventId}&league=${sport}&type=leaders`;
-
-    fetch(endpoint)
+    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=leaders`)
       .then((r) => r.json())
       .then((d) => setLeaders(d.leaders ?? []))
       .catch(() => {});
-  }, [eventId, sport, isMember]);
+  }, [eventId, sport, apiBase]);
+
+  // Fetch win probability + season series + pick center on summary tab
+  useEffect(() => {
+    if (tab !== "summary") return;
+
+    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=winprobability`)
+      .then((r) => r.json())
+      .then((d) => setWinProb(d.winprobability ?? []))
+      .catch(() => {});
+
+    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=seasonseries`)
+      .then((r) => r.json())
+      .then((d) => setSeasonSeries(d.seasonseries ?? []))
+      .catch(() => {});
+
+    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=pickcenter`)
+      .then((r) => r.json())
+      .then((d) => setPickCenter(d.pickcenter ?? []))
+      .catch(() => {});
+  }, [tab, eventId, sport, apiBase]);
 
   // Fetch PBP when tab switches
   useEffect(() => {
     if (tab !== "pbp") return;
 
-    const endpoint = isMember
-      ? `/api/member/game?eventId=${eventId}&league=${sport}&type=plays`
-      : `/api/public/game?eventId=${eventId}&league=${sport}&type=plays`;
-
-    fetch(endpoint)
+    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=plays`)
       .then((r) => r.json())
       .then((d) => {
         setPlays(d.plays ?? []);
         setTotalPlays(d.totalCount ?? 0);
       })
       .catch(() => {});
-  }, [tab, eventId, sport, isMember]);
+  }, [tab, eventId, sport, apiBase]);
 
   // Fetch boxscore when tab switches
   useEffect(() => {
     if (tab !== "boxscore") return;
 
-    const endpoint = isMember
-      ? `/api/member/game?eventId=${eventId}&league=${sport}&type=boxscore`
-      : `/api/public/game?eventId=${eventId}&league=${sport}&type=boxscore`;
-
-    fetch(endpoint)
+    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=boxscore`)
       .then((r) => r.json())
       .then((d) => setBoxscore(d.boxscore ?? null))
       .catch(() => {});
-  }, [tab, eventId, sport, isMember]);
+  }, [tab, eventId, sport, apiBase]);
+
+  // Fetch injuries when tab switches
+  useEffect(() => {
+    if (tab !== "injuries") return;
+
+    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=injuries`)
+      .then((r) => r.json())
+      .then((d) => setInjuries(d.injuries ?? []))
+      .catch(() => {});
+  }, [tab, eventId, sport, apiBase]);
 
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -163,8 +244,8 @@ export function GameDetailClient({
   if (!game) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-500">找不到此比賽</p>
-        <Link href="/scores" className="text-blue-600 text-sm mt-2 inline-block">
+        <p className="text-muted-foreground">找不到此比賽</p>
+        <Link href="/scores" className="text-primary text-sm mt-2 inline-block">
           返回比分頁
         </Link>
       </div>
@@ -175,14 +256,22 @@ export function GameDetailClient({
     game.status === "in_progress"
       ? "bg-green-100 text-green-700"
       : game.status === "final"
-        ? "bg-slate-100 text-slate-700"
+        ? "bg-muted text-muted-foreground"
         : "bg-blue-100 text-blue-700";
+
+  // Prepare win probability chart data
+  const maxSeconds = winProb.length > 0 ? Math.max(...winProb.map((p) => p.secondsLeft)) : 2880;
+  const chartData = winProb.map((p) => ({
+    ...p,
+    progress: formatGameProgress(p.secondsLeft, maxSeconds),
+    elapsed: maxSeconds - p.secondsLeft,
+  }));
 
   return (
     <div className="space-y-6">
       <Link
         href="/scores"
-        className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="w-4 h-4" />
         返回比分
@@ -198,16 +287,16 @@ export function GameDetailClient({
               )}
               <p className="text-sm font-medium mt-1">{game.awayTeam.name}</p>
               {game.awayTeam.record && (
-                <p className="text-xs text-slate-400">{game.awayTeam.record}</p>
+                <p className="text-xs text-muted-foreground">{game.awayTeam.record}</p>
               )}
             </Link>
             <div className="text-center">
               <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold text-slate-900">
+                <span className="text-3xl font-bold text-foreground tabular-nums">
                   {game.awayTeam.score}
                 </span>
-                <span className="text-slate-400 text-lg">-</span>
-                <span className="text-3xl font-bold text-slate-900">
+                <span className="text-muted-foreground text-lg">-</span>
+                <span className="text-3xl font-bold text-foreground tabular-nums">
                   {game.homeTeam.score}
                 </span>
               </div>
@@ -221,7 +310,7 @@ export function GameDetailClient({
               )}
               <p className="text-sm font-medium mt-1">{game.homeTeam.name}</p>
               {game.homeTeam.record && (
-                <p className="text-xs text-slate-400">{game.homeTeam.record}</p>
+                <p className="text-xs text-muted-foreground">{game.homeTeam.record}</p>
               )}
             </Link>
           </div>
@@ -230,13 +319,14 @@ export function GameDetailClient({
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="summary">摘要</TabsTrigger>
           {game.status !== "scheduled" && (
             <TabsTrigger value="boxscore">數據</TabsTrigger>
           )}
           <TabsTrigger value="pbp">逐球紀錄</TabsTrigger>
           <TabsTrigger value="odds">賠率</TabsTrigger>
+          <TabsTrigger value="injuries">傷兵</TabsTrigger>
         </TabsList>
 
         {/* Summary */}
@@ -249,19 +339,73 @@ export function GameDetailClient({
               <CardContent>
                 <div className="grid grid-cols-3 text-center text-sm">
                   <div>
-                    <p className="text-3xl font-bold">{game.awayTeam.score}</p>
-                    <p className="text-slate-500">{game.awayTeam.abbreviation}</p>
+                    <p className="text-3xl font-bold tabular-nums">{game.awayTeam.score}</p>
+                    <p className="text-muted-foreground">{game.awayTeam.abbreviation}</p>
                   </div>
-                  <div className="flex items-center justify-center text-slate-400 text-lg">
+                  <div className="flex items-center justify-center text-muted-foreground text-lg">
                     VS
                   </div>
                   <div>
-                    <p className="text-3xl font-bold">{game.homeTeam.score}</p>
-                    <p className="text-slate-500">{game.homeTeam.abbreviation}</p>
+                    <p className="text-3xl font-bold tabular-nums">{game.homeTeam.score}</p>
+                    <p className="text-muted-foreground">{game.homeTeam.abbreviation}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Win Probability Chart */}
+            {chartData.length > 0 && game.status !== "scheduled" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">勝率走勢</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    主隊（{game.homeTeam.name}）勝率
+                  </p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis
+                        dataKey="elapsed"
+                        tickFormatter={(val: number) => {
+                          const pct = (val / maxSeconds) * 100;
+                          if (pct <= 1) return "開始";
+                          if (Math.abs(pct - 25) < 3) return "Q1";
+                          if (Math.abs(pct - 50) < 3) return "Q2";
+                          if (Math.abs(pct - 75) < 3) return "Q3";
+                          if (pct >= 97) return "Q4";
+                          return "";
+                        }}
+                        tick={{ fontSize: 11 }}
+                        className="text-muted-foreground"
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        tick={{ fontSize: 11 }}
+                        tickFormatter={(val: number) => `${val}%`}
+                        className="text-muted-foreground"
+                      />
+                      <Tooltip
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        formatter={(value: any) => [`${Number(value).toFixed(1)}%`, "主隊勝率"]}
+                        labelFormatter={() => ""}
+                        contentStyle={{ fontSize: 12 }}
+                      />
+                      <ReferenceLine y={50} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" />
+                      <Area
+                        type="monotone"
+                        dataKey="homeWinPct"
+                        stroke="hsl(var(--primary))"
+                        fill="hsl(var(--primary))"
+                        fillOpacity={0.15}
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Leaders */}
             {leaders.length > 0 && game.status !== "scheduled" && (
@@ -277,15 +421,82 @@ export function GameDetailClient({
                           {team.logo && (
                             <img src={team.logo} alt="" className="w-5 h-5" />
                           )}
-                          <span className="text-sm font-medium text-slate-700">{team.teamName}</span>
+                          <span className="text-sm font-medium text-foreground">{team.teamName}</span>
                         </div>
                         <div className="space-y-1">
                           {team.leaders.slice(0, 3).map((l) => (
-                            <p key={l.category} className="text-xs text-slate-600">
-                              <span className="font-medium">{l.displayName}</span>
-                              <span className="text-slate-400 ml-1">{l.displayValue}</span>
+                            <p key={l.category} className="text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground">{l.displayName}</span>
+                              <span className="ml-1">{l.displayValue}</span>
                             </p>
                           ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Season Series (Head-to-Head) */}
+            {seasonSeries.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">本季交手紀錄</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {seasonSeries.map((g, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm border-b border-border last:border-0 pb-2">
+                        <span className="text-muted-foreground text-xs">
+                          {g.date ? new Date(g.date).toLocaleDateString("zh-TW", { month: "short", day: "numeric" }) : "-"}
+                        </span>
+                        <span className="font-medium">
+                          {g.awayTeam} <span className="tabular-nums">{g.awayScore}</span>
+                        </span>
+                        <span className="text-muted-foreground">@</span>
+                        <span className="font-medium">
+                          {g.homeTeam} <span className="tabular-nums">{g.homeScore}</span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">{g.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pick Center */}
+            {pickCenter.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">專家預測</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {pickCenter.map((p, idx) => (
+                      <div key={idx} className="text-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-muted-foreground">{p.provider || "ESPN"}</span>
+                          <span className="text-xs text-muted-foreground">{p.details}</span>
+                        </div>
+                        <div className="flex h-5 rounded-full overflow-hidden bg-muted">
+                          <div
+                            className="bg-red-500/80 flex items-center justify-center text-xs text-white font-medium"
+                            style={{ width: `${Math.max(p.awayWinPct * 100, 5)}%` }}
+                          >
+                            {(p.awayWinPct * 100).toFixed(0)}%
+                          </div>
+                          <div
+                            className="bg-blue-500/80 flex items-center justify-center text-xs text-white font-medium"
+                            style={{ width: `${Math.max(p.homeWinPct * 100, 5)}%` }}
+                          >
+                            {(p.homeWinPct * 100).toFixed(0)}%
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground mt-0.5">
+                          <span>{game.awayTeam.abbreviation}</span>
+                          <span>{game.homeTeam.abbreviation}</span>
                         </div>
                       </div>
                     ))}
@@ -303,23 +514,23 @@ export function GameDetailClient({
                 <CardContent>
                   <div className="grid grid-cols-3 gap-4 text-center text-sm">
                     <div>
-                      <p className="font-medium text-slate-600">Spread</p>
-                      <p className="text-lg">{game.odds.details || "-"}</p>
+                      <p className="font-medium text-muted-foreground">Spread</p>
+                      <p className="text-lg tabular-nums">{game.odds.details || "-"}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-slate-600">O/U</p>
-                      <p className="text-lg">{game.odds.overUnder || "-"}</p>
+                      <p className="font-medium text-muted-foreground">O/U</p>
+                      <p className="text-lg tabular-nums">{game.odds.overUnder || "-"}</p>
                     </div>
                     <MemberGate message="登入查看 Money Line">
                       <div>
-                        <p className="font-medium text-slate-600">ML</p>
-                        <p className="text-lg">
+                        <p className="font-medium text-muted-foreground">ML</p>
+                        <p className="text-lg tabular-nums">
                           {game.odds.awayMoneyLine} / {game.odds.homeMoneyLine}
                         </p>
                       </div>
                     </MemberGate>
                   </div>
-                  <p className="text-xs text-slate-400 mt-2 text-center">
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
                     來源：{game.odds.provider}
                   </p>
                 </CardContent>
@@ -332,7 +543,7 @@ export function GameDetailClient({
         <TabsContent value="boxscore">
           {!boxscore ? (
             <Card>
-              <CardContent className="p-6 text-center text-slate-500">
+              <CardContent className="p-6 text-center text-muted-foreground">
                 暫無數據
               </CardContent>
             </Card>
@@ -347,21 +558,21 @@ export function GameDetailClient({
                   <CardContent>
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b bg-slate-50">
-                          <th className="text-center py-2 px-2 font-medium text-slate-600 w-1/4">
+                        <tr className="border-b bg-muted">
+                          <th className="text-center py-2 px-2 font-medium text-muted-foreground w-1/4">
                             {boxscore.teams[0].teamName}
                           </th>
-                          <th className="text-center py-2 px-2 font-medium text-slate-600">項目</th>
-                          <th className="text-center py-2 px-2 font-medium text-slate-600 w-1/4">
+                          <th className="text-center py-2 px-2 font-medium text-muted-foreground">項目</th>
+                          <th className="text-center py-2 px-2 font-medium text-muted-foreground w-1/4">
                             {boxscore.teams[1].teamName}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {boxscore.teams[0].stats.map((stat, idx) => (
-                          <tr key={stat.label} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                          <tr key={stat.label} className={idx % 2 === 0 ? "bg-card" : "bg-muted/50"}>
                             <td className="text-center py-1.5 px-2 tabular-nums">{stat.value}</td>
-                            <td className="text-center py-1.5 px-2 text-slate-500 text-xs">{stat.label}</td>
+                            <td className="text-center py-1.5 px-2 text-muted-foreground text-xs">{stat.label}</td>
                             <td className="text-center py-1.5 px-2 tabular-nums">
                               {boxscore.teams[1].stats[idx]?.value ?? "-"}
                             </td>
@@ -383,12 +594,12 @@ export function GameDetailClient({
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="border-b bg-slate-50">
-                            <th className="text-left py-2 px-2 font-medium text-slate-600 sticky left-0 bg-slate-50 min-w-[100px]">
+                          <tr className="border-b bg-muted">
+                            <th className="text-left py-2 px-2 font-medium text-muted-foreground sticky left-0 bg-muted min-w-[100px]">
                               球員
                             </th>
                             {group.labels.map((label) => (
-                              <th key={label} className="text-center py-2 px-1.5 font-medium text-slate-600 min-w-[36px]">
+                              <th key={label} className="text-center py-2 px-1.5 font-medium text-muted-foreground min-w-[36px]">
                                 {label}
                               </th>
                             ))}
@@ -398,7 +609,7 @@ export function GameDetailClient({
                           {/* Starters */}
                           {group.athletes.filter((a) => a.starter).length > 0 && (
                             <tr>
-                              <td colSpan={group.labels.length + 1} className="text-xs text-slate-400 font-medium px-2 py-1 bg-slate-100">
+                              <td colSpan={group.labels.length + 1} className="text-xs text-muted-foreground font-medium px-2 py-1 bg-muted/70">
                                 先發
                               </td>
                             </tr>
@@ -406,10 +617,10 @@ export function GameDetailClient({
                           {group.athletes
                             .filter((a) => a.starter)
                             .map((athlete) => (
-                              <tr key={athlete.name} className="border-b border-slate-100">
-                                <td className="py-1.5 px-2 sticky left-0 bg-white">
+                              <tr key={athlete.name} className="border-b border-border">
+                                <td className="py-1.5 px-2 sticky left-0 bg-card">
                                   <span className="font-medium">{athlete.name}</span>
-                                  <span className="text-slate-400 ml-1">{athlete.position}</span>
+                                  <span className="text-muted-foreground ml-1">{athlete.position}</span>
                                 </td>
                                 {athlete.stats.map((s, i) => (
                                   <td key={i} className="text-center py-1.5 px-1.5 tabular-nums">{s}</td>
@@ -419,7 +630,7 @@ export function GameDetailClient({
                           {/* Bench */}
                           {group.athletes.filter((a) => !a.starter).length > 0 && (
                             <tr>
-                              <td colSpan={group.labels.length + 1} className="text-xs text-slate-400 font-medium px-2 py-1 bg-slate-100">
+                              <td colSpan={group.labels.length + 1} className="text-xs text-muted-foreground font-medium px-2 py-1 bg-muted/70">
                                 替補
                               </td>
                             </tr>
@@ -427,10 +638,10 @@ export function GameDetailClient({
                           {group.athletes
                             .filter((a) => !a.starter)
                             .map((athlete) => (
-                              <tr key={athlete.name} className="border-b border-slate-100">
-                                <td className="py-1.5 px-2 sticky left-0 bg-white">
+                              <tr key={athlete.name} className="border-b border-border">
+                                <td className="py-1.5 px-2 sticky left-0 bg-card">
                                   <span className="font-medium">{athlete.name}</span>
-                                  <span className="text-slate-400 ml-1">{athlete.position}</span>
+                                  <span className="text-muted-foreground ml-1">{athlete.position}</span>
                                 </td>
                                 {athlete.stats.map((s, i) => (
                                   <td key={i} className="text-center py-1.5 px-1.5 tabular-nums">{s}</td>
@@ -451,7 +662,7 @@ export function GameDetailClient({
         <TabsContent value="pbp">
           {plays.length === 0 ? (
             <Card>
-              <CardContent className="p-6 text-center text-slate-500">
+              <CardContent className="p-6 text-center text-muted-foreground">
                 暫無逐球紀錄
               </CardContent>
             </Card>
@@ -461,16 +672,16 @@ export function GameDetailClient({
                 {plays.map((play) => (
                   <Card key={play.id}>
                     <CardContent className="p-3 flex items-start gap-3">
-                      <div className="text-xs text-slate-400 whitespace-nowrap pt-0.5">
+                      <div className="text-xs text-muted-foreground whitespace-nowrap pt-0.5">
                         {play.period} {play.clock}
                       </div>
                       <div className="flex-1">
                         <p
-                          className={`text-sm ${play.scoringPlay ? "font-medium text-green-700" : "text-slate-700"}`}
+                          className={`text-sm ${play.scoringPlay ? "font-medium text-green-700" : "text-foreground"}`}
                         >
                           {play.text}
                         </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
                           {play.awayScore} - {play.homeScore}
                         </p>
                       </div>
@@ -501,22 +712,22 @@ export function GameDetailClient({
               <CardContent>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-slate-50">
-                      <th className="text-left py-2 px-3">項目</th>
-                      <th className="text-center py-2 px-3">數值</th>
+                    <tr className="border-b bg-muted">
+                      <th className="text-left py-2 px-3 text-muted-foreground">項目</th>
+                      <th className="text-center py-2 px-3 text-muted-foreground">數值</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b">
-                      <td className="py-2 px-3 text-slate-600">Spread</td>
-                      <td className="text-center py-2 px-3">{game.odds.details}</td>
+                      <td className="py-2 px-3 text-muted-foreground">Spread</td>
+                      <td className="text-center py-2 px-3 tabular-nums">{game.odds.details}</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-3 text-slate-600">Over/Under</td>
-                      <td className="text-center py-2 px-3">{game.odds.overUnder}</td>
+                      <td className="py-2 px-3 text-muted-foreground">Over/Under</td>
+                      <td className="text-center py-2 px-3 tabular-nums">{game.odds.overUnder}</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-3 text-slate-600">來源</td>
+                      <td className="py-2 px-3 text-muted-foreground">來源</td>
                       <td className="text-center py-2 px-3">{game.odds.provider}</td>
                     </tr>
                   </tbody>
@@ -524,19 +735,19 @@ export function GameDetailClient({
                 <MemberGate message="登入查看完整 Money Line 賠率">
                   <table className="w-full text-sm mt-4">
                     <thead>
-                      <tr className="border-b bg-slate-50">
-                        <th className="text-left py-2 px-3">Money Line</th>
-                        <th className="text-center py-2 px-3">客隊</th>
-                        <th className="text-center py-2 px-3">主隊</th>
+                      <tr className="border-b bg-muted">
+                        <th className="text-left py-2 px-3 text-muted-foreground">Money Line</th>
+                        <th className="text-center py-2 px-3 text-muted-foreground">客隊</th>
+                        <th className="text-center py-2 px-3 text-muted-foreground">主隊</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="py-2 px-3 text-slate-600">Close</td>
-                        <td className="text-center py-2 px-3 font-medium">
+                        <td className="py-2 px-3 text-muted-foreground">Close</td>
+                        <td className="text-center py-2 px-3 font-medium tabular-nums">
                           {game.odds.awayMoneyLine}
                         </td>
-                        <td className="text-center py-2 px-3 font-medium">
+                        <td className="text-center py-2 px-3 font-medium tabular-nums">
                           {game.odds.homeMoneyLine}
                         </td>
                       </tr>
@@ -547,10 +758,66 @@ export function GameDetailClient({
             </Card>
           ) : (
             <Card>
-              <CardContent className="p-6 text-center text-slate-500">
+              <CardContent className="p-6 text-center text-muted-foreground">
                 暫無賠率資料
               </CardContent>
             </Card>
+          )}
+        </TabsContent>
+
+        {/* Injuries */}
+        <TabsContent value="injuries">
+          {injuries.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                暫無傷兵資料
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {injuries.map((team) => (
+                <Card key={team.team}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      {team.teamLogo && (
+                        <img src={team.teamLogo} alt="" className="w-5 h-5" />
+                      )}
+                      {team.team}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {team.players.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">無傷兵</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {team.players.map((p, idx) => (
+                          <div key={idx} className="flex items-start gap-3 border-b border-border last:border-0 pb-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-foreground">{p.name}</p>
+                              {p.description && (
+                                <p className="text-xs text-muted-foreground">{p.description}</p>
+                              )}
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={
+                                p.status.toLowerCase().includes("out")
+                                  ? "border-red-300 text-red-600"
+                                  : p.status.toLowerCase().includes("day-to-day") || p.status.toLowerCase().includes("questionable")
+                                    ? "border-yellow-300 text-yellow-700"
+                                    : "border-border text-muted-foreground"
+                              }
+                            >
+                              {p.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </TabsContent>
       </Tabs>

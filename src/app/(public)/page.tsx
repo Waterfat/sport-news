@@ -4,6 +4,7 @@ import { LiveScoreTicker } from "@/components/public/LiveScoreTicker";
 import { HomeArticleSection } from "@/components/public/HomeArticleSection";
 import { QuickStandings } from "@/components/public/QuickStandings";
 import { QuickOdds } from "@/components/public/QuickOdds";
+import { TrendingArticles } from "@/components/public/TrendingArticles";
 
 // 每 60 秒重新驗證頁面資料
 export const revalidate = 60;
@@ -76,23 +77,37 @@ export default async function HomePage() {
         />
       )}
 
-      {/* Articles with category filter */}
-      <HomeArticleSection
-        articles={gridArticles.map((article) => ({
-          id: article.id,
-          title: article.title,
-          content: article.content,
-          category: article.category,
-          published_at: article.published_at,
-          view_count: article.view_count,
-          slug: article.slug,
-          images: article.images,
-          writerName: article.writer_personas?.name ?? null,
-        }))}
-      />
+      {/* Main content + Sidebar */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main content area */}
+        <div className="flex-1 min-w-0">
+          <HomeArticleSection
+            articles={gridArticles.map((article) => ({
+              id: article.id,
+              title: article.title,
+              content: article.content,
+              category: article.category,
+              published_at: article.published_at,
+              view_count: article.view_count,
+              slug: article.slug,
+              images: article.images,
+              writerName: article.writer_personas?.name ?? null,
+            }))}
+          />
+        </div>
 
-      {/* Bottom two-column: Standings + Odds */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        {/* Sidebar - PC only */}
+        <aside className="hidden lg:block w-[300px] flex-shrink-0 space-y-4">
+          <div className="sticky top-4 space-y-4">
+            <TrendingArticles />
+            <QuickStandings />
+            <QuickOdds />
+          </div>
+        </aside>
+      </div>
+
+      {/* Mobile: Standings + Odds below articles */}
+      <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <QuickStandings />
         <QuickOdds />
       </div>

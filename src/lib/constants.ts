@@ -124,12 +124,12 @@ export const SITE_URL =
 export const TELEGRAM_CHANNEL_URL = "https://t.me/howger_sport_news";
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  NBA: "bg-orange-50 text-orange-700 border border-orange-300 rounded-lg",
-  籃球: "bg-orange-50 text-orange-700 border border-orange-300 rounded-lg",
-  棒球: "bg-green-50 text-green-700 border border-green-300 rounded-lg",
-  MLB: "bg-green-50 text-green-700 border border-green-300 rounded-lg",
-  足球: "bg-blue-50 text-blue-700 border border-blue-300 rounded-lg",
-  綜合: "bg-purple-50 text-purple-700 border border-purple-300 rounded-lg",
+  NBA: "bg-orange-500 text-white rounded-md",
+  籃球: "bg-orange-500 text-white rounded-md",
+  棒球: "bg-emerald-600 text-white rounded-md",
+  MLB: "bg-emerald-600 text-white rounded-md",
+  足球: "bg-sky-600 text-white rounded-md",
+  綜合: "bg-violet-600 text-white rounded-md",
 };
 
 /** 分類名稱 → 分類底圖 fallback（無文章配圖時使用） */

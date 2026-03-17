@@ -15,13 +15,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ARTICLE_STATUS_LABELS, ARTICLE_STATUS_VARIANT } from "@/lib/constants";
+import { ARTICLE_STATUS_LABELS, ARTICLE_STATUS_VARIANT, CATEGORY_COLORS } from "@/lib/constants";
 
 export interface Article {
   id: string;
   title: string;
   content: string;
   status: string;
+  category: string | null;
   created_at: string;
   published_at: string | null;
   scheduled_at: string | null;
@@ -163,6 +164,7 @@ export function ArticlesTable({
                 />
               </TableHead>
               <TableHead>標題</TableHead>
+              <TableHead className="w-[80px] hidden md:table-cell">分類</TableHead>
               <TableHead className="w-[100px] hidden md:table-cell">寫手</TableHead>
               <TableHead className="w-[70px]">狀態</TableHead>
               <TableHead className="w-[150px] hidden lg:table-cell">建立時間</TableHead>
@@ -217,6 +219,15 @@ export function ArticlesTable({
                         )}
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {article.category ? (
+                      <span className={`inline-block px-2 py-0.5 text-xs font-medium ${CATEGORY_COLORS[article.category] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg"}`}>
+                        {article.category}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="truncate hidden md:table-cell">
                     {article.writer_personas?.name || "-"}
@@ -303,6 +314,11 @@ export function ArticlesTable({
                       {statusLabel}
                     </Badge>
                   </div>
+                  {article.category && (
+                    <span className={`inline-block px-2 py-0.5 text-xs font-medium mt-1 ${CATEGORY_COLORS[article.category] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg"}`}>
+                      {article.category}
+                    </span>
+                  )}
                   {article.scheduled_at && (
                     <div className="text-blue-600 text-xs mt-1">
                       排程：{new Date(article.scheduled_at).toLocaleString("zh-TW")}

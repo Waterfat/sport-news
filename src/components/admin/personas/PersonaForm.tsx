@@ -123,6 +123,27 @@ export function PersonaForm({
           />
         </div>
 
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>頭像 URL</Label>
+            <Input
+              value={form.avatar_url}
+              onChange={(e) => onFormChange((f) => ({ ...f, avatar_url: e.target.value }))}
+              placeholder="https://example.com/avatar.jpg（預留欄位）"
+            />
+            <p className="text-xs text-gray-400">目前僅 UI 預留，DB 欄位尚未建立</p>
+          </div>
+          <div className="space-y-2">
+            <Label>專長標籤</Label>
+            <Input
+              value={form.specialty_tags}
+              onChange={(e) => onFormChange((f) => ({ ...f, specialty_tags: e.target.value }))}
+              placeholder="逗號分隔，例如：數據分析, 戰術解讀, 球員評比"
+            />
+            <p className="text-xs text-gray-400">目前僅 UI 預留，DB 欄位尚未建立</p>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label>寫作風格 Prompt</Label>
           <Textarea

@@ -35,6 +35,8 @@ export default function PersonasPage() {
       writer_type: p.writer_type || "columnist",
       specialties: p.specialties || { sports: [], leagues: [], teams: [] },
       max_articles: p.max_articles ?? 2,
+      avatar_url: p.avatar_url || "",
+      specialty_tags: p.specialty_tags?.join(", ") || "",
     });
     setTeamInput("");
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);

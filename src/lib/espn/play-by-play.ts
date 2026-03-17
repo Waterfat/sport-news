@@ -230,3 +230,198 @@ export async function fetchLeaders(
 
   return parseLeaders(data);
 }
+
+// ---------- Injuries ----------
+
+export interface InjuryPlayer {
+  name: string;
+  status: string;
+  description: string;
+}
+
+export interface TeamInjuries {
+  team: string;
+  teamLogo: string;
+  players: InjuryPlayer[];
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function parseInjuries(data: any): TeamInjuries[] {
+  const injuries: any[] = data.injuries ?? [];
+  return injuries.map((teamGroup: any) => {
+    const team = teamGroup.team ?? {};
+    const players: InjuryPlayer[] = (teamGroup.injuries ?? []).map((inj: any) => ({
+      name: inj.athlete?.displayName ?? "",
+      status: inj.status ?? inj.type?.description ?? "",
+      description: inj.details?.detail ?? inj.details?.type ?? "",
+    }));
+    return {
+      team: getTeamNameZh(team.displayName ?? ""),
+      teamLogo: team.logo ?? team.logos?.[0]?.href ?? "",
+      players,
+    };
+  });
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/**
+ * 取得傷兵名單
+ */
+export async function fetchInjuries(
+  league: string,
+  eventId: string,
+  isCompleted = false
+): Promise<TeamInjuries[]> {
+  const sportPath = getSportPath(league);
+  const ttl = isCompleted ? CACHE_TTL.PBP_FINAL : CACHE_TTL.LIVE;
+
+  try {
+    const data = await espnFetch<any>(
+      `${sportPath}/summary`,
+      { ttl, params: { event: eventId } }
+    );
+    return parseInjuries(data);
+  } catch (err) {
+    console.error("[ESPN] fetchInjuries error:", err);
+    return [];
+  }
+}
+
+// ---------- Win Probability ----------
+
+export interface WinProbabilityPoint {
+  homeWinPct: number;
+  playId: string;
+  secondsLeft: number;
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function parseWinProbability(data: any): WinProbabilityPoint[] {
+  const items: any[] = data.winprobability ?? [];
+  return items.map((p: any) => ({
+    homeWinPct: (p.homeWinPercentage ?? 0) * 100,
+    playId: p.playId ?? "",
+    secondsLeft: p.secondsLeft ?? 0,
+  }));
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/**
+ * 取得勝率走勢
+ */
+export async function fetchWinProbability(
+  sport: string,
+  league: string,
+  eventId: string
+): Promise<WinProbabilityPoint[]> {
+  const sportPath = getSportPath(league);
+  const ttl = CACHE_TTL.PBP_FINAL;
+
+  try {
+    const data = await espnFetch<any>(
+      `${sportPath}/summary`,
+      { ttl, params: { event: eventId } }
+    );
+    return parseWinProbability(data);
+  } catch (err) {
+    console.error("[ESPN] fetchWinProbability error:", err);
+    return [];
+  }
+}
+
+// ---------- Season Series ----------
+
+export interface SeasonSeriesGame {
+  date: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: string;
+  awayScore: string;
+  status: string;
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function parseSeasonSeries(data: any): SeasonSeriesGame[] {
+  const series: any[] = data.seasonseries ?? [];
+  return series.map((g: any) => {
+    const competitors = g.competitors ?? [];
+    const home = competitors.find((c: any) => c.homeAway === "home") ?? competitors[0] ?? {};
+    const away = competitors.find((c: any) => c.homeAway === "away") ?? competitors[1] ?? {};
+    return {
+      date: g.date ?? "",
+      homeTeam: getTeamNameZh(home.team?.displayName ?? ""),
+      awayTeam: getTeamNameZh(away.team?.displayName ?? ""),
+      homeScore: home.score ?? "0",
+      awayScore: away.score ?? "0",
+      status: g.status?.type?.shortDetail ?? "",
+    };
+  });
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/**
+ * 取得歷史交手紀錄（本季）
+ */
+export async function fetchSeasonSeries(
+  league: string,
+  eventId: string,
+  isCompleted = false
+): Promise<SeasonSeriesGame[]> {
+  const sportPath = getSportPath(league);
+  const ttl = isCompleted ? CACHE_TTL.PBP_FINAL : CACHE_TTL.LIVE;
+
+  try {
+    const data = await espnFetch<any>(
+      `${sportPath}/summary`,
+      { ttl, params: { event: eventId } }
+    );
+    return parseSeasonSeries(data);
+  } catch (err) {
+    console.error("[ESPN] fetchSeasonSeries error:", err);
+    return [];
+  }
+}
+
+// ---------- Pick Center ----------
+
+export interface PickCenterData {
+  provider: string;
+  details: string;
+  homeWinPct: number;
+  awayWinPct: number;
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function parsePickCenter(data: any): PickCenterData[] {
+  const picks: any[] = data.pickcenter ?? [];
+  return picks.map((p: any) => ({
+    provider: p.provider?.name ?? "",
+    details: p.details ?? "",
+    homeWinPct: p.homeTeamOdds?.winPercentage ?? p.homeTeamOdds?.averageScore ?? 0,
+    awayWinPct: p.awayTeamOdds?.winPercentage ?? p.awayTeamOdds?.averageScore ?? 0,
+  }));
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+/**
+ * 取得專家預測
+ */
+export async function fetchPickCenter(
+  league: string,
+  eventId: string,
+  isCompleted = false
+): Promise<PickCenterData[]> {
+  const sportPath = getSportPath(league);
+  const ttl = isCompleted ? CACHE_TTL.PBP_FINAL : CACHE_TTL.LIVE;
+
+  try {
+    const data = await espnFetch<any>(
+      `${sportPath}/summary`,
+      { ttl, params: { event: eventId } }
+    );
+    return parsePickCenter(data);
+  } catch (err) {
+    console.error("[ESPN] fetchPickCenter error:", err);
+    return [];
+  }
+}

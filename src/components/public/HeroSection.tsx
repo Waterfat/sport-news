@@ -31,20 +31,20 @@ export function HeroSection({
       <div className="hidden sm:grid grid-cols-3 gap-4">
         {/* Main hero */}
         <Link href={getHref(hero)} className="col-span-2 block group">
-          <article className="relative rounded-2xl bg-gradient-to-br from-slate-800 to-slate-700 text-white overflow-hidden h-full min-h-[320px] flex items-end active:scale-[0.99] transition-transform duration-150">
+          <article className="relative rounded-xl bg-gradient-to-br from-slate-800 to-slate-700 text-white overflow-hidden h-full min-h-[320px] flex items-end active:scale-[0.99] transition-transform duration-150">
             <img
               src={heroImage}
               alt=""
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             <div className="relative z-10 p-8">
               {hero.category && (
-                <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white mb-3">
+                <span className="inline-block px-3 py-1 text-xs font-semibold rounded-md bg-brand text-brand-foreground mb-3">
                   {hero.category}
                 </span>
               )}
-              <h1 className="text-2xl lg:text-3xl font-bold leading-tight mb-2 group-hover:text-blue-300 transition-colors">
+              <h1 className="text-3xl lg:text-4xl font-bold leading-tight mb-2 group-hover:text-blue-300 transition-colors">
                 {hero.title}
               </h1>
               <p className="text-gray-300 text-sm line-clamp-2 max-w-2xl mb-3">
@@ -69,12 +69,12 @@ export function HeroSection({
                   <img
                     src={thumb}
                     alt=""
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                   <div className="relative z-10 p-4">
                     {article.category && (
-                      <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-blue-600 text-white mb-2">
+                      <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-md bg-brand text-brand-foreground mb-2">
                         {article.category}
                       </span>
                     )}
@@ -95,7 +95,7 @@ export function HeroSection({
       {/* Mobile: hero full width + 2 small grid */}
       <div className="sm:hidden space-y-3">
         <Link href={getHref(hero)} className="block group">
-          <article className="relative rounded-2xl bg-slate-800 text-white overflow-hidden min-h-[200px] flex items-end active:scale-[0.99] transition-transform duration-150">
+          <article className="relative rounded-xl bg-slate-800 text-white overflow-hidden min-h-[200px] flex items-end active:scale-[0.99] transition-transform duration-150">
             <img
               src={heroImage}
               alt=""
@@ -104,7 +104,7 @@ export function HeroSection({
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             <div className="relative z-10 p-5">
               {hero.category && (
-                <span className="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-600 text-white mb-2">
+                <span className="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-md bg-brand text-brand-foreground mb-2">
                   {hero.category}
                 </span>
               )}
@@ -134,7 +134,7 @@ export function HeroSection({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                   <div className="relative z-10 p-3">
                     {article.category && (
-                      <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-blue-600 text-white mb-1">
+                      <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-md bg-brand text-brand-foreground mb-1">
                         {article.category}
                       </span>
                     )}
