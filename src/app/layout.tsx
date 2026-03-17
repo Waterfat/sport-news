@@ -27,6 +27,16 @@ export const metadata: Metadata = {
     template: "%s | 小豪哥體育資訊網",
   },
   description: "最新體育新聞、NBA、MLB、足球賽事報導與深度分析",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "小豪哥體育",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/icon-180x180.png",
+  },
   openGraph: {
     type: "website",
     locale: "zh_TW",
