@@ -1,6 +1,7 @@
-// 賠率解析
+// 賠率解析 — 從 summary API 取得 odds
 
 import { espnFetch, CACHE_TTL, getSportPath } from "./client";
+import type { ESPNOdds } from "./types";
 
 export interface OddsLine {
   provider: string;
@@ -14,29 +15,12 @@ export interface OddsLine {
   homeFavorite: boolean;
 }
 
-interface OddsApiResponse {
-  items: Array<{
-    provider: { id: string; name: string };
-    details: string;
-    overUnder: number;
-    spread: number;
-    overOdds: number;
-    underOdds: number;
-    awayTeamOdds: {
-      moneyLine: number;
-      spreadOdds: number;
-      favorite: boolean;
-    };
-    homeTeamOdds: {
-      moneyLine: number;
-      spreadOdds: number;
-      favorite: boolean;
-    };
-  }>;
+interface OddsSummaryResponse {
+  odds?: ESPNOdds[];
 }
 
-function parseOdds(data: OddsApiResponse): OddsLine[] {
-  return (data.items ?? []).map((o) => ({
+function parseOdds(data: OddsSummaryResponse): OddsLine[] {
+  return (data.odds ?? []).map((o) => ({
     provider: o.provider?.name ?? "",
     details: o.details ?? "",
     overUnder: o.overUnder ?? 0,
@@ -50,17 +34,19 @@ function parseOdds(data: OddsApiResponse): OddsLine[] {
 }
 
 /**
- * 取得比賽賠率
+ * 取得比賽賠率（從 summary API）
  */
 export async function fetchOdds(
   league: string,
-  eventId: string
+  eventId: string,
+  isCompleted = false
 ): Promise<OddsLine[]> {
   const sportPath = getSportPath(league);
+  const ttl = isCompleted ? CACHE_TTL.PBP_FINAL : CACHE_TTL.ODDS;
 
-  const data = await espnFetch<OddsApiResponse>(
-    `${sportPath}/events/${eventId}/competitions/${eventId}/odds`,
-    { ttl: CACHE_TTL.ODDS }
+  const data = await espnFetch<OddsSummaryResponse>(
+    `${sportPath}/summary`,
+    { ttl, params: { event: eventId } }
   );
 
   return parseOdds(data);
@@ -71,9 +57,10 @@ export async function fetchOdds(
  */
 export async function fetchOddsPreview(
   league: string,
-  eventId: string
+  eventId: string,
+  isCompleted = false
 ): Promise<OddsLine[]> {
-  const allOdds = await fetchOdds(league, eventId);
+  const allOdds = await fetchOdds(league, eventId, isCompleted);
   // 訪客只看第一個 provider 的 spread
   return allOdds.slice(0, 1).map((o) => ({
     ...o,

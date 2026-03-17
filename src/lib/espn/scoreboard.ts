@@ -1,7 +1,7 @@
 // 重構 scoreboard — 使用統一 ESPN client
 
 import { espnFetch, CACHE_TTL, getSportPath } from "./client";
-import type { ESPNScoreboardResponse } from "./types";
+import type { ESPNScoreboardResponse, ESPNOdds } from "./types";
 
 // ---------- 前台使用的型別（保持與現有 scoreboard.ts 相容） ----------
 
@@ -13,6 +13,15 @@ export interface TeamInfo {
   record: string;
 }
 
+export interface GameOdds {
+  provider: string;
+  details: string;
+  overUnder: number;
+  spread: number;
+  homeMoneyLine: string;
+  awayMoneyLine: string;
+}
+
 export interface Game {
   id: string;
   date: string;
@@ -20,6 +29,7 @@ export interface Game {
   statusDetail: string;
   homeTeam: TeamInfo;
   awayTeam: TeamInfo;
+  odds?: GameOdds;
 }
 
 export interface ScoreboardResponse {
@@ -52,6 +62,20 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
     const away =
       competitors.find((c) => c.homeAway === "away") ?? competitors[1];
 
+    // Parse odds if available
+    const oddsData: ESPNOdds | undefined = competition?.odds?.[0];
+    let odds: GameOdds | undefined;
+    if (oddsData) {
+      odds = {
+        provider: oddsData.provider?.name ?? "",
+        details: oddsData.details ?? "",
+        overUnder: oddsData.overUnder ?? 0,
+        spread: oddsData.spread ?? 0,
+        homeMoneyLine: String(oddsData.homeTeamOdds?.moneyLine ?? ""),
+        awayMoneyLine: String(oddsData.awayTeamOdds?.moneyLine ?? ""),
+      };
+    }
+
     return {
       id: event.id,
       date: event.date,
@@ -71,6 +95,7 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
         score: away?.score ?? "0",
         record: away?.records?.[0]?.summary ?? "",
       },
+      odds,
     };
   });
 }

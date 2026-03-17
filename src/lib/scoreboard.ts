@@ -104,14 +104,13 @@ function parseGames(data: any): Game[] {
     const oddsData = competition.odds?.[0];
     let odds: GameOdds | undefined;
     if (oddsData) {
-      const ml = oddsData.moneyline ?? {};
       odds = {
         provider: String(oddsData.provider?.name ?? ""),
         details: String(oddsData.details ?? ""),
         overUnder: Number(oddsData.overUnder ?? 0),
         spread: Number(oddsData.spread ?? 0),
-        homeMoneyLine: String(ml.home?.close?.odds ?? ml.homeClose ?? ""),
-        awayMoneyLine: String(ml.away?.close?.odds ?? ml.awayClose ?? ""),
+        homeMoneyLine: String(oddsData.homeTeamOdds?.moneyLine ?? ""),
+        awayMoneyLine: String(oddsData.awayTeamOdds?.moneyLine ?? ""),
       };
     }
 
