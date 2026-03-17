@@ -1,5 +1,7 @@
 // ESPN Scoreboard API 封裝 + in-memory 快取 + 型別定義
 
+import { getTeamNameZh } from "@/lib/constants";
+
 const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 
 // ---------- Types ----------
@@ -81,7 +83,7 @@ function parseTeam(competitor: Record<string, unknown>): TeamInfo {
   const firstRecord = (records[0] ?? {}) as Record<string, unknown>;
 
   return {
-    name: String(team.displayName ?? team.name ?? ""),
+    name: getTeamNameZh(String(team.displayName ?? team.name ?? "")),
     abbreviation: String(team.abbreviation ?? ""),
     logo: String(team.logo ?? ""),
     score: String(competitor.score ?? "0"),

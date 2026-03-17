@@ -1,6 +1,8 @@
 // Play-by-Play 解析（使用 ESPN summary API）
 
 import { espnFetch, CACHE_TTL, getSportPath } from "./client";
+import { getTeamNameZh } from "@/lib/constants";
+import { translatePbpText } from "./translate-pbp";
 
 export interface Play {
   id: string;
@@ -47,7 +49,7 @@ function buildTeamMap(data: SummaryResponse): Record<string, string> {
   const competitors =
     data.header?.competitions?.[0]?.competitors ?? [];
   for (const c of competitors) {
-    map[c.team.id] = c.team.displayName;
+    map[c.team.id] = getTeamNameZh(c.team.displayName);
   }
   return map;
 }
@@ -59,7 +61,7 @@ function parsePlays(
   return plays.map((p) => ({
     id: p.id,
     sequence: parseInt(p.sequenceNumber) || 0,
-    text: p.text,
+    text: translatePbpText(p.text),
     type: p.type?.text ?? "",
     period: p.period?.displayValue ?? "",
     clock: p.clock?.displayValue ?? "",

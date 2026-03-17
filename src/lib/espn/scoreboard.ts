@@ -2,6 +2,7 @@
 
 import { espnFetch, CACHE_TTL, getSportPath } from "./client";
 import type { ESPNScoreboardResponse, ESPNOdds } from "./types";
+import { getTeamNameZh } from "@/lib/constants";
 
 // ---------- 前台使用的型別（保持與現有 scoreboard.ts 相容） ----------
 
@@ -82,14 +83,14 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
       status: mapStatus(event.status?.type?.name ?? ""),
       statusDetail: event.status?.type?.shortDetail ?? "",
       homeTeam: {
-        name: home?.team?.displayName ?? "",
+        name: getTeamNameZh(home?.team?.displayName ?? ""),
         abbreviation: home?.team?.abbreviation ?? "",
         logo: home?.team?.logo ?? "",
         score: home?.score ?? "0",
         record: home?.records?.[0]?.summary ?? "",
       },
       awayTeam: {
-        name: away?.team?.displayName ?? "",
+        name: getTeamNameZh(away?.team?.displayName ?? ""),
         abbreviation: away?.team?.abbreviation ?? "",
         logo: away?.team?.logo ?? "",
         score: away?.score ?? "0",
