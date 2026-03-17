@@ -123,13 +123,6 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
         </div>
       )}
 
-      {/* Odds Summary */}
-      {game.odds && game.status !== "final" && (
-        <div className="px-4 pb-2 text-xs text-slate-400 text-center border-t border-slate-100 pt-2">
-          Spread: {game.odds.details || "-"} | O/U: {game.odds.overUnder || "-"}
-        </div>
-      )}
-
       {/* Records */}
       {(game.homeTeam.record || game.awayTeam.record) && (
         <div className="px-4 pb-3 text-xs text-slate-400 text-center">
