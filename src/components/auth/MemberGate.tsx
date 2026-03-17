@@ -27,11 +27,16 @@ export function MemberGate({
   message = "登入查看完整內容",
   className,
 }: MemberGateProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [loginOpen, setLoginOpen] = useState(false);
 
-  // 已登入會員 → 顯示完整內容（admin 不算會員）
-  if (session?.user?.role === "member") {
+  // Session 載入中 → 不顯示任何內容，避免閃爍
+  if (status === "loading") {
+    return null;
+  }
+
+  // 已登入用戶 → 顯示完整內容
+  if (session?.user) {
     return <>{children}</>;
   }
 
@@ -89,10 +94,14 @@ export function MemberGateList<T>({
   message?: string;
   className?: string;
 }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
-  // 已登入會員 → 顯示全部（admin 不算會員）
-  if (session?.user?.role === "member") {
+  if (status === "loading") {
+    return null;
+  }
+
+  // 已登入用戶 → 顯示全部
+  if (session?.user) {
     return (
       <div className={className}>
         {items.map((item, i) => renderItem(item, i))}
