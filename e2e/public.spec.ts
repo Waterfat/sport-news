@@ -155,6 +155,45 @@ test.describe("即時比分頁", () => {
 });
 
 // ---------------------------------------------------------------------------
+// MemberGate（球隊頁訪客限制）
+// ---------------------------------------------------------------------------
+test.describe("MemberGate 訪客限制", () => {
+  test("未登入訪問球隊頁顯示登入引導與模糊預覽", async ({ page }) => {
+    await page.goto("/team/nba/13");
+
+    // 球隊頁載入成功
+    await expect(page.getByText("球員名單", { exact: true })).toBeVisible({ timeout: 10_000 });
+
+    // 未登入應看到登入引導
+    await expect(page.getByText("登入查看完整球員名單與數據")).toBeVisible();
+    await expect(page.getByRole("button", { name: "免費登入" })).toBeVisible();
+  });
+
+  test("Team API 回傳球隊資料", async ({ request }) => {
+    const resp = await request.get("/api/public/team?sport=nba&id=13");
+    expect(resp.ok()).toBeTruthy();
+    const json = await resp.json();
+    expect(json).toHaveProperty("team");
+    expect(json.team).toHaveProperty("name");
+    expect(json.team).toHaveProperty("abbreviation");
+  });
+
+  test("Team Roster API 回傳球員名單", async ({ request }) => {
+    const resp = await request.get("/api/public/team?sport=nba&id=13&type=roster");
+    expect(resp.ok()).toBeTruthy();
+    const json = await resp.json();
+    expect(json).toHaveProperty("roster");
+    expect(Array.isArray(json.roster)).toBeTruthy();
+  });
+
+  test("Favorites API 未登入回傳 401", async ({ request }) => {
+    const resp = await request.get("/api/member/favorites");
+    // 未登入應回傳 401 或 redirect
+    expect([401, 302].includes(resp.status())).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // SEO / crawler files
 // ---------------------------------------------------------------------------
 test.describe("SEO 檔案", () => {

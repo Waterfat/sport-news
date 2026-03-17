@@ -35,8 +35,8 @@ export function MemberGate({
     return null;
   }
 
-  // 已登入用戶 → 顯示完整內容
-  if (session?.user) {
+  // 已登入會員 → 顯示完整內容（admin 是後台帳號，不算前台會員）
+  if (session?.user && session.user.role !== "admin") {
     return <>{children}</>;
   }
 
@@ -100,8 +100,8 @@ export function MemberGateList<T>({
     return null;
   }
 
-  // 已登入用戶 → 顯示全部
-  if (session?.user) {
+  // 已登入會員 → 顯示全部（admin 不算前台會員）
+  if (session?.user && session.user.role !== "admin") {
     return (
       <div className={className}>
         {items.map((item, i) => renderItem(item, i))}
