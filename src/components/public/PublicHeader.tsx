@@ -83,7 +83,7 @@ export function PublicHeader() {
             <Link
               key={link.href}
               href={link.href}
-              className="px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:text-blue-600 hover:bg-blue-50 transition-colors whitespace-nowrap"
+              className="px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:text-blue-600 hover:bg-blue-50 active:scale-[0.97] transition-all duration-150 whitespace-nowrap"
             >
               {link.label}
             </Link>
