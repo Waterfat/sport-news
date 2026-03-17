@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { CATEGORY_COLORS, formatRelativeTime } from "@/lib/constants";
+import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime } from "@/lib/constants";
 import { Star } from "lucide-react";
 
 interface FavoriteTeam {
@@ -60,7 +60,7 @@ export function PersonalizedArticleGrid({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
       {sortedArticles.map((article) => {
         const colorClass = CATEGORY_COLORS[article.category ?? ""] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
-        const thumbnail = article.images?.[0]?.url;
+        const thumbnail = article.images?.[0]?.url || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
         const isFavorite = favoriteNames.some((name) => article.title.includes(name));
 
         return (
@@ -71,20 +71,18 @@ export function PersonalizedArticleGrid({
           >
             {/* Desktop: vertical card */}
             <article className="hidden sm:block h-full rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md hover:border-blue-300 active:scale-[0.98] transition-all duration-150">
-              {thumbnail && (
-                <div className="aspect-video bg-slate-100 relative">
-                  <img
-                    src={thumbnail}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                  {isFavorite && (
-                    <span className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 rounded-full p-1">
-                      <Star className="w-3 h-3 fill-current" />
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="aspect-video bg-slate-100 relative">
+                <img
+                  src={thumbnail}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+                {isFavorite && (
+                  <span className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 rounded-full p-1">
+                    <Star className="w-3 h-3 fill-current" />
+                  </span>
+                )}
+              </div>
               <div className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   {article.category && (
@@ -136,13 +134,11 @@ export function PersonalizedArticleGrid({
                     </div>
                   )}
                 </div>
-                {thumbnail && (
-                  <img
-                    src={thumbnail}
-                    alt=""
-                    className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
-                  />
-                )}
+                <img
+                  src={thumbnail}
+                  alt=""
+                  className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
+                />
               </div>
             </article>
           </Link>

@@ -132,6 +132,16 @@ export const CATEGORY_COLORS: Record<string, string> = {
   綜合: "bg-purple-50 text-purple-700 border border-purple-300 rounded-lg",
 };
 
+/** 分類名稱 → 分類底圖 fallback（無文章配圖時使用） */
+export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  NBA: "/images/category-nba.jpg",
+  籃球: "/images/category-nba.jpg",
+  棒球: "/images/category-mlb.jpg",
+  MLB: "/images/category-mlb.jpg",
+  足球: "/images/category-soccer.jpg",
+  綜合: "/images/category-general.jpg",
+};
+
 /** slug → 顯示名稱 */
 export const CATEGORY_LABELS: Record<string, string> = {
   nba: "NBA",

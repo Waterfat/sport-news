@@ -31,6 +31,33 @@ const LEAGUE_OPTIONS = [
   { value: "mlb", label: "MLB" },
 ];
 
+/** 將 ESPN 時間格式（如 "3/17 - 7:00 PM EDT"）轉為台灣時間 */
+function formatStatusDetail(detail: string): string {
+  // 匹配 "M/D - H:MM PM EDT" 格式
+  const match = detail.match(/(\d{1,2})\/(\d{1,2})\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)\s*(E[DS]T)/i);
+  if (!match) return detail;
+
+  const [, month, day, hourStr, minute, ampm, tz] = match;
+  let hour = parseInt(hourStr);
+  if (ampm.toUpperCase() === "PM" && hour !== 12) hour += 12;
+  if (ampm.toUpperCase() === "AM" && hour === 12) hour = 0;
+
+  // EDT = UTC-4, EST = UTC-5
+  const utcOffset = tz.toUpperCase() === "EDT" ? -4 : -5;
+  const now = new Date();
+  const year = now.getFullYear();
+  const utcDate = new Date(Date.UTC(year, parseInt(month) - 1, parseInt(day), hour - utcOffset, parseInt(minute)));
+
+  // 轉台灣時間 (UTC+8)
+  const twDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
+  const twMonth = twDate.getUTCMonth() + 1;
+  const twDay = twDate.getUTCDate();
+  const twHour = twDate.getUTCHours();
+  const twMin = twDate.getUTCMinutes().toString().padStart(2, "0");
+
+  return `${twMonth}/${twDay} ${twHour}:${twMin}`;
+}
+
 export function OddsClient() {
   const { data: session } = useSession();
   const [league, setLeague] = useState("nba");
@@ -67,7 +94,7 @@ export function OddsClient() {
           ) : games.length === 0 ? (
             <p className="text-slate-500 text-center py-8">今日暫無賽事</p>
           ) : (
-            <div className="space-y-4 mt-4">
+            <div className="space-y-3 mt-4">
               {games.map((game) => (
                 <Card key={game.id}>
                   <CardContent className="p-4">
@@ -87,7 +114,7 @@ export function OddsClient() {
                         )}
                         <span className="font-medium">{game.homeTeam.abbreviation}</span>
                       </Link>
-                      <span className="text-xs text-slate-500">{game.statusDetail}</span>
+                      <span className="text-xs text-slate-500">{formatStatusDetail(game.statusDetail)}</span>
                     </div>
 
                     {/* Odds table */}

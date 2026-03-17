@@ -65,7 +65,7 @@ export default function PublicLayout({
             </div>
             <div className="border-t border-slate-200 pt-3">
               <div className="text-sm text-slate-400 text-center">
-                &copy; 2019 小豪哥體育資訊網. All rights reserved.
+                &copy; {new Date().getFullYear()} 小豪哥體育資訊網. All rights reserved.
               </div>
             </div>
           </div>
