@@ -205,8 +205,6 @@ export default async function CategoryPage({
                       {writerName && <span>{writerName}</span>}
                       {writerName && <span>&middot;</span>}
                       <span>{formatRelativeTime(article.published_at)}</span>
-                      <span>&middot;</span>
-                      <span>{article.view_count ?? 0} views</span>
                     </div>
                   </div>
                   {thumbnail && (

@@ -131,7 +131,9 @@ export default async function WriterPage({
                     .slice(0, 160)}
                 </p>
                 <span className="text-xs text-slate-400">
-                  {article.view_count ?? 0} views
+                  {article.published_at
+                    ? new Date(article.published_at).toLocaleDateString("zh-TW")
+                    : ""}
                 </span>
               </Link>
             );

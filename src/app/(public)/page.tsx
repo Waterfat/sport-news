@@ -70,8 +70,6 @@ export default async function HomePage() {
                   )}
                   <span>&middot;</span>
                   <span>{formatRelativeTime(hero.published_at)}</span>
-                  <span>&middot;</span>
-                  <span>{hero.view_count ?? 0} views</span>
                 </div>
               </div>
             </article>

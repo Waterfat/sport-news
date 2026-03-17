@@ -102,10 +102,11 @@ export function PersonalizedArticleGrid({
                 <p className="text-sm text-slate-500 line-clamp-2 mb-3">
                   {article.content?.replace(/[#*_>\-\n]/g, " ").slice(0, 120)}
                 </p>
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  {article.writerName && <span>{article.writerName}</span>}
-                  <span>{article.view_count ?? 0} views</span>
-                </div>
+                {article.writerName && (
+                  <div className="text-xs text-slate-400">
+                    <span>{article.writerName}</span>
+                  </div>
+                )}
               </div>
             </article>
 
@@ -129,11 +130,11 @@ export function PersonalizedArticleGrid({
                   <h3 className="text-sm font-semibold text-slate-900 leading-snug mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
                     {article.title}
                   </h3>
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    {article.writerName && <span>{article.writerName}</span>}
-                    {article.writerName && <span>&middot;</span>}
-                    <span>{article.view_count ?? 0} views</span>
-                  </div>
+                  {article.writerName && (
+                    <div className="text-xs text-slate-400">
+                      <span>{article.writerName}</span>
+                    </div>
+                  )}
                 </div>
                 {thumbnail && (
                   <img
