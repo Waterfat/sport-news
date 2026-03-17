@@ -75,7 +75,7 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
         : "border-l-4 border-l-blue-400";
 
   const content = (
-    <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden ${borderClass} ${league ? "hover:shadow-md transition-shadow cursor-pointer" : ""}`}>
+    <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden ${borderClass} ${league ? "hover:shadow-md transition-all duration-150 active:scale-[0.98] cursor-pointer" : ""}`}>
       {/* Status */}
       <div className="px-4 pt-3 pb-2">
         <StatusBadge game={game} />
