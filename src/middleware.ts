@@ -10,6 +10,7 @@ const ADMIN_ALLOWED_PREFIXES = [
   "/admin",
   "/login",
   "/api/auth",
+  "/api/admin",
   "/api/dashboard",
   "/api/settings",
   "/api/rewrite",

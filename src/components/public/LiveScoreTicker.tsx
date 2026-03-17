@@ -151,10 +151,14 @@ export function LiveScoreTicker({ leagues }: { leagues: League[] }) {
           ))}
         </div>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-          {games.map(({ game, league }) => (
-            <TickerGameCard key={`${league}-${game.id}`} game={game} league={league} />
-          ))}
+        <div className="relative">
+          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+            {games.map(({ game, league }) => (
+              <TickerGameCard key={`${league}-${game.id}`} game={game} league={league} />
+            ))}
+          </div>
+          {/* 右側漸層遮罩提示可滾動 */}
+          <div className="absolute top-0 right-0 bottom-1 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none" />
         </div>
       )}
     </section>

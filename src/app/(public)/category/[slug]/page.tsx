@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_LABELS, formatRelativeTime } from "@/lib/constants";
+import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_FALLBACK_IMAGES, CATEGORY_LABELS, formatRelativeTime } from "@/lib/constants";
 
 export const revalidate = 60;
 
@@ -184,7 +184,7 @@ export default async function CategoryPage({
         <div className="space-y-4 mb-8">
           {(articles as unknown as ArticleWithWriter[]).map((article) => {
             const writerName = article.writer_personas?.name;
-            const thumbnail = article.images?.[0]?.url;
+            const thumbnail = article.images?.[0]?.url || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
             return (
               <Link
                 key={article.id}
@@ -207,13 +207,11 @@ export default async function CategoryPage({
                       <span>{formatRelativeTime(article.published_at)}</span>
                     </div>
                   </div>
-                  {thumbnail && (
-                    <img
-                      src={thumbnail}
-                      alt=""
-                      className="w-28 h-20 object-cover rounded-lg flex-shrink-0"
-                    />
-                  )}
+                  <img
+                    src={thumbnail}
+                    alt=""
+                    className="w-28 h-20 object-cover rounded-lg flex-shrink-0"
+                  />
                 </div>
               </Link>
             );
