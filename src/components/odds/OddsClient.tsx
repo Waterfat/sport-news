@@ -16,6 +16,18 @@ interface GameOdds {
   awayMoneyLine: string;
 }
 
+interface OddsLine {
+  provider: string;
+  details: string;
+  overUnder: number;
+  spread: number;
+  homeMoneyLine: number;
+  awayMoneyLine: number;
+  homeSpreadOdds: number;
+  awaySpreadOdds: number;
+  homeFavorite: boolean;
+}
+
 interface Game {
   id: string;
   date: string;
@@ -62,6 +74,7 @@ export function OddsClient() {
   const { data: session } = useSession();
   const [league, setLeague] = useState("nba");
   const [games, setGames] = useState<Game[]>([]);
+  const [multiOdds, setMultiOdds] = useState<Record<string, OddsLine[]>>({});
   const [loading, setLoading] = useState(true);
 
   const isMember = !!session?.user;
@@ -74,6 +87,32 @@ export function OddsClient() {
       .catch(() => setGames([]))
       .finally(() => setLoading(false));
   }, [league]);
+
+  // Fetch multi-provider odds for members
+  useEffect(() => {
+    if (!isMember || games.length === 0) return;
+
+    const fetchAllOdds = async () => {
+      const results: Record<string, OddsLine[]> = {};
+      await Promise.all(
+        games.map(async (game) => {
+          try {
+            const res = await fetch(
+              `/api/member/game?eventId=${game.id}&league=${league}&type=odds`
+            );
+            if (res.ok) {
+              const d = await res.json();
+              results[game.id] = d.odds ?? [];
+            }
+          } catch {
+            // ignore per-game fetch errors
+          }
+        })
+      );
+      setMultiOdds(results);
+    };
+    fetchAllOdds();
+  }, [isMember, games, league]);
 
   return (
     <Tabs value={league} onValueChange={setLeague}>
@@ -89,74 +128,105 @@ export function OddsClient() {
         <TabsContent key={opt.value} value={opt.value}>
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
           ) : games.length === 0 ? (
-            <p className="text-slate-500 text-center py-8">今日暫無賽事</p>
+            <p className="text-muted-foreground text-center py-8">今日暫無賽事</p>
           ) : (
             <div className="space-y-3 mt-4">
-              {games.map((game) => (
-                <Card key={game.id}>
-                  <CardContent className="p-4">
-                    {/* Game header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <Link
-                        href={`/game/${league}/${game.id}`}
-                        className="flex items-center gap-2 hover:opacity-80"
-                      >
-                        {game.awayTeam.logo && (
-                          <img src={game.awayTeam.logo} alt="" className="w-6 h-6" />
-                        )}
-                        <span className="font-medium">{game.awayTeam.abbreviation}</span>
-                        <span className="text-slate-400">@</span>
-                        {game.homeTeam.logo && (
-                          <img src={game.homeTeam.logo} alt="" className="w-6 h-6" />
-                        )}
-                        <span className="font-medium">{game.homeTeam.abbreviation}</span>
-                      </Link>
-                      <span className="text-xs text-slate-500">{formatStatusDetail(game.statusDetail)}</span>
-                    </div>
+              {games.map((game) => {
+                const gameMultiOdds = multiOdds[game.id] ?? [];
+                const showMulti = isMember && gameMultiOdds.length > 1;
 
-                    {/* Odds table */}
-                    {game.odds ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="text-xs text-slate-500 border-b">
-                              <th className="text-left py-1">來源</th>
-                              <th className="text-center py-1">Spread</th>
-                              <th className="text-center py-1">O/U</th>
-                              {isMember && <th className="text-center py-1">ML</th>}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="border-b last:border-0">
-                              <td className="py-1.5 text-slate-600">{game.odds.provider}</td>
-                              <td className="text-center py-1.5">{game.odds.details}</td>
-                              <td className="text-center py-1.5">{game.odds.overUnder}</td>
-                              {isMember && (
-                                <td className="text-center py-1.5 text-xs">
-                                  {game.odds.awayMoneyLine} / {game.odds.homeMoneyLine}
-                                </td>
-                              )}
-                            </tr>
-                          </tbody>
-                        </table>
+                return (
+                  <Card key={game.id}>
+                    <CardContent className="p-4">
+                      {/* Game header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <Link
+                          href={`/game/${league}/${game.id}`}
+                          className="flex items-center gap-2 hover:opacity-80"
+                        >
+                          {game.awayTeam.logo && (
+                            <img src={game.awayTeam.logo} alt="" className="w-6 h-6" />
+                          )}
+                          <span className="font-medium">{game.awayTeam.abbreviation}</span>
+                          <span className="text-muted-foreground">@</span>
+                          {game.homeTeam.logo && (
+                            <img src={game.homeTeam.logo} alt="" className="w-6 h-6" />
+                          )}
+                          <span className="font-medium">{game.homeTeam.abbreviation}</span>
+                        </Link>
+                        <span className="text-xs text-muted-foreground">{formatStatusDetail(game.statusDetail)}</span>
                       </div>
-                    ) : (
-                      <p className="text-sm text-slate-400">暫無賠率資料</p>
-                    )}
 
-                    {/* Lock hint for non-members */}
-                    {!isMember && game.odds && (
-                      <div className="mt-2 flex items-center gap-1 text-xs text-blue-600">
-                        <Lock className="w-3 h-3" />
-                        <span>登入查看 Money Line 賠率</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                      {/* Multi-provider odds table (member) */}
+                      {showMulti ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-xs text-muted-foreground border-b">
+                                <th className="text-left py-1">來源</th>
+                                <th className="text-center py-1">Spread</th>
+                                <th className="text-center py-1">O/U</th>
+                                <th className="text-center py-1">ML (客)</th>
+                                <th className="text-center py-1">ML (主)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {gameMultiOdds.map((odds, idx) => (
+                                <tr key={idx} className="border-b last:border-0">
+                                  <td className="py-1.5 text-muted-foreground">{odds.provider}</td>
+                                  <td className="text-center py-1.5 tabular-nums">{odds.details}</td>
+                                  <td className="text-center py-1.5 tabular-nums">{odds.overUnder}</td>
+                                  <td className="text-center py-1.5 tabular-nums text-xs">{odds.awayMoneyLine || "-"}</td>
+                                  <td className="text-center py-1.5 tabular-nums text-xs">{odds.homeMoneyLine || "-"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : game.odds ? (
+                        /* Single provider (visitor or single provider) */
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-xs text-muted-foreground border-b">
+                                <th className="text-left py-1">來源</th>
+                                <th className="text-center py-1">Spread</th>
+                                <th className="text-center py-1">O/U</th>
+                                {isMember && <th className="text-center py-1">ML</th>}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="border-b last:border-0">
+                                <td className="py-1.5 text-muted-foreground">{game.odds.provider}</td>
+                                <td className="text-center py-1.5 tabular-nums">{game.odds.details}</td>
+                                <td className="text-center py-1.5 tabular-nums">{game.odds.overUnder}</td>
+                                {isMember && (
+                                  <td className="text-center py-1.5 text-xs tabular-nums">
+                                    {game.odds.awayMoneyLine} / {game.odds.homeMoneyLine}
+                                  </td>
+                                )}
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">暫無賠率資料</p>
+                      )}
+
+                      {/* Lock hint for non-members */}
+                      {!isMember && game.odds && (
+                        <div className="mt-2 flex items-center gap-1 text-xs text-primary">
+                          <Lock className="w-3 h-3" />
+                          <span>登入查看 Money Line 及多家賠率比較</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>

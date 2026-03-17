@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
 
   const { page, limit, offset } = parsePagination(searchParams);
   const status = searchParams.get("status");
+  const category = searchParams.get("category");
 
   let query = supabase
     .from("generated_articles")
@@ -20,6 +21,10 @@ export async function GET(request: NextRequest) {
     query = query.eq("status", "draft").not("scheduled_at", "is", null);
   } else if (status) {
     query = query.eq("status", status);
+  }
+
+  if (category) {
+    query = query.eq("category", category);
   }
 
   const { data, count, error } = await query;

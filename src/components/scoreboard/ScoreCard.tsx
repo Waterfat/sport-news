@@ -77,8 +77,13 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
   const content = (
     <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden ${borderClass} ${league ? "hover:shadow-md transition-all duration-150 active:scale-[0.98] cursor-pointer" : ""}`}>
       {/* Status */}
-      <div className="px-4 pt-3 pb-2">
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
         <StatusBadge game={game} />
+        {game.broadcast && (
+          <span className="text-xs text-muted-foreground">
+            {game.broadcast}
+          </span>
+        )}
       </div>
 
       {/* Teams */}
@@ -123,9 +128,16 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
         </div>
       )}
 
+      {/* Odds summary */}
+      {game.odds && (
+        <div className="px-4 pb-2 text-xs text-muted-foreground text-center tabular-nums">
+          {game.odds.details} | O/U {game.odds.overUnder}
+        </div>
+      )}
+
       {/* Records */}
       {(game.homeTeam.record || game.awayTeam.record) && (
-        <div className="px-4 pb-3 text-xs text-slate-400 text-center">
+        <div className="px-4 pb-3 text-xs text-muted-foreground text-center">
           ({game.awayTeam.record}) vs ({game.homeTeam.record})
         </div>
       )}

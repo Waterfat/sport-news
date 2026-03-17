@@ -125,8 +125,16 @@ export default function ScoreboardClient({
             currentDate={selectedDate}
             onDateChange={setSelectedDate}
           />
+          {!isToday && (
+            <button
+              onClick={() => setSelectedDate(getTodayStr())}
+              className="px-2 py-1 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              今天
+            </button>
+          )}
           {lastUpdated && isToday && (
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-muted-foreground">
               上次更新 {lastUpdated}
             </span>
           )}

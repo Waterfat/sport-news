@@ -14,6 +14,8 @@ export interface Persona {
   specialties: Specialties;
   max_articles: number;
   created_at: string;
+  avatar_url?: string | null;
+  specialty_tags?: string[] | null;
 }
 
 export interface PersonaFormData {
@@ -24,6 +26,8 @@ export interface PersonaFormData {
   writer_type: string;
   specialties: Specialties;
   max_articles: number;
+  avatar_url: string;
+  specialty_tags: string;
 }
 
 export const SPORT_OPTIONS = ["籃球", "棒球", "美式足球", "足球", "冰球", "網球", "綜合"];
@@ -42,4 +46,6 @@ export const emptyForm: PersonaFormData = {
   writer_type: "columnist",
   specialties: { sports: [], leagues: [], teams: [] },
   max_articles: 2,
+  avatar_url: "",
+  specialty_tags: "",
 };

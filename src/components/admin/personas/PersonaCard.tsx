@@ -24,6 +24,17 @@ export function PersonaCard({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            {persona.avatar_url ? (
+              <img
+                src={persona.avatar_url}
+                alt={persona.name}
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                {persona.name.charAt(0)}
+              </div>
+            )}
             <CardTitle className="text-lg">{persona.name}</CardTitle>
             <Badge variant="outline">
               {TYPE_LABELS[persona.writer_type] || persona.writer_type}
@@ -71,6 +82,15 @@ export function PersonaCard({
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {persona.specialty_tags && persona.specialty_tags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-xs text-gray-400 mr-1">專長:</span>
+            {persona.specialty_tags.map((tag) => (
+              <Badge key={tag} className="text-xs bg-purple-100 text-purple-800">{tag}</Badge>
+            ))}
           </div>
         )}
 

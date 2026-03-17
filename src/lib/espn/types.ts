@@ -22,10 +22,16 @@ export interface ESPNEvent {
   competitions: ESPNCompetition[];
 }
 
+export interface ESPNBroadcast {
+  market: string;
+  names: string[];
+}
+
 export interface ESPNCompetition {
   id: string;
   competitors: ESPNCompetitor[];
   odds?: ESPNOdds[];
+  broadcasts?: ESPNBroadcast[];
 }
 
 export interface ESPNCompetitor {

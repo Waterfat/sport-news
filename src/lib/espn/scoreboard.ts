@@ -1,7 +1,7 @@
 // 重構 scoreboard — 使用統一 ESPN client
 
 import { espnFetch, CACHE_TTL, getSportPath } from "./client";
-import type { ESPNScoreboardResponse, ESPNOdds } from "./types";
+import type { ESPNScoreboardResponse, ESPNOdds, ESPNCompetition } from "./types";
 import { getTeamNameZh } from "@/lib/constants";
 
 // ---------- 前台使用的型別（保持與現有 scoreboard.ts 相容） ----------
@@ -32,6 +32,7 @@ export interface Game {
   homeTeam: TeamInfo;
   awayTeam: TeamInfo;
   odds?: GameOdds;
+  broadcast?: string;
 }
 
 export interface ScoreboardResponse {
@@ -78,11 +79,16 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
       };
     }
 
+    // Parse broadcast
+    const broadcastData = (competition as ESPNCompetition)?.broadcasts?.[0];
+    const broadcast = broadcastData?.names?.[0] ?? undefined;
+
     return {
       id: event.id,
       date: event.date,
       status: mapStatus(event.status?.type?.name ?? ""),
       statusDetail: event.status?.type?.shortDetail ?? "",
+      broadcast,
       homeTeam: {
         name: getTeamNameZh(home?.team?.displayName ?? ""),
         abbreviation: home?.team?.abbreviation ?? "",

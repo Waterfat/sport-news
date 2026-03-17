@@ -24,6 +24,18 @@ interface ArticleItem {
   writerName: string | null;
 }
 
+function getExcerpt(content: string | null): string {
+  if (!content) return "";
+  const lines = content.split("\n").filter(Boolean);
+  const firstParagraph = lines.find(
+    (line) => !line.startsWith("#") && !line.startsWith("-") && !line.startsWith(">") && line.trim().length > 20
+  );
+  if (firstParagraph) {
+    return firstParagraph.replace(/[#*_\[\]()>`~]/g, "").trim().slice(0, 120);
+  }
+  return content.replace(/[#*_>\-\n\[\]()>`~]/g, " ").trim().slice(0, 120);
+}
+
 export function PersonalizedArticleGrid({
   articles,
 }: {
@@ -43,7 +55,6 @@ export function PersonalizedArticleGrid({
   const sortedArticles = useMemo(() => {
     if (favorites.length === 0) return articles;
     const favoriteNames = favorites.map((f) => f.name);
-    // Stable sort: favorites first
     return [...articles].sort((a, b) => {
       const aMatch = favoriteNames.some((name) => a.title.includes(name)) ? 1 : 0;
       const bMatch = favoriteNames.some((name) => b.title.includes(name)) ? 1 : 0;
@@ -57,9 +68,9 @@ export function PersonalizedArticleGrid({
   );
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-      {sortedArticles.map((article) => {
-        const colorClass = CATEGORY_COLORS[article.category ?? ""] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+      {sortedArticles.map((article, index) => {
+        const colorClass = CATEGORY_COLORS[article.category ?? ""] ?? "bg-muted text-muted-foreground rounded-md";
         const thumbnail = article.images?.[0]?.url || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
         const isFavorite = favoriteNames.some((name) => article.title.includes(name));
 
@@ -67,15 +78,16 @@ export function PersonalizedArticleGrid({
           <Link
             key={article.id}
             href={`/news/${article.slug || article.id}`}
-            className="group block"
+            className="group block animate-fade-in-up"
+            style={{ animationDelay: `${Math.min(index, 11) * 50}ms` }}
           >
             {/* Desktop: vertical card */}
-            <article className="hidden sm:block h-full rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md hover:border-blue-300 active:scale-[0.98] transition-all duration-150">
-              <div className="aspect-video bg-slate-100 relative">
+            <article className="hidden sm:block h-full rounded-xl border border-border bg-card overflow-hidden hover:shadow-lg hover:scale-[1.02] hover:border-brand/30 active:scale-[0.98] transition-all duration-200">
+              <div className="aspect-video bg-muted relative overflow-hidden">
                 <img
                   src={thumbnail}
                   alt=""
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 {isFavorite && (
                   <span className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 rounded-full p-1">
@@ -83,25 +95,25 @@ export function PersonalizedArticleGrid({
                   </span>
                 )}
               </div>
-              <div className="p-5">
-                <div className="flex items-center gap-2 mb-3">
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-2.5">
                   {article.category && (
-                    <span className={`inline-block px-2 py-0.5 text-xs font-medium ${colorClass}`}>
+                    <span className={`inline-block px-2 py-0.5 text-xs font-semibold ${colorClass}`}>
                       {article.category}
                     </span>
                   )}
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-muted-foreground">
                     {formatRelativeTime(article.published_at)}
                   </span>
                 </div>
-                <h3 className="text-base font-semibold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                <h3 className="text-lg font-semibold text-card-foreground leading-snug mb-2 line-clamp-2 group-hover:text-brand transition-colors">
                   {article.title}
                 </h3>
-                <p className="text-sm text-slate-500 line-clamp-2 mb-3">
-                  {article.content?.replace(/[#*_>\-\n]/g, " ").slice(0, 120)}
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                  {getExcerpt(article.content)}
                 </p>
                 {article.writerName && (
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-muted-foreground">
                     <span>{article.writerName}</span>
                   </div>
                 )}
@@ -109,7 +121,7 @@ export function PersonalizedArticleGrid({
             </article>
 
             {/* Mobile: horizontal card */}
-            <article className="sm:hidden rounded-xl border border-slate-200 bg-white p-4 hover:shadow-md hover:border-blue-300 active:scale-[0.98] transition-all duration-150">
+            <article className="sm:hidden rounded-xl border border-border bg-card p-4 hover:shadow-md hover:border-brand/30 active:scale-[0.98] transition-all duration-200">
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
@@ -117,19 +129,19 @@ export function PersonalizedArticleGrid({
                       <Star className="w-3 h-3 text-yellow-500 fill-yellow-400 flex-shrink-0" />
                     )}
                     {article.category && (
-                      <span className={`inline-block px-2 py-0.5 text-xs font-medium ${colorClass}`}>
+                      <span className={`inline-block px-2 py-0.5 text-xs font-semibold ${colorClass}`}>
                         {article.category}
                       </span>
                     )}
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-muted-foreground">
                       {formatRelativeTime(article.published_at)}
                     </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-slate-900 leading-snug mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-sm font-semibold text-card-foreground leading-snug mb-1 line-clamp-2 group-hover:text-brand transition-colors">
                     {article.title}
                   </h3>
                   {article.writerName && (
-                    <div className="text-xs text-slate-400">
+                    <div className="text-xs text-muted-foreground">
                       <span>{article.writerName}</span>
                     </div>
                   )}
@@ -137,7 +149,7 @@ export function PersonalizedArticleGrid({
                 <img
                   src={thumbnail}
                   alt=""
-                  className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
+                  className="w-28 h-20 object-cover rounded-lg flex-shrink-0"
                 />
               </div>
             </article>

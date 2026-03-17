@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSportPath } from "@/lib/espn/client";
+import { fetchTeamATS } from "@/lib/espn/team";
 
 const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 
 export async function GET(request: NextRequest) {
   const sport = request.nextUrl.searchParams.get("sport") || "nba";
   const id = request.nextUrl.searchParams.get("id");
-  const type = request.nextUrl.searchParams.get("type"); // "roster" or default
+  const type = request.nextUrl.searchParams.get("type"); // "roster" | "ats" | default
 
   if (!id) {
     return NextResponse.json({ error: "id required" }, { status: 400 });
@@ -35,6 +36,11 @@ export async function GET(request: NextRequest) {
       /* eslint-enable @typescript-eslint/no-explicit-any */
 
       return NextResponse.json({ roster });
+    }
+
+    if (type === "ats") {
+      const ats = await fetchTeamATS(sport, id);
+      return NextResponse.json({ ats });
     }
 
     // Default: team info

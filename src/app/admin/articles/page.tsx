@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PAGE_SIZE_OPTIONS } from "@/lib/constants";
+import { PAGE_SIZE_OPTIONS, CATEGORY_COLORS } from "@/lib/constants";
 
 import { PaginationBar } from "@/components/admin/PaginationBar";
 import { PlansTable } from "@/components/admin/PlansTable";
@@ -27,6 +27,7 @@ export default function ArticlesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [status, setStatus] = useState<string>("all");
+  const [category, setCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [jumpInput, setJumpInput] = useState("");
 
@@ -44,6 +45,7 @@ export default function ArticlesPage() {
       limit: pageSize.toString(),
     });
     if (status !== "all") params.set("status", status);
+    if (category !== "all") params.set("category", category);
 
     try {
       const res = await fetch(`/api/articles/generated?${params}`);
@@ -55,7 +57,7 @@ export default function ArticlesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, status]);
+  }, [page, pageSize, status, category]);
 
   const planManager = usePlanManager({
     onProduceSuccess: () => {
@@ -262,15 +264,35 @@ export default function ArticlesPage() {
 
       {rewritePolling.runningMode === "plan" && planManager.plans.length === 0 && <PlanLoadingCard />}
 
-      {/* 狀態篩選 */}
-      <Tabs value={status} onValueChange={handleStatusChange}>
-        <TabsList>
-          <TabsTrigger value="all">全部</TabsTrigger>
-          <TabsTrigger value="draft">未發布</TabsTrigger>
-          <TabsTrigger value="scheduled">排程中</TabsTrigger>
-          <TabsTrigger value="published">已發布</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* 狀態 + 分類篩選 */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Tabs value={status} onValueChange={handleStatusChange}>
+          <TabsList>
+            <TabsTrigger value="all">全部</TabsTrigger>
+            <TabsTrigger value="draft">未發布</TabsTrigger>
+            <TabsTrigger value="scheduled">排程中</TabsTrigger>
+            <TabsTrigger value="published">已發布</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Select
+          value={category}
+          onValueChange={(v) => {
+            setCategory(v);
+            setPage(1);
+            setSelectedIds(new Set());
+          }}
+        >
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="所有分類" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">所有分類</SelectItem>
+            {Object.keys(CATEGORY_COLORS).filter((k) => k.length <= 3 || k === "綜合").map((cat) => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* 批次操作列 */}
       <BatchActionsBar
