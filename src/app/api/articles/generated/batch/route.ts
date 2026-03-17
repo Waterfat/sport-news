@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase";
 import { publishArticle } from "@/lib/publish-article";
 
@@ -29,6 +30,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    revalidatePath("/");
+    revalidatePath("/category/[slug]", "page");
+    revalidatePath("/news/[slug]", "page");
+    revalidatePath("/writer/[id]", "page");
+    revalidatePath("/rss.xml");
+
     return NextResponse.json({ success: true, deleted: ids.length });
   }
 
@@ -40,5 +47,14 @@ export async function POST(request: NextRequest) {
   }
 
   const published = results.filter((r) => r.success).length;
+
+  if (published > 0) {
+    revalidatePath("/");
+    revalidatePath("/category/[slug]", "page");
+    revalidatePath("/news/[slug]", "page");
+    revalidatePath("/writer/[id]", "page");
+    revalidatePath("/rss.xml");
+  }
+
   return NextResponse.json({ success: true, published, results });
 }
