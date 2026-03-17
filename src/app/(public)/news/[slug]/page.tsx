@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, formatDateFull, formatRelativeTime, getCategorySlug, SITE_URL } from "@/lib/constants";
+import { CATEGORY_COLORS, formatDateFull, formatRelativeTime, getCategorySlug, getFirstImageUrl, SITE_URL } from "@/lib/constants";
 import ViewTracker from "./ViewTracker";
 import LikeButton from "./LikeButton";
 import { TelegramArticleCTA } from "@/components/TelegramCTA";
@@ -217,18 +217,19 @@ export default async function ArticlePage({
       </header>
 
       {/* Featured Image */}
-      {article.images?.length > 0 && article.images[0]?.url && (
-        <div className="mb-8 rounded-xl overflow-hidden">
-          <img
-            src={article.images[0].url}
-            alt={article.images[0].caption || article.title}
-            className="w-full max-h-[480px] object-cover"
-          />
-          {article.images[0].caption && (
-            <p className="text-xs text-muted-foreground mt-2">{article.images[0].caption}</p>
-          )}
-        </div>
-      )}
+      {(() => {
+        const featuredUrl = getFirstImageUrl(article.images);
+        if (!featuredUrl) return null;
+        return (
+          <div className="mb-8 rounded-xl overflow-hidden">
+            <img
+              src={featuredUrl}
+              alt={article.title}
+              className="w-full max-h-[480px] object-cover"
+            />
+          </div>
+        );
+      })()}
 
       {/* Divider */}
       <hr className="border-border mb-8" />
