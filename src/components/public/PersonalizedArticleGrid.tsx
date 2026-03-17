@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime } from "@/lib/constants";
+import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime, getFirstImageUrl } from "@/lib/constants";
 import { Star } from "lucide-react";
 
 interface FavoriteTeam {
@@ -71,7 +71,7 @@ export function PersonalizedArticleGrid({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
       {sortedArticles.map((article, index) => {
         const colorClass = CATEGORY_COLORS[article.category ?? ""] ?? "bg-muted text-muted-foreground rounded-md";
-        const thumbnail = article.images?.[0]?.url || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
+        const thumbnail = getFirstImageUrl(article.images) || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
         const isFavorite = favoriteNames.some((name) => article.title.includes(name));
 
         return (

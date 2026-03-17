@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime } from "@/lib/constants";
+import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime, getFirstImageUrl } from "@/lib/constants";
 import { SearchInput } from "./SearchInput";
 
 export const metadata: Metadata = {
@@ -63,7 +63,7 @@ export default async function SearchPage({
               CATEGORY_COLORS[article.category ?? ""] ??
               "bg-muted text-muted-foreground border border-border rounded-lg";
             const thumbnail =
-              article.images?.[0]?.url ||
+              getFirstImageUrl(article.images) ||
               CATEGORY_FALLBACK_IMAGES[article.category ?? ""] ||
               "/images/category-general.jpg";
 
