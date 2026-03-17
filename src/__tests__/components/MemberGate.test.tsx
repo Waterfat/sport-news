@@ -61,19 +61,19 @@ describe("MemberGate", () => {
     expect(screen.queryByText("預覽")).toBeNull();
   });
 
-  it("已登入 admin 也顯示完整內容", () => {
+  it("已登入 admin 不顯示會員內容（前後台分離）", () => {
     mockUseSession.mockReturnValue({
       data: { user: { name: "Admin", role: "admin" } },
       status: "authenticated",
     });
 
     render(
-      <MemberGate fallback={<div>預覽</div>}>
+      <MemberGate message="請登入" fallback={<div>預覽</div>}>
         <div>完整內容</div>
       </MemberGate>
     );
 
-    expect(screen.getByText("完整內容")).toBeDefined();
-    expect(screen.queryByText("預覽")).toBeNull();
+    expect(screen.queryByText("完整內容")).toBeNull();
+    expect(screen.getByText("請登入")).toBeDefined();
   });
 });
