@@ -45,9 +45,9 @@ export function StandingsClient({
   // NBA/MLB 常見 stat keys
   const statKeys =
     league === "nba"
-      ? ["wins", "losses", "winPercent", "gamesBehind", "streak"]
+      ? ["wins", "losses", "winPercent", "gamesBehind", "Home", "Away", "L10", "streak"]
       : league === "mlb"
-        ? ["wins", "losses", "winPercent", "gamesBehind"]
+        ? ["wins", "losses", "winPercent", "gamesBehind", "Home", "Away", "L10"]
         : ["wins", "losses", "ties", "pointsFor", "pointsAgainst"];
 
   const statLabels: Record<string, string> = {
@@ -59,6 +59,10 @@ export function StandingsClient({
     streak: "連續",
     pointsFor: "得分",
     pointsAgainst: "失分",
+    Home: "主場",
+    Away: "客場",
+    L10: "近10場",
+    OTL: "加時負",
   };
 
   return (

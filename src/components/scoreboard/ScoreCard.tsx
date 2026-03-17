@@ -88,6 +88,48 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
         <TeamRow team={game.homeTeam} isWinner={homeWins} />
       </div>
 
+      {/* Linescores */}
+      {isFinishedOrLive && game.homeTeam.linescores && game.awayTeam.linescores && (
+        <div className="px-4 pb-2">
+          <table className="w-full text-xs tabular-nums">
+            <thead>
+              <tr className="text-slate-400">
+                <th className="text-left font-normal py-0.5 w-10"></th>
+                {game.homeTeam.linescores.map((ls) => (
+                  <th key={ls.period} className="text-center font-normal py-0.5 w-7">
+                    {ls.period}
+                  </th>
+                ))}
+                <th className="text-center font-medium py-0.5 w-7 text-slate-600">T</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="text-slate-600">
+                <td className="text-left font-medium py-0.5">{game.awayTeam.abbreviation}</td>
+                {game.awayTeam.linescores.map((ls) => (
+                  <td key={ls.period} className="text-center py-0.5">{ls.value}</td>
+                ))}
+                <td className={`text-center py-0.5 font-medium ${awayWins ? "text-slate-900" : ""}`}>{game.awayTeam.score}</td>
+              </tr>
+              <tr className="text-slate-600">
+                <td className="text-left font-medium py-0.5">{game.homeTeam.abbreviation}</td>
+                {game.homeTeam.linescores.map((ls) => (
+                  <td key={ls.period} className="text-center py-0.5">{ls.value}</td>
+                ))}
+                <td className={`text-center py-0.5 font-medium ${homeWins ? "text-slate-900" : ""}`}>{game.homeTeam.score}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Odds Summary */}
+      {game.odds && game.status !== "final" && (
+        <div className="px-4 pb-2 text-xs text-slate-400 text-center border-t border-slate-100 pt-2">
+          Spread: {game.odds.details || "-"} | O/U: {game.odds.overUnder || "-"}
+        </div>
+      )}
+
       {/* Records */}
       {(game.homeTeam.record || game.awayTeam.record) && (
         <div className="px-4 pb-3 text-xs text-slate-400 text-center">

@@ -40,6 +40,7 @@ export interface ESPNCompetitor {
     color?: string;
   };
   records?: Array<{ summary: string }>;
+  linescores?: Array<{ value: number }>;
 }
 
 export interface ESPNLeague {
@@ -195,6 +196,46 @@ export interface ESPNPlayerResponse {
       }>;
     }>;
   };
+}
+
+// ---------- Box Score ----------
+
+export interface BoxScoreTeam {
+  teamName: string;
+  logo: string;
+  stats: { label: string; value: string }[];
+}
+
+export interface BoxScorePlayer {
+  name: string;
+  position: string;
+  stats: string[];
+  starter: boolean;
+}
+
+export interface BoxScorePlayerGroup {
+  teamName: string;
+  labels: string[];
+  athletes: BoxScorePlayer[];
+}
+
+export interface BoxScore {
+  teams: BoxScoreTeam[];
+  players: BoxScorePlayerGroup[];
+}
+
+// ---------- Leaders ----------
+
+export interface GameLeader {
+  category: string;
+  displayName: string;
+  displayValue: string;
+}
+
+export interface TeamLeaders {
+  teamName: string;
+  logo: string;
+  leaders: GameLeader[];
 }
 
 // ---------- Futures ----------

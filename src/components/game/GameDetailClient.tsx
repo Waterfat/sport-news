@@ -49,6 +49,36 @@ interface GameInfo {
   odds?: GameOdds;
 }
 
+interface BoxScoreTeam {
+  teamName: string;
+  logo: string;
+  stats: { label: string; value: string }[];
+}
+
+interface BoxScorePlayer {
+  name: string;
+  position: string;
+  stats: string[];
+  starter: boolean;
+}
+
+interface BoxScoreData {
+  teams: BoxScoreTeam[];
+  players: { teamName: string; labels: string[]; athletes: BoxScorePlayer[] }[];
+}
+
+interface GameLeader {
+  category: string;
+  displayName: string;
+  displayValue: string;
+}
+
+interface TeamLeadersData {
+  teamName: string;
+  logo: string;
+  leaders: GameLeader[];
+}
+
 export function GameDetailClient({
   sport,
   eventId,
@@ -60,6 +90,8 @@ export function GameDetailClient({
   const [game, setGame] = useState<GameInfo | null>(null);
   const [plays, setPlays] = useState<Play[]>([]);
   const [totalPlays, setTotalPlays] = useState(0);
+  const [boxscore, setBoxscore] = useState<BoxScoreData | null>(null);
+  const [leaders, setLeaders] = useState<TeamLeadersData[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("summary");
 
@@ -77,6 +109,18 @@ export function GameDetailClient({
       .finally(() => setLoading(false));
   }, [sport, eventId]);
 
+  // Fetch leaders on mount
+  useEffect(() => {
+    const endpoint = isMember
+      ? `/api/member/game?eventId=${eventId}&league=${sport}&type=leaders`
+      : `/api/public/game?eventId=${eventId}&league=${sport}&type=leaders`;
+
+    fetch(endpoint)
+      .then((r) => r.json())
+      .then((d) => setLeaders(d.leaders ?? []))
+      .catch(() => {});
+  }, [eventId, sport, isMember]);
+
   // Fetch PBP when tab switches
   useEffect(() => {
     if (tab !== "pbp") return;
@@ -91,6 +135,20 @@ export function GameDetailClient({
         setPlays(d.plays ?? []);
         setTotalPlays(d.totalCount ?? 0);
       })
+      .catch(() => {});
+  }, [tab, eventId, sport, isMember]);
+
+  // Fetch boxscore when tab switches
+  useEffect(() => {
+    if (tab !== "boxscore") return;
+
+    const endpoint = isMember
+      ? `/api/member/game?eventId=${eventId}&league=${sport}&type=boxscore`
+      : `/api/public/game?eventId=${eventId}&league=${sport}&type=boxscore`;
+
+    fetch(endpoint)
+      .then((r) => r.json())
+      .then((d) => setBoxscore(d.boxscore ?? null))
       .catch(() => {});
   }, [tab, eventId, sport, isMember]);
 
@@ -174,6 +232,9 @@ export function GameDetailClient({
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="summary">摘要</TabsTrigger>
+          {game.status !== "scheduled" && (
+            <TabsTrigger value="boxscore">數據</TabsTrigger>
+          )}
           <TabsTrigger value="pbp">逐球紀錄</TabsTrigger>
           <TabsTrigger value="odds">賠率</TabsTrigger>
         </TabsList>
@@ -201,6 +262,37 @@ export function GameDetailClient({
                 </div>
               </CardContent>
             </Card>
+
+            {/* Leaders */}
+            {leaders.length > 0 && game.status !== "scheduled" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">本場最佳</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    {leaders.map((team) => (
+                      <div key={team.teamName}>
+                        <div className="flex items-center gap-2 mb-2">
+                          {team.logo && (
+                            <img src={team.logo} alt="" className="w-5 h-5" />
+                          )}
+                          <span className="text-sm font-medium text-slate-700">{team.teamName}</span>
+                        </div>
+                        <div className="space-y-1">
+                          {team.leaders.slice(0, 3).map((l) => (
+                            <p key={l.category} className="text-xs text-slate-600">
+                              <span className="font-medium">{l.displayName}</span>
+                              <span className="text-slate-400 ml-1">{l.displayValue}</span>
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Quick Odds */}
             {game.odds && (
@@ -234,6 +326,125 @@ export function GameDetailClient({
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        {/* Box Score */}
+        <TabsContent value="boxscore">
+          {!boxscore ? (
+            <Card>
+              <CardContent className="p-6 text-center text-slate-500">
+                暫無數據
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {/* Team Stats Comparison */}
+              {boxscore.teams.length >= 2 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">球隊數據對比</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-slate-50">
+                          <th className="text-center py-2 px-2 font-medium text-slate-600 w-1/4">
+                            {boxscore.teams[0].teamName}
+                          </th>
+                          <th className="text-center py-2 px-2 font-medium text-slate-600">項目</th>
+                          <th className="text-center py-2 px-2 font-medium text-slate-600 w-1/4">
+                            {boxscore.teams[1].teamName}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {boxscore.teams[0].stats.map((stat, idx) => (
+                          <tr key={stat.label} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                            <td className="text-center py-1.5 px-2 tabular-nums">{stat.value}</td>
+                            <td className="text-center py-1.5 px-2 text-slate-500 text-xs">{stat.label}</td>
+                            <td className="text-center py-1.5 px-2 tabular-nums">
+                              {boxscore.teams[1].stats[idx]?.value ?? "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Player Stats */}
+              {boxscore.players.map((group) => (
+                <Card key={group.teamName}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">{group.teamName}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b bg-slate-50">
+                            <th className="text-left py-2 px-2 font-medium text-slate-600 sticky left-0 bg-slate-50 min-w-[100px]">
+                              球員
+                            </th>
+                            {group.labels.map((label) => (
+                              <th key={label} className="text-center py-2 px-1.5 font-medium text-slate-600 min-w-[36px]">
+                                {label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {/* Starters */}
+                          {group.athletes.filter((a) => a.starter).length > 0 && (
+                            <tr>
+                              <td colSpan={group.labels.length + 1} className="text-xs text-slate-400 font-medium px-2 py-1 bg-slate-100">
+                                先發
+                              </td>
+                            </tr>
+                          )}
+                          {group.athletes
+                            .filter((a) => a.starter)
+                            .map((athlete) => (
+                              <tr key={athlete.name} className="border-b border-slate-100">
+                                <td className="py-1.5 px-2 sticky left-0 bg-white">
+                                  <span className="font-medium">{athlete.name}</span>
+                                  <span className="text-slate-400 ml-1">{athlete.position}</span>
+                                </td>
+                                {athlete.stats.map((s, i) => (
+                                  <td key={i} className="text-center py-1.5 px-1.5 tabular-nums">{s}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          {/* Bench */}
+                          {group.athletes.filter((a) => !a.starter).length > 0 && (
+                            <tr>
+                              <td colSpan={group.labels.length + 1} className="text-xs text-slate-400 font-medium px-2 py-1 bg-slate-100">
+                                替補
+                              </td>
+                            </tr>
+                          )}
+                          {group.athletes
+                            .filter((a) => !a.starter)
+                            .map((athlete) => (
+                              <tr key={athlete.name} className="border-b border-slate-100">
+                                <td className="py-1.5 px-2 sticky left-0 bg-white">
+                                  <span className="font-medium">{athlete.name}</span>
+                                  <span className="text-slate-400 ml-1">{athlete.position}</span>
+                                </td>
+                                {athlete.stats.map((s, i) => (
+                                  <td key={i} className="text-center py-1.5 px-1.5 tabular-nums">{s}</td>
+                                ))}
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* PBP */}

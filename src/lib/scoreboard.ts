@@ -12,6 +12,7 @@ export interface TeamInfo {
   logo: string;
   score: string;
   record: string;
+  linescores?: { period: number; value: string }[];
 }
 
 export interface GameOdds {
@@ -81,6 +82,7 @@ function parseTeam(competitor: Record<string, unknown>): TeamInfo {
   const team = (competitor.team ?? {}) as Record<string, unknown>;
   const records = Array.isArray(competitor.records) ? competitor.records : [];
   const firstRecord = (records[0] ?? {}) as Record<string, unknown>;
+  const rawLinescores = Array.isArray(competitor.linescores) ? competitor.linescores : undefined;
 
   return {
     name: getTeamNameZh(String(team.displayName ?? team.name ?? "")),
@@ -88,6 +90,10 @@ function parseTeam(competitor: Record<string, unknown>): TeamInfo {
     logo: String(team.logo ?? ""),
     score: String(competitor.score ?? "0"),
     record: String(firstRecord.summary ?? ""),
+    linescores: rawLinescores?.map((ls: Record<string, unknown>, idx: number) => ({
+      period: idx + 1,
+      value: String((ls as Record<string, unknown>).value ?? 0),
+    })),
   };
 }
 
