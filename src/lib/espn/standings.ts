@@ -22,13 +22,20 @@ export interface StandingsEntry {
   stats: Record<string, string>;
 }
 
+// ESPN stat name → 前端 key 映射
+const STAT_NAME_MAP: Record<string, string> = {
+  "Road": "Away",
+  "Last Ten Games": "L10",
+};
+
 function parseStandings(data: ESPNStandingsResponse): StandingsGroup[] {
   return (data.children ?? []).map((group) => ({
     name: group.name,
     entries: (group.standings?.entries ?? []).map((entry) => {
       const statsMap: Record<string, string> = {};
       (entry.stats ?? []).forEach((s) => {
-        statsMap[s.name] = s.displayValue;
+        const key = STAT_NAME_MAP[s.name] ?? s.name;
+        statsMap[key] = s.displayValue;
       });
       return {
         teamId: entry.team?.id ?? "",
@@ -37,6 +44,12 @@ function parseStandings(data: ESPNStandingsResponse): StandingsGroup[] {
         logo: entry.team?.logos?.[0]?.href ?? "",
         stats: statsMap,
       };
+    })
+    // 按勝率降序排列（ESPN 回傳順序不固定）
+    .sort((a, b) => {
+      const aWp = parseFloat(a.stats.winPercent || "0");
+      const bWp = parseFloat(b.stats.winPercent || "0");
+      return bWp - aWp;
     }),
   }));
 }

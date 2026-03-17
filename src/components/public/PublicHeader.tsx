@@ -78,17 +78,21 @@ export function PublicHeader() {
 
       {/* Row 2: Nav tabs */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide pb-0.5">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:text-blue-600 hover:bg-blue-50 active:scale-[0.97] transition-all duration-150 whitespace-nowrap"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="relative">
+          <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide pb-0.5">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="px-3 py-2 text-sm font-medium text-slate-600 rounded-md hover:text-blue-600 hover:bg-blue-50 active:scale-[0.97] transition-all duration-150 whitespace-nowrap"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          {/* Mobile 右側漸層提示可滾動 */}
+          <div className="absolute top-0 right-0 bottom-0 w-6 bg-gradient-to-l from-white to-transparent pointer-events-none sm:hidden" />
+        </div>
       </div>
     </header>
   );
