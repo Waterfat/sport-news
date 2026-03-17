@@ -132,6 +132,17 @@ export const CATEGORY_COLORS: Record<string, string> = {
   綜合: "bg-violet-600 text-white rounded-md",
 };
 
+/** 從 images 欄位取第一張圖片 URL（相容 string[] 和 { url: string }[] 兩種格式） */
+export function getFirstImageUrl(images: unknown): string | null {
+  if (!Array.isArray(images) || images.length === 0) return null;
+  const first = images[0];
+  if (typeof first === "string") return first;
+  if (first && typeof first === "object" && "url" in first && typeof (first as { url: string }).url === "string") {
+    return (first as { url: string }).url;
+  }
+  return null;
+}
+
 /** 分類名稱 → 分類底圖 fallback（無文章配圖時使用） */
 export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   NBA: "/images/category-nba.jpg",

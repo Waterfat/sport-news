@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CATEGORY_FALLBACK_IMAGES, formatRelativeTime } from "@/lib/constants";
+import { CATEGORY_FALLBACK_IMAGES, formatRelativeTime, getFirstImageUrl } from "@/lib/constants";
 
 interface HeroArticle {
   id: string;
@@ -23,7 +23,7 @@ export function HeroSection({
   hero: HeroArticle;
   subHeroes: HeroArticle[];
 }) {
-  const heroImage = hero.images?.[0]?.url || CATEGORY_FALLBACK_IMAGES[hero.category ?? ""] || "/images/hero-sports-bg.jpg";
+  const heroImage = getFirstImageUrl(hero.images) || CATEGORY_FALLBACK_IMAGES[hero.category ?? ""] || "/images/hero-sports-bg.jpg";
 
   return (
     <section className="mb-8">
@@ -62,7 +62,7 @@ export function HeroSection({
         {/* Sub heroes - stacked vertically */}
         <div className="flex flex-col gap-4">
           {subHeroes.map((article) => {
-            const thumb = article.images?.[0]?.url || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
+            const thumb = getFirstImageUrl(article.images) || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
             return (
               <Link key={article.id} href={getHref(article)} className="block group flex-1">
                 <article className="relative rounded-xl bg-slate-800 text-white overflow-hidden h-full min-h-[150px] flex items-end active:scale-[0.99] transition-transform duration-150">
@@ -122,7 +122,7 @@ export function HeroSection({
 
         <div className="grid grid-cols-2 gap-3">
           {subHeroes.map((article) => {
-            const thumb = article.images?.[0]?.url || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
+            const thumb = getFirstImageUrl(article.images) || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
             return (
               <Link key={article.id} href={getHref(article)} className="block group">
                 <article className="relative rounded-xl bg-slate-800 text-white overflow-hidden min-h-[120px] flex items-end active:scale-[0.99] transition-transform duration-150">
