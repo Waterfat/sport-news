@@ -105,11 +105,11 @@ describe("fetchScoreboard", () => {
     expect(game1.id).toBe("401633205");
     expect(game1.status).toBe("in_progress");
     expect(game1.statusDetail).toBe("Q3 5:23");
-    expect(game1.homeTeam.name).toBe("Philadelphia 76ers");
+    expect(game1.homeTeam.name).toBe("費城乘者");
     expect(game1.homeTeam.abbreviation).toBe("PHI");
     expect(game1.homeTeam.score).toBe("104");
     expect(game1.homeTeam.record).toBe("30-42");
-    expect(game1.awayTeam.name).toBe("Brooklyn Nets");
+    expect(game1.awayTeam.name).toBe("布魯克林籃網");
     expect(game1.awayTeam.abbreviation).toBe("BKN");
     expect(game1.awayTeam.score).toBe("97");
 
