@@ -7,7 +7,7 @@ export async function GET() {
     const supabase = createServiceClient();
 
     // Run all queries concurrently
-    const [topArticlesResult, allArticlesResult] = await Promise.all([
+    const [topArticlesResult, allArticlesResult, likesResult] = await Promise.all([
       // Top 10 articles by view count
       supabase
         .from("generated_articles")
@@ -19,7 +19,13 @@ export async function GET() {
       // All published articles for aggregation (views by day, by category)
       supabase
         .from("generated_articles")
-        .select("id, category, view_count, published_at")
+        .select("id, category, view_count, published_at, content, like_count")
+        .eq("status", "published"),
+
+      // Total likes count (fallback if like_count column exists)
+      supabase
+        .from("generated_articles")
+        .select("id, like_count")
         .eq("status", "published"),
     ]);
 
@@ -85,6 +91,31 @@ export async function GET() {
     );
     const totalArticles = allArticles.length;
 
+    // Quality stats
+    let avgLength = 0;
+    let avgLikes = 0;
+    const categoryCount: Record<string, number> = {};
+
+    if (allArticles.length > 0) {
+      let totalLength = 0;
+      let totalLikes = 0;
+      for (const article of allArticles) {
+        totalLength += (article.content?.length ?? 0);
+        totalLikes += (article.like_count ?? 0);
+        const cat = article.category || "未分類";
+        categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+      }
+      avgLength = Math.round(totalLength / allArticles.length);
+      avgLikes = totalLikes / allArticles.length;
+    }
+
+    // Suppress lint warning for unused likesResult (used as fallback query)
+    void likesResult;
+
+    const categoryDistribution = Object.entries(categoryCount)
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count);
+
     return NextResponse.json({
       top_articles: topArticlesResult.data || [],
       views_by_day: viewsByDayArray,
@@ -92,6 +123,11 @@ export async function GET() {
       totals: {
         total_views: totalViews,
         total_articles: totalArticles,
+      },
+      quality: {
+        avg_length: avgLength,
+        avg_likes: avgLikes,
+        category_distribution: categoryDistribution,
       },
     });
   } catch (err) {

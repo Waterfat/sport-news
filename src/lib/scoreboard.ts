@@ -32,6 +32,7 @@ export interface Game {
   homeTeam: TeamInfo;
   awayTeam: TeamInfo;
   odds?: GameOdds;
+  broadcast?: string;
 }
 
 export interface ScoreboardResponse {

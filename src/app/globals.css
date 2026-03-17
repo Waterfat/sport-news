@@ -38,6 +38,11 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
+  --color-live: var(--live);
+  --color-live-muted: var(--live-muted);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -49,71 +54,85 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* Brand: Deep navy blue */
+  --brand: oklch(0.35 0.12 255);
+  --brand-foreground: oklch(0.98 0 0);
+  --brand-muted: oklch(0.92 0.03 255);
+  /* Live/accent: Warm amber */
+  --live: oklch(0.65 0.2 30);
+  --live-muted: oklch(0.92 0.05 30);
+
+  --background: oklch(0.98 0.002 260);
+  --foreground: oklch(0.15 0.01 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.15 0.01 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.15 0.01 260);
+  --primary: oklch(0.35 0.12 255);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.96 0.005 260);
+  --secondary-foreground: oklch(0.2 0.01 260);
+  --muted: oklch(0.96 0.005 260);
+  --muted-foreground: oklch(0.5 0.01 260);
+  --accent: oklch(0.96 0.005 260);
+  --accent-foreground: oklch(0.2 0.01 260);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
+  --border: oklch(0.9 0.005 260);
+  --input: oklch(0.9 0.005 260);
+  --ring: oklch(0.45 0.12 255);
+  --chart-1: oklch(0.35 0.12 255);
   --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-3: oklch(0.65 0.2 30);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.97 0.005 260);
+  --sidebar-foreground: oklch(0.15 0.01 260);
+  --sidebar-primary: oklch(0.35 0.12 255);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.94 0.01 260);
+  --sidebar-accent-foreground: oklch(0.2 0.01 260);
+  --sidebar-border: oklch(0.9 0.005 260);
+  --sidebar-ring: oklch(0.45 0.12 255);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --brand: oklch(0.65 0.15 255);
+  --brand-foreground: oklch(0.98 0 0);
+  --brand-muted: oklch(0.25 0.05 255);
+  --live: oklch(0.7 0.2 30);
+  --live-muted: oklch(0.25 0.08 30);
+
+  --background: oklch(0.13 0.015 260);
+  --foreground: oklch(0.93 0.005 260);
+  --card: oklch(0.17 0.015 260);
+  --card-foreground: oklch(0.93 0.005 260);
+  --popover: oklch(0.17 0.015 260);
+  --popover-foreground: oklch(0.93 0.005 260);
+  --primary: oklch(0.65 0.15 255);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.22 0.015 260);
+  --secondary-foreground: oklch(0.93 0.005 260);
+  --muted: oklch(0.22 0.015 260);
+  --muted-foreground: oklch(0.6 0.01 260);
+  --accent: oklch(0.22 0.015 260);
+  --accent-foreground: oklch(0.93 0.005 260);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
+  --border: oklch(0.28 0.015 260);
+  --input: oklch(0.28 0.015 260);
+  --ring: oklch(0.55 0.12 255);
+  --chart-1: oklch(0.55 0.2 255);
   --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-3: oklch(0.7 0.2 30);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.15 0.015 260);
+  --sidebar-foreground: oklch(0.93 0.005 260);
+  --sidebar-primary: oklch(0.55 0.2 255);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.22 0.015 260);
+  --sidebar-accent-foreground: oklch(0.93 0.005 260);
+  --sidebar-border: oklch(0.28 0.015 260);
+  --sidebar-ring: oklch(0.55 0.12 255);
 }
 
 @layer base {
@@ -125,10 +144,6 @@
   }
 }
 
-html {
-  background-color: white;
-}
-
 /* Hide scrollbar but keep scroll functionality */
 @layer utilities {
   .scrollbar-hide {
@@ -138,4 +153,28 @@ html {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* LIVE blink animation */
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.animate-live-blink {
+  animation: live-blink 1.2s ease-in-out infinite;
+}
+
+/* Card fade-in animation */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s ease-out both;
 }

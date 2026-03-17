@@ -28,6 +28,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 1,
   });
 
+  // Static pages
+  const staticPages = [
+    { path: "/scores", changeFrequency: "hourly" as const, priority: 0.9 },
+    { path: "/odds", changeFrequency: "hourly" as const, priority: 0.8 },
+    { path: "/standings/nba", changeFrequency: "daily" as const, priority: 0.7 },
+    { path: "/install", changeFrequency: "monthly" as const, priority: 0.3 },
+    { path: "/privacy", changeFrequency: "yearly" as const, priority: 0.2 },
+  ];
+
+  for (const page of staticPages) {
+    entries.push({
+      url: `${SITE_URL}${page.path}`,
+      lastModified: new Date(),
+      changeFrequency: page.changeFrequency,
+      priority: page.priority,
+    });
+  }
+
   // Category pages
   const categories = ["nba", "mlb", "soccer", "general"];
   for (const cat of categories) {

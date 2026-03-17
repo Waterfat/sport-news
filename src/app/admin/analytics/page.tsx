@@ -18,11 +18,18 @@ interface DayStats {
   views: number;
 }
 
+interface QualityStats {
+  avg_length: number;
+  avg_likes: number;
+  category_distribution: { category: string; count: number }[];
+}
+
 interface AnalyticsData {
   top_articles: TopArticle[];
   views_by_day: DayStats[];
   views_by_category: Record<string, { articles: number; views: number }>;
   totals: { total_views: number; total_articles: number };
+  quality?: QualityStats;
 }
 
 export default function AnalyticsPage() {
@@ -206,6 +213,83 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 文章品質監控 */}
+      {data.quality && (
+        <>
+          <h2 className="text-xl font-bold mt-4">文章品質監控</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500">平均文章長度</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-indigo-600">
+                  {data.quality.avg_length.toLocaleString()} 字
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500">平均按讚數</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-pink-600">
+                  {data.quality.avg_likes.toFixed(1)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="col-span-2 md:col-span-1">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500">分類數量最多</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-teal-600">
+                  {data.quality.category_distribution[0]?.category || "-"}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {data.quality.category_distribution[0]?.count || 0} 篇
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 分類分佈長條圖 */}
+          {data.quality.category_distribution.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>文章分類分佈</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(() => {
+                    const maxCount = Math.max(
+                      ...data.quality!.category_distribution.map((d) => d.count),
+                      1
+                    );
+                    return data.quality!.category_distribution.map((item) => (
+                      <div key={item.category} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium">{item.category}</span>
+                          <span className="text-gray-500">{item.count} 篇</span>
+                        </div>
+                        <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-indigo-500 rounded-full"
+                            style={{
+                              width: `${(item.count / maxCount) * 100}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
     </div>
   );
 }

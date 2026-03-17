@@ -29,6 +29,12 @@ interface RosterPlayer {
   weight: string;
 }
 
+interface TeamATS {
+  wins: number;
+  losses: number;
+  pushes: number;
+}
+
 export function TeamDetailClient({
   sport,
   teamId,
@@ -39,6 +45,7 @@ export function TeamDetailClient({
   const { data: session } = useSession();
   const [team, setTeam] = useState<TeamInfo | null>(null);
   const [roster, setRoster] = useState<RosterPlayer[]>([]);
+  const [ats, setAts] = useState<TeamATS | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -48,10 +55,12 @@ export function TeamDetailClient({
     Promise.all([
       fetch(`/api/public/team?sport=${sport}&id=${teamId}`).then((r) => r.json()),
       fetch(`/api/public/team?sport=${sport}&id=${teamId}&type=roster`).then((r) => r.json()),
+      fetch(`/api/public/team?sport=${sport}&id=${teamId}&type=ats`).then((r) => r.json()),
     ])
-      .then(([teamData, rosterData]) => {
+      .then(([teamData, rosterData, atsData]) => {
         setTeam(teamData.team ?? null);
         setRoster(rosterData.roster ?? []);
+        setAts(atsData.ats ?? null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -159,6 +168,34 @@ export function TeamDetailClient({
           </div>
         </CardContent>
       </Card>
+
+      {/* ATS (Against the Spread) */}
+      {ats && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">ATS 紀錄</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{ats.wins}</p>
+                <p className="text-xs text-muted-foreground">勝</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{ats.losses}</p>
+                <p className="text-xs text-muted-foreground">負</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{ats.pushes}</p>
+                <p className="text-xs text-muted-foreground">平</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Against the Spread 本季紀錄
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Roster */}
       <Card>

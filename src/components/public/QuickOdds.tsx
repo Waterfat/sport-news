@@ -13,7 +13,6 @@ export function QuickOdds() {
       .then((r) => r.json())
       .then((d) => {
         const allGames: Game[] = d.games ?? [];
-        // Prefer scheduled or in-progress games
         const upcoming = allGames.filter((g) => g.status !== "final");
         const display = upcoming.length > 0 ? upcoming.slice(0, 3) : allGames.slice(0, 3);
         setGames(display);
@@ -23,10 +22,10 @@ export function QuickOdds() {
   }, []);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-slate-900">今日賽事</h3>
-        <Link href="/odds" className="text-xs text-blue-600 hover:underline">
+        <h3 className="text-sm font-bold text-card-foreground">今日賽事</h3>
+        <Link href="/odds" className="text-xs text-brand hover:underline">
           查看更多賠率
         </Link>
       </div>
@@ -34,11 +33,11 @@ export function QuickOdds() {
       {loading ? (
         <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-12 rounded bg-slate-100 animate-pulse" />
+            <div key={i} className="h-12 rounded bg-muted animate-pulse" />
           ))}
         </div>
       ) : games.length === 0 ? (
-        <p className="text-xs text-slate-400 text-center py-4">今日無賽事</p>
+        <p className="text-xs text-muted-foreground text-center py-4">今日無賽事</p>
       ) : (
         <div className="space-y-2">
           {games.map((game) => {
@@ -49,15 +48,22 @@ export function QuickOdds() {
               <Link
                 key={game.id}
                 href={`/game/nba/${game.id}`}
-                className="block rounded-lg border border-slate-100 p-2.5 hover:border-blue-200 hover:bg-blue-50/30 transition-colors"
+                className={`block rounded-lg border p-2.5 hover:shadow-md transition-all duration-200 ${
+                  isLive
+                    ? "border-live/30 bg-live-muted/30 hover:border-live/50"
+                    : "border-border hover:border-brand/30 hover:bg-accent"
+                }`}
               >
                 <div className="flex items-center justify-between text-xs mb-1">
                   {isLive ? (
-                    <span className="text-red-600 font-semibold text-[10px]">LIVE</span>
+                    <span className="flex items-center gap-1 text-live font-bold text-[10px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-live animate-live-blink" />
+                      LIVE
+                    </span>
                   ) : isFinal ? (
-                    <span className="text-slate-400 text-[10px]">終場</span>
+                    <span className="text-muted-foreground text-[10px]">終場</span>
                   ) : (
-                    <span className="text-slate-400 text-[10px]">
+                    <span className="text-muted-foreground text-[10px]">
                       {new Date(game.date).toLocaleTimeString("zh-TW", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -65,7 +71,7 @@ export function QuickOdds() {
                     </span>
                   )}
                   {game.odds && (
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-muted-foreground">
                       O/U {game.odds.overUnder}
                     </span>
                   )}
@@ -76,9 +82,9 @@ export function QuickOdds() {
                     {game.awayTeam.logo && (
                       <img src={game.awayTeam.logo} alt="" className="w-3.5 h-3.5" />
                     )}
-                    <span className="text-slate-700">{game.awayTeam.abbreviation}</span>
+                    <span className="text-card-foreground">{game.awayTeam.abbreviation}</span>
                   </div>
-                  <span className={`font-bold tabular-nums ${isLive ? "text-red-600" : "text-slate-900"}`}>
+                  <span className={`font-bold tabular-nums ${isLive ? "text-live" : "text-card-foreground"}`}>
                     {game.awayTeam.score}
                   </span>
                 </div>
@@ -88,9 +94,9 @@ export function QuickOdds() {
                     {game.homeTeam.logo && (
                       <img src={game.homeTeam.logo} alt="" className="w-3.5 h-3.5" />
                     )}
-                    <span className="text-slate-700">{game.homeTeam.abbreviation}</span>
+                    <span className="text-card-foreground">{game.homeTeam.abbreviation}</span>
                   </div>
-                  <span className={`font-bold tabular-nums ${isLive ? "text-red-600" : "text-slate-900"}`}>
+                  <span className={`font-bold tabular-nums ${isLive ? "text-live" : "text-card-foreground"}`}>
                     {game.homeTeam.score}
                   </span>
                 </div>

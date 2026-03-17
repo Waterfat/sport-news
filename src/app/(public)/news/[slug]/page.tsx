@@ -4,9 +4,12 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 import { CATEGORY_COLORS, formatDateFull, formatRelativeTime, getCategorySlug, SITE_URL } from "@/lib/constants";
 import ViewTracker from "./ViewTracker";
-
 import LikeButton from "./LikeButton";
 import { TelegramArticleCTA } from "@/components/TelegramCTA";
+import { ArticleContent, extractHeadings } from "@/components/public/ArticleContent";
+import { TableOfContents } from "@/components/public/TableOfContents";
+import { ShareButtons } from "@/components/public/ShareButtons";
+import { ReactionButtons } from "@/components/public/ReactionButtons";
 
 export const revalidate = 60;
 
@@ -55,6 +58,7 @@ export async function generateMetadata({
   const description = getContentExcerpt(article.content);
 
   const articleUrl = `${SITE_URL}/news/${article.slug || slug}`;
+  const ogImageUrl = `${SITE_URL}/api/og?title=${encodeURIComponent(article.title)}&subtitle=${encodeURIComponent(article.category || "")}&type=article`;
 
   return {
     title: `${article.title} - 小豪哥體育資訊網`,
@@ -73,11 +77,13 @@ export async function generateMetadata({
         : undefined,
       siteName: "小豪哥體育資訊網",
       locale: "zh_TW",
+      images: [{ url: ogImageUrl, width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: article.title,
       description,
+      images: [ogImageUrl],
     },
     other: {
       ...(article.published_at ? { "article:published_time": article.published_at } : {}),
@@ -116,15 +122,16 @@ export default async function ArticlePage({
     .limit(4);
 
   const colorClass =
-    CATEGORY_COLORS[article.category ?? ""] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
-
-  // Simple markdown-like rendering: split by paragraphs, handle headings
-  const contentParagraphs: string[] = (article.content ?? "").split("\n").filter(Boolean);
+    CATEGORY_COLORS[article.category ?? ""] ?? "bg-muted text-muted-foreground border border-border rounded-lg";
 
   const articleUrl = `${SITE_URL}/news/${article.slug || slug}`;
+  const contentStr = article.content ?? "";
+  const showToc = contentStr.length > 1500;
+  const headings = showToc ? extractHeadings(contentStr) : [];
 
-  // JSON-LD structured data (server-generated, safe content)
-  const jsonLd = {
+  // JSON-LD structured data
+  // Note: content is server-generated from trusted DB (not user input), safe to serialize as JSON
+  const jsonLdData = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     headline: article.title,
@@ -141,36 +148,35 @@ export default async function ArticlePage({
       "@id": articleUrl,
     },
     articleSection: article.category ?? undefined,
-  };
+  });
 
   return (
     <article className="max-w-3xl mx-auto">
-      {/* JSON-LD: content is server-generated from trusted DB, not user input */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      {/* JSON-LD structured data for SEO - trusted server-generated content */}
+      <script type="application/ld+json" suppressHydrationWarning>
+        {jsonLdData}
+      </script>
       <ViewTracker slug={slug} />
 
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm mb-6">
-        <span className="inline-flex items-center gap-2 bg-slate-100 rounded-full px-4 py-1.5">
-          <Link href="/" className="text-slate-500 hover:text-blue-600 transition-colors">
+        <span className="inline-flex items-center gap-2 bg-muted rounded-full px-4 py-1.5">
+          <Link href="/" className="text-muted-foreground hover:text-blue-600 transition-colors">
             首頁
           </Link>
-          <span className="text-slate-300">/</span>
+          <span className="text-muted-foreground/40">/</span>
           {article.category && (
             <>
               <Link
                 href={`/category/${getCategorySlug(article.category)}`}
-                className="text-slate-500 hover:text-blue-600 transition-colors"
+                className="text-muted-foreground hover:text-blue-600 transition-colors"
               >
                 {article.category}
               </Link>
-              <span className="text-slate-300">/</span>
+              <span className="text-muted-foreground/40">/</span>
             </>
           )}
-          <span className="text-slate-700 truncate max-w-[200px]">
+          <span className="text-foreground truncate max-w-[200px]">
             {article.title}
           </span>
         </span>
@@ -185,14 +191,14 @@ export default async function ArticlePage({
             {article.category}
           </span>
         )}
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight mb-4">
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground leading-tight mb-4">
           {article.title}
         </h1>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-4">
           {writer && (
             <Link
               href={`/writer/${writer.id}`}
-              className="font-medium text-slate-700 hover:text-blue-600 transition-colors"
+              className="font-medium text-foreground hover:text-blue-600 transition-colors"
             >
               {writer.name}
             </Link>
@@ -202,9 +208,12 @@ export default async function ArticlePage({
             {formatDateFull(article.published_at)}
           </time>
           {article.published_at && (
-            <span className="text-slate-400">({formatRelativeTime(article.published_at)})</span>
+            <span className="text-muted-foreground/60">({formatRelativeTime(article.published_at)})</span>
           )}
         </div>
+
+        {/* Share Buttons - top */}
+        <ShareButtons url={articleUrl} title={article.title} />
       </header>
 
       {/* Featured Image */}
@@ -216,72 +225,25 @@ export default async function ArticlePage({
             className="w-full max-h-[480px] object-cover"
           />
           {article.images[0].caption && (
-            <p className="text-xs text-slate-400 mt-2">{article.images[0].caption}</p>
+            <p className="text-xs text-muted-foreground mt-2">{article.images[0].caption}</p>
           )}
         </div>
       )}
 
       {/* Divider */}
-      <hr className="border-slate-200 mb-8" />
+      <hr className="border-border mb-8" />
 
-      {/* Content */}
-      <div className="prose prose-lg max-w-none mb-12">
-        {contentParagraphs.map((line, i) => {
-          const trimmed = line.trim();
-          if (trimmed.startsWith("### ")) {
-            return (
-              <h3
-                key={i}
-                className="text-xl font-bold text-slate-900 mt-8 mb-3"
-              >
-                {trimmed.slice(4)}
-              </h3>
-            );
-          }
-          if (trimmed.startsWith("## ")) {
-            return (
-              <h2
-                key={i}
-                className="text-2xl font-bold text-slate-900 mt-10 mb-4"
-              >
-                {trimmed.slice(3)}
-              </h2>
-            );
-          }
-          if (trimmed.startsWith("# ")) {
-            return (
-              <h2
-                key={i}
-                className="text-2xl font-bold text-slate-900 mt-10 mb-4"
-              >
-                {trimmed.slice(2)}
-              </h2>
-            );
-          }
-          if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-            return (
-              <div key={i} className="flex items-start gap-2 text-slate-700 leading-relaxed ml-4">
-                <span className="select-none" aria-hidden="true">&#8226;</span>
-                <span>{trimmed.slice(2)}</span>
-              </div>
-            );
-          }
-          if (trimmed.startsWith("> ")) {
-            return (
-              <blockquote
-                key={i}
-                className="border-l-4 border-blue-400 bg-blue-50/50 pl-4 py-2 italic text-slate-600 my-4"
-              >
-                {trimmed.slice(2)}
-              </blockquote>
-            );
-          }
-          return (
-            <p key={i} className="text-slate-700 leading-relaxed mb-4">
-              {trimmed}
-            </p>
-          );
-        })}
+      {/* Table of Contents */}
+      {showToc && headings.length >= 2 && (
+        <TableOfContents headings={headings} />
+      )}
+
+      {/* Content - react-markdown */}
+      <ArticleContent content={contentStr} />
+
+      {/* Reactions */}
+      <div className="mb-4">
+        <ReactionButtons articleId={article.id} />
       </div>
 
       {/* Like Button */}
@@ -289,12 +251,18 @@ export default async function ArticlePage({
         <LikeButton articleId={article.id} />
       </div>
 
+      {/* Share Buttons - bottom */}
+      <div className="mb-8">
+        <p className="text-sm font-medium text-muted-foreground mb-2">分享這篇文章</p>
+        <ShareButtons url={articleUrl} title={article.title} />
+      </div>
+
       {/* Telegram CTA */}
       <TelegramArticleCTA />
 
       {/* Writer Info */}
       {writer && (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 mb-12">
+        <div className="bg-muted/50 border border-border rounded-xl p-6 mb-12">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-full bg-blue-600 ring-2 ring-blue-600 ring-offset-2 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
               {writer.name.charAt(1) || writer.name.charAt(0)}
@@ -302,12 +270,12 @@ export default async function ArticlePage({
             <div>
               <Link
                 href={`/writer/${writer.id}`}
-                className="text-base font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                className="text-base font-semibold text-foreground hover:text-blue-600 transition-colors"
               >
                 {writer.name}
               </Link>
               {writer.description && (
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {writer.description}
                 </p>
               )}
@@ -319,18 +287,18 @@ export default async function ArticlePage({
       {/* Related Articles */}
       {relatedArticles && relatedArticles.length > 0 && (
         <section>
-          <h2 className="text-xl font-bold text-slate-900 mb-5 border-l-4 border-blue-600 pl-3">相關報導</h2>
+          <h2 className="text-xl font-bold text-foreground mb-5 border-l-4 border-blue-600 pl-3">相關報導</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {relatedArticles.map((related) => (
               <Link
                 key={related.id}
                 href={`/news/${related.slug || related.id}`}
-                className="group block rounded-lg border border-slate-200 bg-white p-4 hover:shadow-md hover:border-blue-300 transition-all"
+                className="group block rounded-lg border border-border bg-card p-4 hover:shadow-md hover:border-blue-300 transition-all"
               >
-                <h3 className="text-sm font-semibold text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
+                <h3 className="text-sm font-semibold text-foreground line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
                   {related.title}
                 </h3>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <time>
                     {related.published_at
                       ? new Date(related.published_at).toLocaleDateString(
