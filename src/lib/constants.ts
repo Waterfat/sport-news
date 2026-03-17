@@ -213,6 +213,35 @@ export function isValidImageUrl(url: string): boolean {
 }
 
 /**
+ * 格式化相對時間，用於文章列表
+ * < 1分鐘 → "剛剛"
+ * < 60分鐘 → "N 分鐘前"
+ * < 24小時 → "N 小時前"
+ * < 7天 → "N 天前"
+ * >= 7天 → 原有 formatDateShort 格式
+ */
+export function formatRelativeTime(dateStr: string | null): string {
+  if (!dateStr) return "";
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return "";
+  const diffMs = now - then;
+  if (diffMs < 0) return formatDateShort(dateStr);
+
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return "剛剛";
+  if (minutes < 60) return `${minutes} 分鐘前`;
+
+  const hours = Math.floor(diffMs / 3_600_000);
+  if (hours < 24) return `${hours} 小時前`;
+
+  const days = Math.floor(diffMs / 86_400_000);
+  if (days < 7) return `${days} 天前`;
+
+  return formatDateShort(dateStr);
+}
+
+/**
  * 格式化日期 - 完整版（含時間），用於文章詳情頁
  */
 export function formatDateFull(dateStr: string | null) {

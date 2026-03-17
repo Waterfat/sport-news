@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, formatDateFull, getCategorySlug, SITE_URL } from "@/lib/constants";
+import { CATEGORY_COLORS, formatDateFull, formatRelativeTime, getCategorySlug, SITE_URL } from "@/lib/constants";
 import ViewTracker from "./ViewTracker";
 
 import LikeButton from "./LikeButton";
@@ -201,6 +201,9 @@ export default async function ArticlePage({
           <time dateTime={article.published_at ?? ""}>
             {formatDateFull(article.published_at)}
           </time>
+          {article.published_at && (
+            <span className="text-slate-400">({formatRelativeTime(article.published_at)})</span>
+          )}
           <span>&middot;</span>
           <span className="flex items-center gap-1">
             <svg

@@ -3,6 +3,7 @@
 import { espnFetch, CACHE_TTL, getSportPath } from "./client";
 import { getTeamNameZh } from "@/lib/constants";
 import { translatePbpText } from "./translate-pbp";
+import type { BoxScore, BoxScorePlayerGroup, BoxScoreTeam, TeamLeaders, GameLeader } from "./types";
 
 export interface Play {
   id: string;
@@ -32,9 +33,18 @@ interface SummaryPlay {
 
 interface SummaryCompetitor {
   homeAway: "home" | "away";
-  team: { id: string; displayName: string };
+  team: { id: string; displayName: string; logo?: string; logos?: Array<{ href: string }> };
+  leaders?: Array<{
+    name: string;
+    displayName: string;
+    leaders: Array<{
+      displayValue: string;
+      athlete: { displayName: string };
+    }>;
+  }>;
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 interface SummaryResponse {
   plays?: SummaryPlay[];
   header?: {
@@ -42,7 +52,28 @@ interface SummaryResponse {
       competitors?: SummaryCompetitor[];
     }>;
   };
+  boxscore?: {
+    teams?: Array<{
+      team: { displayName: string; logo?: string; logos?: Array<{ href: string }> };
+      statistics: Array<{
+        name: string;
+        displayValue: string;
+      }>;
+    }>;
+    players?: Array<{
+      team: { displayName: string };
+      statistics: Array<{
+        labels: string[];
+        athletes: Array<{
+          athlete: { displayName: string; position?: { abbreviation: string } };
+          stats: string[];
+          starter: boolean;
+        }>;
+      }>;
+    }>;
+  };
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 function buildTeamMap(data: SummaryResponse): Record<string, string> {
   const map: Record<string, string> = {};
@@ -108,4 +139,94 @@ export async function fetchPlayByPlayPreview(
     plays: allPlays.slice(0, 5),
     totalCount: allPlays.length,
   };
+}
+
+// ---------- Box Score ----------
+
+function parseBoxScore(data: SummaryResponse): BoxScore | null {
+  if (!data.boxscore) return null;
+
+  const teams: BoxScoreTeam[] = (data.boxscore.teams ?? []).map((t) => ({
+    teamName: getTeamNameZh(t.team.displayName),
+    logo: t.team.logo ?? t.team.logos?.[0]?.href ?? "",
+    stats: t.statistics.map((s) => ({
+      label: s.name,
+      value: s.displayValue,
+    })),
+  }));
+
+  const players: BoxScorePlayerGroup[] = (data.boxscore.players ?? []).map((p) => {
+    const firstStatGroup = p.statistics?.[0];
+    return {
+      teamName: getTeamNameZh(p.team.displayName),
+      labels: firstStatGroup?.labels ?? [],
+      athletes: (firstStatGroup?.athletes ?? []).map((a) => ({
+        name: a.athlete.displayName,
+        position: a.athlete.position?.abbreviation ?? "",
+        stats: a.stats ?? [],
+        starter: a.starter ?? false,
+      })),
+    };
+  });
+
+  return { teams, players };
+}
+
+/**
+ * 取得 Box Score
+ */
+export async function fetchBoxScore(
+  league: string,
+  eventId: string,
+  isCompleted = false
+): Promise<BoxScore | null> {
+  const sportPath = getSportPath(league);
+  const ttl = isCompleted ? CACHE_TTL.PBP_FINAL : CACHE_TTL.LIVE;
+
+  const data = await espnFetch<SummaryResponse>(
+    `${sportPath}/summary`,
+    { ttl, params: { event: eventId } }
+  );
+
+  return parseBoxScore(data);
+}
+
+// ---------- Leaders ----------
+
+function parseLeaders(data: SummaryResponse): TeamLeaders[] {
+  const competitors = data.header?.competitions?.[0]?.competitors ?? [];
+
+  return competitors.map((c) => {
+    const logo = c.team.logo ?? c.team.logos?.[0]?.href ?? "";
+    const leaders: GameLeader[] = (c.leaders ?? []).map((l) => ({
+      category: l.name,
+      displayName: l.leaders?.[0]?.athlete?.displayName ?? "",
+      displayValue: l.leaders?.[0]?.displayValue ?? "",
+    }));
+
+    return {
+      teamName: getTeamNameZh(c.team.displayName),
+      logo,
+      leaders,
+    };
+  });
+}
+
+/**
+ * 取得本場最佳球員
+ */
+export async function fetchLeaders(
+  league: string,
+  eventId: string,
+  isCompleted = false
+): Promise<TeamLeaders[]> {
+  const sportPath = getSportPath(league);
+  const ttl = isCompleted ? CACHE_TTL.PBP_FINAL : CACHE_TTL.LIVE;
+
+  const data = await espnFetch<SummaryResponse>(
+    `${sportPath}/summary`,
+    { ttl, params: { event: eventId } }
+  );
+
+  return parseLeaders(data);
 }

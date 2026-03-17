@@ -12,6 +12,7 @@ export interface TeamInfo {
   logo: string;
   score: string;
   record: string;
+  linescores?: { period: number; value: string }[];
 }
 
 export interface GameOdds {
@@ -88,6 +89,10 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
         logo: home?.team?.logo ?? "",
         score: home?.score ?? "0",
         record: home?.records?.[0]?.summary ?? "",
+        linescores: home?.linescores?.map((ls, idx) => ({
+          period: idx + 1,
+          value: String(ls.value ?? 0),
+        })),
       },
       awayTeam: {
         name: getTeamNameZh(away?.team?.displayName ?? ""),
@@ -95,6 +100,10 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
         logo: away?.team?.logo ?? "",
         score: away?.score ?? "0",
         record: away?.records?.[0]?.summary ?? "",
+        linescores: away?.linescores?.map((ls, idx) => ({
+          period: idx + 1,
+          value: String(ls.value ?? 0),
+        })),
       },
       odds,
     };

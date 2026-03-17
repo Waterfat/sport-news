@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { TelegramBanner } from "@/components/TelegramCTA";
-import { CATEGORY_COLORS, formatDateShort } from "@/lib/constants";
+import { formatRelativeTime } from "@/lib/constants";
+import { PersonalizedArticleGrid } from "@/components/public/PersonalizedArticleGrid";
 
 // 每 60 秒重新驗證頁面資料
 export const revalidate = 60;
@@ -68,7 +69,7 @@ export default async function HomePage() {
                     <span>{hero.writer_personas.name}</span>
                   )}
                   <span>&middot;</span>
-                  <span>{formatDateShort(hero.published_at)}</span>
+                  <span>{formatRelativeTime(hero.published_at)}</span>
                   <span>&middot;</span>
                   <span>{hero.view_count ?? 0} views</span>
                 </div>
@@ -89,93 +90,19 @@ export default async function HomePage() {
         {gridArticles.length === 0 ? (
           <p className="text-slate-500">目前沒有已發布的文章。</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {gridArticles.map((article) => {
-              const writerName = article.writer_personas?.name;
-              const colorClass = CATEGORY_COLORS[article.category ?? ""] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
-              const thumbnail = article.images?.[0]?.url;
-
-              return (
-                <Link
-                  key={article.id}
-                  href={getArticleHref(article)}
-                  className="group block"
-                >
-                  {/* Desktop: vertical card */}
-                  <article className="hidden sm:block h-full rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md hover:border-blue-300 active:scale-[0.98] transition-all duration-150">
-                    {thumbnail && (
-                      <div className="aspect-video bg-slate-100">
-                        <img
-                          src={thumbnail}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="p-5">
-                      <div className="flex items-center gap-2 mb-3">
-                        {article.category && (
-                          <span
-                            className={`inline-block px-2 py-0.5 text-xs font-medium ${colorClass}`}
-                          >
-                            {article.category}
-                          </span>
-                        )}
-                        <span className="text-xs text-slate-400">
-                          {formatDateShort(article.published_at)}
-                        </span>
-                      </div>
-                      <h3 className="text-base font-semibold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                        {article.title}
-                      </h3>
-                      <p className="text-sm text-slate-500 line-clamp-2 mb-3">
-                        {article.content?.replace(/[#*_>\-\n]/g, " ").slice(0, 120)}
-                      </p>
-                      <div className="flex items-center justify-between text-xs text-slate-400">
-                        {writerName && <span>{writerName}</span>}
-                        <span>{article.view_count ?? 0} views</span>
-                      </div>
-                    </div>
-                  </article>
-
-                  {/* Mobile: horizontal card with small thumbnail */}
-                  <article className="sm:hidden rounded-xl border border-slate-200 bg-white p-4 hover:shadow-md hover:border-blue-300 active:scale-[0.98] transition-all duration-150">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          {article.category && (
-                            <span
-                              className={`inline-block px-2 py-0.5 text-xs font-medium ${colorClass}`}
-                            >
-                              {article.category}
-                            </span>
-                          )}
-                          <span className="text-xs text-slate-400">
-                            {formatDateShort(article.published_at)}
-                          </span>
-                        </div>
-                        <h3 className="text-sm font-semibold text-slate-900 leading-snug mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                          {article.title}
-                        </h3>
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                          {writerName && <span>{writerName}</span>}
-                          {writerName && <span>&middot;</span>}
-                          <span>{article.view_count ?? 0} views</span>
-                        </div>
-                      </div>
-                      {thumbnail && (
-                        <img
-                          src={thumbnail}
-                          alt=""
-                          className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
-                        />
-                      )}
-                    </div>
-                  </article>
-                </Link>
-              );
-            })}
-          </div>
+          <PersonalizedArticleGrid
+            articles={gridArticles.map((article) => ({
+              id: article.id,
+              title: article.title,
+              content: article.content,
+              category: article.category,
+              published_at: article.published_at,
+              view_count: article.view_count,
+              slug: article.slug,
+              images: article.images,
+              writerName: article.writer_personas?.name ?? null,
+            }))}
+          />
         )}
       </section>
     </div>

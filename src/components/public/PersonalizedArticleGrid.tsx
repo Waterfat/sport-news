@@ -1,0 +1,152 @@
+"use client";
+
+import { useEffect, useState, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { CATEGORY_COLORS, formatRelativeTime } from "@/lib/constants";
+import { Star } from "lucide-react";
+
+interface FavoriteTeam {
+  sport: string;
+  teamId: string;
+  name: string;
+}
+
+interface ArticleItem {
+  id: string;
+  title: string;
+  content: string | null;
+  category: string | null;
+  published_at: string | null;
+  view_count: number | null;
+  slug: string | null;
+  images: { url: string }[] | null;
+  writerName: string | null;
+}
+
+export function PersonalizedArticleGrid({
+  articles,
+}: {
+  articles: ArticleItem[];
+}) {
+  const { data: session } = useSession();
+  const [favorites, setFavorites] = useState<FavoriteTeam[]>([]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch("/api/member/favorites")
+      .then((r) => r.json())
+      .then((d) => setFavorites(d.favorites ?? []))
+      .catch(() => {});
+  }, [session]);
+
+  const sortedArticles = useMemo(() => {
+    if (favorites.length === 0) return articles;
+    const favoriteNames = favorites.map((f) => f.name);
+    // Stable sort: favorites first
+    return [...articles].sort((a, b) => {
+      const aMatch = favoriteNames.some((name) => a.title.includes(name)) ? 1 : 0;
+      const bMatch = favoriteNames.some((name) => b.title.includes(name)) ? 1 : 0;
+      return bMatch - aMatch;
+    });
+  }, [favorites, articles]);
+
+  const favoriteNames = useMemo(
+    () => favorites.map((f) => f.name),
+    [favorites]
+  );
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {sortedArticles.map((article) => {
+        const colorClass = CATEGORY_COLORS[article.category ?? ""] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
+        const thumbnail = article.images?.[0]?.url;
+        const isFavorite = favoriteNames.some((name) => article.title.includes(name));
+
+        return (
+          <Link
+            key={article.id}
+            href={`/news/${article.slug || article.id}`}
+            className="group block"
+          >
+            {/* Desktop: vertical card */}
+            <article className="hidden sm:block h-full rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md hover:border-blue-300 active:scale-[0.98] transition-all duration-150">
+              {thumbnail && (
+                <div className="aspect-video bg-slate-100 relative">
+                  <img
+                    src={thumbnail}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                  {isFavorite && (
+                    <span className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 rounded-full p-1">
+                      <Star className="w-3 h-3 fill-current" />
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  {article.category && (
+                    <span className={`inline-block px-2 py-0.5 text-xs font-medium ${colorClass}`}>
+                      {article.category}
+                    </span>
+                  )}
+                  <span className="text-xs text-slate-400">
+                    {formatRelativeTime(article.published_at)}
+                  </span>
+                </div>
+                <h3 className="text-base font-semibold text-slate-900 leading-snug mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                  {article.title}
+                </h3>
+                <p className="text-sm text-slate-500 line-clamp-2 mb-3">
+                  {article.content?.replace(/[#*_>\-\n]/g, " ").slice(0, 120)}
+                </p>
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  {article.writerName && <span>{article.writerName}</span>}
+                  <span>{article.view_count ?? 0} views</span>
+                </div>
+              </div>
+            </article>
+
+            {/* Mobile: horizontal card */}
+            <article className="sm:hidden rounded-xl border border-slate-200 bg-white p-4 hover:shadow-md hover:border-blue-300 active:scale-[0.98] transition-all duration-150">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {isFavorite && (
+                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-400 flex-shrink-0" />
+                    )}
+                    {article.category && (
+                      <span className={`inline-block px-2 py-0.5 text-xs font-medium ${colorClass}`}>
+                        {article.category}
+                      </span>
+                    )}
+                    <span className="text-xs text-slate-400">
+                      {formatRelativeTime(article.published_at)}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900 leading-snug mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                    {article.title}
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    {article.writerName && <span>{article.writerName}</span>}
+                    {article.writerName && <span>&middot;</span>}
+                    <span>{article.view_count ?? 0} views</span>
+                  </div>
+                </div>
+                {thumbnail && (
+                  <img
+                    src={thumbnail}
+                    alt=""
+                    className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
+                  />
+                )}
+              </div>
+            </article>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}

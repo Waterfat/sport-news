@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_LABELS, formatDateShort } from "@/lib/constants";
+import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_LABELS, formatRelativeTime } from "@/lib/constants";
 
 export const revalidate = 60;
 
@@ -204,7 +204,7 @@ export default async function CategoryPage({
                     <div className="flex items-center gap-2 text-xs text-slate-400">
                       {writerName && <span>{writerName}</span>}
                       {writerName && <span>&middot;</span>}
-                      <span>{formatDateShort(article.published_at)}</span>
+                      <span>{formatRelativeTime(article.published_at)}</span>
                       <span>&middot;</span>
                       <span>{article.view_count ?? 0} views</span>
                     </div>
