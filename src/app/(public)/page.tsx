@@ -79,7 +79,7 @@ export default async function HomePage() {
       })()}
 
       {/* Telegram CTA Banner */}
-      <div className="mb-10">
+      <div className="mb-8">
         <TelegramBanner />
       </div>
 
@@ -89,7 +89,7 @@ export default async function HomePage() {
         {gridArticles.length === 0 ? (
           <p className="text-slate-500">目前沒有已發布的文章。</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {gridArticles.map((article) => {
               const writerName = article.writer_personas?.name;
               const colorClass = CATEGORY_COLORS[article.category ?? ""] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg";
@@ -101,7 +101,8 @@ export default async function HomePage() {
                   href={getArticleHref(article)}
                   className="group block"
                 >
-                  <article className="h-full rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md hover:border-blue-300 transition-all duration-200">
+                  {/* Desktop: vertical card */}
+                  <article className="hidden sm:block h-full rounded-xl border border-slate-200 bg-white overflow-hidden hover:shadow-md hover:border-blue-300 transition-all duration-200">
                     {thumbnail && (
                       <div className="aspect-video bg-slate-100">
                         <img
@@ -134,6 +135,41 @@ export default async function HomePage() {
                         {writerName && <span>{writerName}</span>}
                         <span>{article.view_count ?? 0} views</span>
                       </div>
+                    </div>
+                  </article>
+
+                  {/* Mobile: horizontal card with small thumbnail */}
+                  <article className="sm:hidden rounded-xl border border-slate-200 bg-white p-4 hover:shadow-md hover:border-blue-300 transition-all duration-200">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          {article.category && (
+                            <span
+                              className={`inline-block px-2 py-0.5 text-xs font-medium ${colorClass}`}
+                            >
+                              {article.category}
+                            </span>
+                          )}
+                          <span className="text-xs text-slate-400">
+                            {formatDateShort(article.published_at)}
+                          </span>
+                        </div>
+                        <h3 className="text-sm font-semibold text-slate-900 leading-snug mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                          {article.title}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                          {writerName && <span>{writerName}</span>}
+                          {writerName && <span>&middot;</span>}
+                          <span>{article.view_count ?? 0} views</span>
+                        </div>
+                      </div>
+                      {thumbnail && (
+                        <img
+                          src={thumbnail}
+                          alt=""
+                          className="w-24 h-16 object-cover rounded-lg flex-shrink-0"
+                        />
+                      )}
                     </div>
                   </article>
                 </Link>

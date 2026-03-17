@@ -10,21 +10,21 @@ describe("TelegramBanner", () => {
 
   it("renders the CTA button with correct text", () => {
     render(<TelegramBanner />);
-    expect(screen.getByText("立即加入頻道")).toBeInTheDocument();
+    expect(screen.getByText("加入頻道")).toBeInTheDocument();
   });
 
   it("links to the correct Telegram channel URL", () => {
     render(<TelegramBanner />);
-    const link = screen.getByText("立即加入頻道").closest("a");
+    const link = screen.getByText("加入頻道").closest("a");
     expect(link).toHaveAttribute("href", "https://t.me/howger_sport_news");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  it("contains channel description mentioning NBA", () => {
+  it("contains channel description mentioning Telegram", () => {
     render(<TelegramBanner />);
     expect(
-      screen.getByText(/加入我們的 Telegram 頻道/)
+      screen.getByText(/加入 Telegram 頻道/)
     ).toBeInTheDocument();
   });
 });
