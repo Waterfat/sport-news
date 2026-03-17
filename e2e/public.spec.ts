@@ -194,6 +194,34 @@ test.describe("MemberGate 訪客限制", () => {
 });
 
 // ---------------------------------------------------------------------------
+// PWA 安裝教學頁
+// ---------------------------------------------------------------------------
+test.describe("PWA 安裝教學頁", () => {
+  test("頁面載入並顯示標題與頁籤", async ({ page }) => {
+    await page.goto("/install");
+    await expect(page.getByRole("heading", { name: "安裝 App" })).toBeVisible();
+    // 雙頁籤存在
+    await expect(page.getByRole("button", { name: /iOS/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Android/i })).toBeVisible();
+  });
+
+  test("可切換 iOS / Android 頁籤", async ({ page }) => {
+    await page.goto("/install");
+    // 點 Android 頁籤
+    await page.getByRole("button", { name: /Android/i }).click();
+    await expect(page.getByText("用 Chrome 開啟本站")).toBeVisible();
+    // 點 iOS 頁籤
+    await page.getByRole("button", { name: /iOS/i }).click();
+    await expect(page.getByText("用 Safari 開啟本站")).toBeVisible();
+  });
+
+  test("Footer 有安裝 App 連結", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("footer").getByRole("link", { name: "安裝 App" })).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // SEO / crawler files
 // ---------------------------------------------------------------------------
 test.describe("SEO 檔案", () => {
