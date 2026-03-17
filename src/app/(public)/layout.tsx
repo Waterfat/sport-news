@@ -9,6 +9,7 @@ const footerLinks = [
   { href: "/category/general", label: "綜合" },
   { href: "/standings/nba", label: "排名" },
   { href: "/odds", label: "賠率" },
+  { href: "/install", label: "安裝 App" },
 ];
 
 export default function PublicLayout({

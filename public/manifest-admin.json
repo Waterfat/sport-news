@@ -1,0 +1,28 @@
+{
+  "name": "小豪哥體育資訊網 - 後台管理",
+  "short_name": "小豪哥後台",
+  "description": "小豪哥體育資訊網後台管理系統",
+  "start_url": "/admin",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
