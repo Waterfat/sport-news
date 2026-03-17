@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase";
 import { publishArticle } from "@/lib/publish-article";
 
@@ -61,6 +62,12 @@ export async function PATCH(
     if (result.errors.length > 0) {
       console.error(`[Publish] ${id} errors:`, result.errors);
     }
+
+    revalidatePath("/");
+    revalidatePath("/category/[slug]", "page");
+    revalidatePath("/news/[slug]", "page");
+    revalidatePath("/writer/[id]", "page");
+    revalidatePath("/rss.xml");
 
     // 回傳更新後的文章
     const { data } = await supabase
