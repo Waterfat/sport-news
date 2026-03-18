@@ -4,10 +4,22 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 
+const VISITOR_KEY = "pv_visitor_id";
 const SESSION_KEY = "pv_session_id";
 const SESSION_EXPIRY_KEY = "pv_session_expiry";
 const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
+/** Persistent visitor ID — never expires unless user clears browser data */
+function getVisitorId(): string {
+  let visitorId = localStorage.getItem(VISITOR_KEY);
+  if (!visitorId) {
+    visitorId = crypto.randomUUID();
+    localStorage.setItem(VISITOR_KEY, visitorId);
+  }
+  return visitorId;
+}
+
+/** Session ID — expires after 30 min of inactivity, used for path tracking */
 function getSessionId(): string {
   const now = Date.now();
   const expiry = parseInt(localStorage.getItem(SESSION_EXPIRY_KEY) || "0", 10);
@@ -18,7 +30,6 @@ function getSessionId(): string {
     localStorage.setItem(SESSION_KEY, sessionId);
   }
 
-  // Extend expiry on every activity
   localStorage.setItem(SESSION_EXPIRY_KEY, String(now + SESSION_TTL_MS));
   return sessionId;
 }
@@ -33,11 +44,13 @@ export function PageTracker() {
     lastTracked.current = pathname;
 
     try {
+      const visitorId = getVisitorId();
       const sessionId = getSessionId();
       const referrer = document.referrer || "";
       const memberId = (session?.user as { id?: string } | undefined)?.id || null;
 
       const data = JSON.stringify({
+        visitorId,
         sessionId,
         path: pathname,
         referrer,
