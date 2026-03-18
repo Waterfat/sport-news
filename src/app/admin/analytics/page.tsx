@@ -45,7 +45,7 @@ interface VisitorData {
     memberViews: number;
   };
   dailyTrend: { date: string; pv: number; uv: number }[];
-  topPages: { path: string; pv: number; uv: number }[];
+  topPages: { path: string; name: string; pv: number; uv: number }[];
   referrerSources: { source: string; count: number }[];
   devices: { device: string; count: number }[];
   recentSessions: {
@@ -55,7 +55,7 @@ interface VisitorData {
     firstSeen: string;
     lastPage: string;
     ua: string;
-    pages: { path: string; time: string }[];
+    pages: { path: string; name: string; time: string }[];
   }[];
 }
 
@@ -233,7 +233,7 @@ export default function AnalyticsPage() {
                   {visitor.topPages.map((p, i) => (
                     <div key={p.path} className="flex items-center gap-2 text-xs">
                       <span className="w-5 text-gray-400 text-right">{i + 1}</span>
-                      <span className="flex-1 truncate text-gray-700" title={p.path}>{p.path}</span>
+                      <span className="flex-1 truncate text-gray-700" title={p.path}>{p.name}</span>
                       <span className="text-gray-500 tabular-nums">{p.pv}</span>
                       <span className="text-gray-400 tabular-nums">{p.uv} UV</span>
                     </div>
@@ -317,7 +317,7 @@ export default function AnalyticsPage() {
                               {new Date(p.time).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                             </span>
                             {i < s.pages.length - 1 && <ArrowRight className="w-3 h-3 text-gray-300" />}
-                            <span className="text-gray-600">{p.path}</span>
+                            <span className="text-gray-600">{p.name}</span>
                           </div>
                         ))}
                       </div>

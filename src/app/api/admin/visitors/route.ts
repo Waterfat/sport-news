@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { getPageName } from "@/lib/constants";
+
+/** Get the best unique identifier for a visitor (priority: member > visitor+ip > visitor > ip) */
+function getVisitorKey(v: { member_id: string | null; visitor_id: string | null; ip_hash: string | null; session_id: string }): string {
+  if (v.member_id) return `m:${v.member_id}`;
+  if (v.visitor_id && v.ip_hash) return `v:${v.visitor_id}`;
+  if (v.visitor_id) return `v:${v.visitor_id}`;
+  if (v.ip_hash) return `ip:${v.ip_hash}`;
+  return `s:${v.session_id}`;
+}
 
 export async function GET(req: NextRequest) {
   const period = req.nextUrl.searchParams.get("period") || "7d";
@@ -7,18 +17,17 @@ export async function GET(req: NextRequest) {
 
   const since = new Date();
   since.setDate(since.getDate() - days);
-  const sinceStr = since.toISOString();
 
   const supabase = createServiceClient();
 
   const { data: views } = await supabase
     .from("page_views")
-    .select("session_id, member_id, page_path, referrer, user_agent, ip_hash, created_at")
-    .gte("created_at", sinceStr)
+    .select("session_id, visitor_id, member_id, page_path, referrer, user_agent, ip_hash, created_at")
+    .gte("created_at", since.toISOString())
     .order("created_at", { ascending: false })
     .limit(50000);
 
-  // Filter out bot traffic in query results (defense in depth)
+  // Filter bots (defense in depth)
   const allViews = (views ?? []).filter((v) => {
     const ua = (v.user_agent || "").toLowerCase();
     return !(/headlesschrome|playwright|puppeteer|selenium|bot|spider|crawl/i.test(ua));
@@ -26,17 +35,14 @@ export async function GET(req: NextRequest) {
 
   // --- Summary ---
   const totalPV = allViews.length;
-  // UV: use member_id if available, fallback to session_id
-  const uniqueVisitors = new Set(allViews.map((v) => v.member_id || v.session_id));
+  const uniqueVisitors = new Set(allViews.map(getVisitorKey));
   const totalUV = uniqueVisitors.size;
   const avgPagesPerVisitor = totalUV > 0 ? Math.round((totalPV / totalUV) * 10) / 10 : 0;
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayViews = allViews.filter((v) => v.created_at?.startsWith(todayStr));
   const todayPV = todayViews.length;
-  const todayUV = new Set(todayViews.map((v) => v.member_id || v.session_id)).size;
-
-  // Count logged-in views
+  const todayUV = new Set(todayViews.map(getVisitorKey)).size;
   const memberViews = allViews.filter((v) => v.member_id).length;
 
   // --- Daily trend ---
@@ -46,22 +52,22 @@ export async function GET(req: NextRequest) {
     if (!dailyMap.has(day)) dailyMap.set(day, { pv: 0, visitors: new Set() });
     const d = dailyMap.get(day)!;
     d.pv++;
-    d.visitors.add(v.member_id || v.session_id);
+    d.visitors.add(getVisitorKey(v));
   }
   const dailyTrend = Array.from(dailyMap.entries())
     .map(([date, d]) => ({ date, pv: d.pv, uv: d.visitors.size }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // --- Top pages ---
+  // --- Top pages (with Chinese names) ---
   const pageMap = new Map<string, { pv: number; visitors: Set<string> }>();
   for (const v of allViews) {
     if (!pageMap.has(v.page_path)) pageMap.set(v.page_path, { pv: 0, visitors: new Set() });
     const p = pageMap.get(v.page_path)!;
     p.pv++;
-    p.visitors.add(v.member_id || v.session_id);
+    p.visitors.add(getVisitorKey(v));
   }
   const topPages = Array.from(pageMap.entries())
-    .map(([path, p]) => ({ path, pv: p.pv, uv: p.visitors.size }))
+    .map(([path, p]) => ({ path, name: getPageName(path), pv: p.pv, uv: p.visitors.size }))
     .sort((a, b) => b.pv - a.pv)
     .slice(0, 20);
 
@@ -82,7 +88,7 @@ export async function GET(req: NextRequest) {
     .map(([source, count]) => ({ source, count }))
     .sort((a, b) => b.count - a.count);
 
-  // --- Device distribution ---
+  // --- Devices ---
   const deviceMap = new Map<string, number>();
   for (const v of allViews) {
     const ua = (v.user_agent || "").toLowerCase();
@@ -96,25 +102,40 @@ export async function GET(req: NextRequest) {
     .map(([device, count]) => ({ device, count }))
     .sort((a, b) => b.count - a.count);
 
-  // --- Recent sessions ---
-  const sessionMap = new Map<string, { pages: { path: string; time: string }[]; firstSeen: string; ua: string; memberId: string | null }>();
+  // --- Recent sessions (with Chinese page names) ---
+  const sessionMap = new Map<string, {
+    pages: { path: string; name: string; time: string }[];
+    firstSeen: string;
+    ua: string;
+    memberId: string | null;
+    visitorKey: string;
+  }>();
   for (const v of allViews) {
-    const key = v.member_id || v.session_id;
+    const key = getVisitorKey(v);
     if (!sessionMap.has(key)) {
-      sessionMap.set(key, { pages: [], firstSeen: v.created_at, ua: v.user_agent || "", memberId: v.member_id });
+      sessionMap.set(key, {
+        pages: [],
+        firstSeen: v.created_at,
+        ua: v.user_agent || "",
+        memberId: v.member_id,
+        visitorKey: key,
+      });
     }
     sessionMap.get(key)!.pages.push({
       path: v.page_path,
+      name: getPageName(v.page_path),
       time: v.created_at,
     });
   }
   const recentSessions = Array.from(sessionMap.entries())
-    .map(([id, s]) => ({
-      sessionId: s.memberId ? `會員 ${id.slice(0, 8)}...` : id.slice(0, 8) + "...",
+    .map(([, s]) => ({
+      sessionId: s.memberId
+        ? `會員 ${s.memberId.slice(0, 8)}...`
+        : s.visitorKey.slice(0, 12) + "...",
       isMember: !!s.memberId,
       pageCount: s.pages.length,
       firstSeen: s.firstSeen,
-      lastPage: s.pages[0]?.path ?? "",
+      lastPage: s.pages[0]?.name ?? s.pages[0]?.path ?? "",
       ua: s.ua.slice(0, 80),
       pages: s.pages.slice(0, 30).reverse(),
     }))
