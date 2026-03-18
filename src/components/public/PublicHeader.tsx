@@ -15,7 +15,7 @@ const navLinks = [
   { href: "/category/mlb", label: "MLB" },
   { href: "/category/soccer", label: "足球" },
   { href: "/category/general", label: "綜合" },
-  { href: "/standings", label: "排名" },
+  { href: "/standings/nba", label: "排名" },
   { href: "/odds", label: "賠率" },
 ];
 

@@ -107,6 +107,12 @@ interface WinProbPoint {
   secondsLeft: number;
 }
 
+interface SeasonSeriesData {
+  summary: string;
+  seriesScore: string;
+  games: SeasonSeriesGame[];
+}
+
 interface SeasonSeriesGame {
   date: string;
   homeTeam: string;
@@ -152,7 +158,7 @@ export function GameDetailClient({
   const [leaders, setLeaders] = useState<TeamLeadersData[]>([]);
   const [injuries, setInjuries] = useState<TeamInjuriesData[]>([]);
   const [winProb, setWinProb] = useState<WinProbPoint[]>([]);
-  const [seasonSeries, setSeasonSeries] = useState<SeasonSeriesGame[]>([]);
+  const [seasonSeries, setSeasonSeries] = useState<SeasonSeriesData | null>(null);
   const [pickCenter, setPickCenter] = useState<PickCenterItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("summary");
@@ -191,7 +197,7 @@ export function GameDetailClient({
 
     fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=seasonseries`)
       .then((r) => r.json())
-      .then((d) => setSeasonSeries(d.seasonseries ?? []))
+      .then((d) => setSeasonSeries(d.seasonseries ?? null))
       .catch(() => {});
 
     fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=pickcenter`)
@@ -439,26 +445,28 @@ export function GameDetailClient({
             )}
 
             {/* Season Series (Head-to-Head) */}
-            {seasonSeries.length > 0 && (
+            {seasonSeries && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">本季交手紀錄</CardTitle>
+                  {seasonSeries.summary && (
+                    <p className="text-sm text-muted-foreground">{seasonSeries.summary}</p>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {seasonSeries.map((g, idx) => (
+                    {seasonSeries.games.map((g: SeasonSeriesGame, idx: number) => (
                       <div key={idx} className="flex items-center justify-between text-sm border-b border-border last:border-0 pb-2">
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-muted-foreground text-xs w-16">
                           {g.date ? new Date(g.date).toLocaleDateString("zh-TW", { month: "short", day: "numeric" }) : "-"}
                         </span>
-                        <span className="font-medium">
+                        <span className="font-medium flex-1 text-right">
                           {g.awayTeam} <span className="tabular-nums">{g.awayScore}</span>
                         </span>
-                        <span className="text-muted-foreground">@</span>
-                        <span className="font-medium">
-                          {g.homeTeam} <span className="tabular-nums">{g.homeScore}</span>
+                        <span className="text-muted-foreground mx-2">@</span>
+                        <span className="font-medium flex-1">
+                          <span className="tabular-nums">{g.homeScore}</span> {g.homeTeam}
                         </span>
-                        <span className="text-xs text-muted-foreground">{g.status}</span>
                       </div>
                     ))}
                   </div>
