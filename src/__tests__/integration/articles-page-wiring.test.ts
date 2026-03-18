@@ -10,6 +10,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { useRewritePolling } from "@/hooks/useRewritePolling";
 import { usePlanManager } from "@/hooks/usePlanManager";
 import { POLLING_INTERVAL_MS } from "@/lib/constants";
+import { createQueryWrapper } from "../test-utils";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -108,7 +109,7 @@ describe("onPlanPollComplete wiring", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useArticlesPageWiring());
+    const { result } = renderHook(() => useArticlesPageWiring(), { wrapper: createQueryWrapper() });
 
     // Wait for mount fetches
     await act(async () => {
@@ -210,7 +211,7 @@ describe("onProducePollComplete wiring", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useArticlesPageWiring());
+    const { result } = renderHook(() => useArticlesPageWiring(), { wrapper: createQueryWrapper() });
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0));
@@ -304,7 +305,7 @@ describe("onPollComplete wiring (page-load auto-detect)", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useArticlesPageWiring());
+    const { result } = renderHook(() => useArticlesPageWiring(), { wrapper: createQueryWrapper() });
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0));
@@ -383,7 +384,7 @@ describe("triggerPlan full chain", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useArticlesPageWiring());
+    const { result } = renderHook(() => useArticlesPageWiring(), { wrapper: createQueryWrapper() });
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0));
@@ -461,7 +462,7 @@ describe("handlePlanProduce full chain", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useArticlesPageWiring());
+    const { result } = renderHook(() => useArticlesPageWiring(), { wrapper: createQueryWrapper() });
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0));

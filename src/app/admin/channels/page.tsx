@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PublishChannel, ChannelType } from "@/components/admin/channels/channel-types";
 import { resetConfigForType } from "@/components/admin/channels/channel-types";
 import { ChannelForm } from "@/components/admin/channels/ChannelForm";
 import { ChannelCard } from "@/components/admin/channels/ChannelCard";
 
 export default function ChannelsPage() {
-  const [channels, setChannels] = useState<PublishChannel[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   // 新增表單
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<ChannelType>("telegram");
   const [newConfig, setNewConfig] = useState<Record<string, string>>({});
-  const [adding, setAdding] = useState(false);
 
   // 編輯
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -22,35 +21,18 @@ export default function ChannelsPage() {
   const [editType, setEditType] = useState<ChannelType>("telegram");
   const [editConfig, setEditConfig] = useState<Record<string, string>>({});
 
-  // --- API calls ---
-
-  const fetchChannels = useCallback(async () => {
-    try {
+  const { data: channels = [], isLoading } = useQuery<PublishChannel[]>({
+    queryKey: ["channels"],
+    queryFn: async () => {
       const res = await fetch("/api/settings/channels");
+      if (!res.ok) throw new Error("fetch failed");
       const data = await res.json();
-      if (Array.isArray(data)) setChannels(data);
-    } catch (err) {
-      console.error("Failed to fetch channels:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return Array.isArray(data) ? data : [];
+    },
+  });
 
-  useEffect(() => {
-    fetchChannels();
-  }, [fetchChannels]);
-
-  // 新增表單：切換類型
-  function handleNewTypeChange(type: ChannelType) {
-    setNewType(type);
-    setNewConfig(resetConfigForType(type));
-  }
-
-  // 新增頻道
-  async function addChannel() {
-    if (!newName.trim() || !newType) return;
-    setAdding(true);
-    try {
+  const addMutation = useMutation({
+    mutationFn: async () => {
       const res = await fetch("/api/settings/channels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,71 +43,49 @@ export default function ChannelsPage() {
         }),
       });
       const data = await res.json();
-      if (data.id) {
-        setChannels((prev) => [...prev, data]);
-        setNewName("");
-        setNewType("telegram");
-        setNewConfig({});
-      } else {
-        alert(data.error || "新增失敗");
-      }
-    } catch (err) {
-      console.error("Failed to add channel:", err);
-    } finally {
-      setAdding(false);
-    }
-  }
+      if (!data.id) throw new Error(data.error || "新增失敗");
+      return data;
+    },
+    onSuccess: () => {
+      setNewName("");
+      setNewType("telegram");
+      setNewConfig({});
+      queryClient.invalidateQueries({ queryKey: ["channels"] });
+    },
+    onError: (err) => {
+      alert(err.message);
+    },
+  });
 
-  // 刪除頻道
-  async function deleteChannel(id: number, name: string) {
-    if (!confirm(`確定刪除「${name}」？`)) return;
-    try {
-      const res = await fetch(`/api/settings/channels?id=${id}`, {
-        method: "DELETE",
-      });
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/settings/channels?id=${id}`, { method: "DELETE" });
       const data = await res.json();
-      if (data.success) {
-        setChannels((prev) => prev.filter((c) => c.id !== id));
-      }
-    } catch (err) {
-      console.error("Failed to delete channel:", err);
-    }
-  }
+      if (!data.success) throw new Error("delete failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["channels"] });
+    },
+  });
 
-  // 切換啟用狀態
-  async function toggleActive(channel: PublishChannel) {
-    const newActive = !channel.is_active;
-    try {
+  const toggleActiveMutation = useMutation({
+    mutationFn: async (channel: PublishChannel) => {
       const res = await fetch("/api/settings/channels", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: channel.id, is_active: newActive }),
+        body: JSON.stringify({ id: channel.id, is_active: !channel.is_active }),
       });
       const data = await res.json();
-      if (data.success) {
-        setChannels((prev) =>
-          prev.map((c) =>
-            c.id === channel.id ? { ...c, is_active: newActive } : c
-          )
-        );
-      }
-    } catch (err) {
-      console.error("Failed to toggle channel:", err);
-    }
-  }
+      if (!data.success) throw new Error("toggle failed");
+      return { id: channel.id, is_active: !channel.is_active };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["channels"] });
+    },
+  });
 
-  // 開始編輯
-  function startEdit(channel: PublishChannel) {
-    setEditingId(channel.id);
-    setEditName(channel.name);
-    setEditType(channel.type as ChannelType);
-    setEditConfig({ ...channel.config });
-  }
-
-  // 儲存編輯
-  async function saveEdit(id: number) {
-    if (!editName.trim()) return;
-    try {
+  const saveEditMutation = useMutation({
+    mutationFn: async (id: number) => {
       const res = await fetch("/api/settings/channels", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -137,35 +97,52 @@ export default function ChannelsPage() {
         }),
       });
       const data = await res.json();
-      if (data.success) {
-        setChannels((prev) =>
-          prev.map((c) =>
-            c.id === id
-              ? {
-                  ...c,
-                  name: editName.trim(),
-                  type: editType,
-                  config: editConfig,
-                }
-              : c
-          )
-        );
-        setEditingId(null);
-      }
-    } catch (err) {
-      console.error("Failed to update channel:", err);
-    }
+      if (!data.success) throw new Error("update failed");
+    },
+    onSuccess: () => {
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ["channels"] });
+    },
+  });
+
+  // 新增表單：切換類型
+  function handleNewTypeChange(type: ChannelType) {
+    setNewType(type);
+    setNewConfig(resetConfigForType(type));
   }
 
-  // 編輯表單：切換類型
+  function addChannel() {
+    if (!newName.trim() || !newType) return;
+    addMutation.mutate();
+  }
+
+  function deleteChannel(id: number, name: string) {
+    if (!confirm(`確定刪除「${name}」？`)) return;
+    deleteMutation.mutate(id);
+  }
+
+  function toggleActive(channel: PublishChannel) {
+    toggleActiveMutation.mutate(channel);
+  }
+
+  function startEdit(channel: PublishChannel) {
+    setEditingId(channel.id);
+    setEditName(channel.name);
+    setEditType(channel.type as ChannelType);
+    setEditConfig({ ...channel.config });
+  }
+
+  function saveEdit(id: number) {
+    if (!editName.trim()) return;
+    saveEditMutation.mutate(id);
+  }
+
   function handleEditTypeChange(type: ChannelType) {
     setEditType(type);
     setEditConfig(resetConfigForType(type));
   }
 
-  // --- Render ---
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <p className="text-gray-500">載入中...</p>
@@ -186,7 +163,7 @@ export default function ChannelsPage() {
         name={newName}
         type={newType}
         config={newConfig}
-        adding={adding}
+        adding={addMutation.isPending}
         onNameChange={setNewName}
         onTypeChange={handleNewTypeChange}
         onConfigChange={setNewConfig}

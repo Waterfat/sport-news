@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,95 +152,109 @@ export function GameDetailClient({
   eventId: string;
 }) {
   const { data: session } = useSession();
-  const [game, setGame] = useState<GameInfo | null>(null);
-  const [plays, setPlays] = useState<Play[]>([]);
-  const [totalPlays, setTotalPlays] = useState(0);
-  const [boxscore, setBoxscore] = useState<BoxScoreData | null>(null);
-  const [leaders, setLeaders] = useState<TeamLeadersData[]>([]);
-  const [injuries, setInjuries] = useState<TeamInjuriesData[]>([]);
-  const [winProb, setWinProb] = useState<WinProbPoint[]>([]);
-  const [seasonSeries, setSeasonSeries] = useState<SeasonSeriesData | null>(null);
-  const [pickCenter, setPickCenter] = useState<PickCenterItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("summary");
 
   const isMember = !!session?.user;
   const apiBase = getGameApiBase(isMember);
 
   // Fetch game info from scoreboard
-  useEffect(() => {
-    fetch(`/api/public/scoreboard?league=${sport}`)
-      .then((r) => r.json())
-      .then((d) => {
-        const g = (d.games ?? []).find((g: GameInfo) => g.id === eventId);
-        if (g) setGame(g);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [sport, eventId]);
+  const { data: game = null, isLoading } = useQuery({
+    queryKey: ["game-info", sport, eventId],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/scoreboard?league=${sport}`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      const g = (d.games ?? []).find((g: GameInfo) => g.id === eventId);
+      return (g as GameInfo) ?? null;
+    },
+  });
 
   // Fetch leaders on mount
-  useEffect(() => {
-    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=leaders`)
-      .then((r) => r.json())
-      .then((d) => setLeaders(d.leaders ?? []))
-      .catch(() => {});
-  }, [eventId, sport, apiBase]);
+  const { data: leaders = [] } = useQuery({
+    queryKey: ["game-leaders", eventId, sport, apiBase],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=leaders`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.leaders ?? []) as TeamLeadersData[];
+    },
+  });
 
-  // Fetch win probability + season series + pick center on summary tab
-  useEffect(() => {
-    if (tab !== "summary") return;
+  // Fetch win probability on summary tab
+  const { data: winProb = [] } = useQuery({
+    queryKey: ["game-winprob", eventId, sport, apiBase],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=winprobability`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.winprobability ?? []) as WinProbPoint[];
+    },
+    enabled: tab === "summary",
+  });
 
-    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=winprobability`)
-      .then((r) => r.json())
-      .then((d) => setWinProb(d.winprobability ?? []))
-      .catch(() => {});
+  // Fetch season series on summary tab
+  const { data: seasonSeries = null } = useQuery({
+    queryKey: ["game-seasonseries", eventId, sport, apiBase],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=seasonseries`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.seasonseries ?? null) as SeasonSeriesData | null;
+    },
+    enabled: tab === "summary",
+  });
 
-    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=seasonseries`)
-      .then((r) => r.json())
-      .then((d) => setSeasonSeries(d.seasonseries ?? null))
-      .catch(() => {});
-
-    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=pickcenter`)
-      .then((r) => r.json())
-      .then((d) => setPickCenter(d.pickcenter ?? []))
-      .catch(() => {});
-  }, [tab, eventId, sport, apiBase]);
+  // Fetch pick center on summary tab
+  const { data: pickCenter = [] } = useQuery({
+    queryKey: ["game-pickcenter", eventId, sport, apiBase],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=pickcenter`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.pickcenter ?? []) as PickCenterItem[];
+    },
+    enabled: tab === "summary",
+  });
 
   // Fetch PBP when tab switches
-  useEffect(() => {
-    if (tab !== "pbp") return;
-
-    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=plays`)
-      .then((r) => r.json())
-      .then((d) => {
-        setPlays(d.plays ?? []);
-        setTotalPlays(d.totalCount ?? 0);
-      })
-      .catch(() => {});
-  }, [tab, eventId, sport, apiBase]);
+  const { data: pbpData } = useQuery({
+    queryKey: ["game-pbp", eventId, sport, apiBase],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=plays`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return { plays: (d.plays ?? []) as Play[], totalCount: (d.totalCount ?? 0) as number };
+    },
+    enabled: tab === "pbp",
+  });
+  const plays = pbpData?.plays ?? [];
+  const totalPlays = pbpData?.totalCount ?? 0;
 
   // Fetch boxscore when tab switches
-  useEffect(() => {
-    if (tab !== "boxscore") return;
-
-    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=boxscore`)
-      .then((r) => r.json())
-      .then((d) => setBoxscore(d.boxscore ?? null))
-      .catch(() => {});
-  }, [tab, eventId, sport, apiBase]);
+  const { data: boxscore = null } = useQuery({
+    queryKey: ["game-boxscore", eventId, sport, apiBase],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=boxscore`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.boxscore ?? null) as BoxScoreData | null;
+    },
+    enabled: tab === "boxscore",
+  });
 
   // Fetch injuries when tab switches
-  useEffect(() => {
-    if (tab !== "injuries") return;
+  const { data: injuries = [] } = useQuery({
+    queryKey: ["game-injuries", eventId, sport, apiBase],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=injuries`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.injuries ?? []) as TeamInjuriesData[];
+    },
+    enabled: tab === "injuries",
+  });
 
-    fetch(`${apiBase}?eventId=${eventId}&league=${sport}&type=injuries`)
-      .then((r) => r.json())
-      .then((d) => setInjuries(d.injuries ?? []))
-      .catch(() => {});
-  }, [tab, eventId, sport, apiBase]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

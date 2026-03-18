@@ -2,7 +2,7 @@
  * User Story E2E: 後台 CRUD 操作流程
  * 模擬管理者對寫手、頻道、球種與來源的完整操作
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures/reload-verify";
 
 function skipIfNoCredentials() {
   if (!process.env.E2E_USERNAME || !process.env.E2E_PASSWORD) {
@@ -67,6 +67,72 @@ test.describe("寫手管理 CRUD", () => {
       }
     }
   });
+
+  test("管理者儲存寫手後 reload 仍可見該寫手", async ({ page, verifyAfterReload }) => {
+    await page.goto("/admin/personas");
+    await expect(page.getByRole("heading", { name: "寫手管理" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const editButtons = page.getByRole("button", { name: "編輯" });
+    const count = await editButtons.count();
+    if (count === 0) {
+      test.skip(true, "目前沒有寫手可編輯，跳過儲存驗證測試");
+      return;
+    }
+
+    // 讀取第一個寫手的現有名稱，儲存後用來驗證
+    await editButtons.first().click();
+    const nameInput = page.getByPlaceholder("例如：毒舌球評老王");
+    await expect(nameInput).toBeVisible({ timeout: 5000 });
+    const existingName = await nameInput.inputValue();
+
+    // 監聽 dialog 錯誤
+    const dialogs: { type: string; message: string }[] = [];
+    page.on("dialog", async (dialog) => {
+      dialogs.push({ type: dialog.type(), message: dialog.message() });
+      await dialog.accept();
+    });
+
+    // 攔截儲存 API 回應
+    const saveApiPromise = page.waitForResponse(
+      (res) =>
+        (res.url().includes("/api/personas") || res.url().includes("/api/admin/personas")) &&
+        (res.request().method() === "PUT" || res.request().method() === "PATCH"),
+      { timeout: 10_000 }
+    );
+
+    // 點擊儲存（不修改資料，直接重新儲存以觸發 mutation）
+    const saveButton = page.getByRole("button", { name: /保存|儲存/ });
+    await saveButton.click();
+
+    // 等待 API 回應
+    const saveResponse = await saveApiPromise.catch(() => null);
+    if (!saveResponse) {
+      test.skip(true, "找不到儲存 API 回應（可能 URL pattern 不符），跳過");
+      return;
+    }
+
+    const saveStatus = saveResponse.status();
+    expect(saveStatus, `儲存 API 回傳 ${saveStatus}，預期 2xx`).toBeLessThan(300);
+
+    // 不應有錯誤 dialog
+    const errorDialog = dialogs.find(
+      (d) => d.type === "alert" && /失敗|error/i.test(d.message)
+    );
+    expect(errorDialog, `出現錯誤 alert: "${errorDialog?.message ?? ""}"`).toBeUndefined();
+
+    // reload 後驗證寫手仍存在
+    await verifyAfterReload(async () => {
+      await expect(page.getByRole("heading", { name: "寫手管理" })).toBeVisible({
+        timeout: 15_000,
+      });
+      // 確認寫手名稱在頁面上可見（卡片列表中）
+      if (existingName) {
+        await expect(page.getByText(existingName).first()).toBeVisible({ timeout: 5000 });
+      }
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -108,6 +174,71 @@ test.describe("頻道管理 CRUD", () => {
       // 取消編輯
       await page.getByRole("button", { name: "取消" }).click();
     }
+  });
+
+  test("管理者儲存頻道後 reload 仍可見該頻道", async ({ page, verifyAfterReload }) => {
+    await page.goto("/admin/channels");
+    await expect(page.getByRole("heading", { name: "發布頻道" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const editButtons = page.getByRole("button", { name: "編輯" });
+    const count = await editButtons.count();
+    if (count === 0) {
+      test.skip(true, "目前沒有頻道可編輯，跳過儲存驗證測試");
+      return;
+    }
+
+    // 進入編輯模式，讀取頻道名稱
+    await editButtons.first().click();
+    const nameInput = page.getByPlaceholder("例：官方 Telegram 頻道");
+    await expect(nameInput).toBeVisible({ timeout: 5000 });
+    const existingName = await nameInput.inputValue();
+
+    // 監聽 dialog 錯誤
+    const dialogs: { type: string; message: string }[] = [];
+    page.on("dialog", async (dialog) => {
+      dialogs.push({ type: dialog.type(), message: dialog.message() });
+      await dialog.accept();
+    });
+
+    // 攔截儲存 API 回應
+    const saveApiPromise = page.waitForResponse(
+      (res) =>
+        (res.url().includes("/api/channels") || res.url().includes("/api/admin/channels")) &&
+        (res.request().method() === "PUT" || res.request().method() === "PATCH"),
+      { timeout: 10_000 }
+    );
+
+    // 點擊儲存
+    const saveButton = page.getByRole("button", { name: /保存|儲存/ });
+    await saveButton.click();
+
+    // 等待 API 回應
+    const saveResponse = await saveApiPromise.catch(() => null);
+    if (!saveResponse) {
+      test.skip(true, "找不到儲存 API 回應（可能 URL pattern 不符），跳過");
+      return;
+    }
+
+    const saveStatus = saveResponse.status();
+    expect(saveStatus, `儲存 API 回傳 ${saveStatus}，預期 2xx`).toBeLessThan(300);
+
+    // 不應有錯誤 dialog
+    const errorDialog = dialogs.find(
+      (d) => d.type === "alert" && /失敗|error/i.test(d.message)
+    );
+    expect(errorDialog, `出現錯誤 alert: "${errorDialog?.message ?? ""}"`).toBeUndefined();
+
+    // reload 後驗證頻道仍存在
+    await verifyAfterReload(async () => {
+      await expect(page.getByRole("heading", { name: "發布頻道" })).toBeVisible({
+        timeout: 15_000,
+      });
+      if (existingName) {
+        await expect(page.getByText(existingName).first()).toBeVisible({ timeout: 5000 });
+      }
+    });
   });
 });
 

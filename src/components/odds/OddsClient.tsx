@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useQueryState, parseAsString } from "nuqs";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,27 +73,26 @@ function formatStatusDetail(detail: string): string {
 
 export function OddsClient() {
   const { data: session } = useSession();
-  const [league, setLeague] = useState("nba");
-  const [games, setGames] = useState<Game[]>([]);
-  const [multiOdds, setMultiOdds] = useState<Record<string, OddsLine[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [league, setLeague] = useQueryState(
+    "league",
+    parseAsString.withDefault("nba")
+  );
 
   const isMember = !!session?.user;
 
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/public/scoreboard?league=${league}`)
-      .then((r) => r.json())
-      .then((d) => setGames(d.games ?? []))
-      .catch(() => setGames([]))
-      .finally(() => setLoading(false));
-  }, [league]);
+  const { data: games = [], isLoading } = useQuery({
+    queryKey: ["odds-scoreboard", league],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/scoreboard?league=${league}`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.games ?? []) as Game[];
+    },
+  });
 
-  // Fetch multi-provider odds for members
-  useEffect(() => {
-    if (!isMember || games.length === 0) return;
-
-    const fetchAllOdds = async () => {
+  const { data: multiOdds = {} } = useQuery({
+    queryKey: ["odds-multi", league, games.map((g) => g.id)],
+    queryFn: async () => {
       const results: Record<string, OddsLine[]> = {};
       await Promise.all(
         games.map(async (game) => {
@@ -109,13 +109,13 @@ export function OddsClient() {
           }
         })
       );
-      setMultiOdds(results);
-    };
-    fetchAllOdds();
-  }, [isMember, games, league]);
+      return results;
+    },
+    enabled: isMember && games.length > 0,
+  });
 
   return (
-    <Tabs value={league} onValueChange={setLeague}>
+    <Tabs value={league} onValueChange={(v) => setLeague(v)}>
       <TabsList>
         {LEAGUE_OPTIONS.map((opt) => (
           <TabsTrigger key={opt.value} value={opt.value}>
@@ -126,7 +126,7 @@ export function OddsClient() {
 
       {LEAGUE_OPTIONS.map((opt) => (
         <TabsContent key={opt.value} value={opt.value}>
-          {loading ? (
+          {isLoading ? (
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>

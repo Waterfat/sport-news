@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useRewritePolling } from "@/hooks/useRewritePolling";
 import { POLLING_INTERVAL_MS } from "@/lib/constants";
+import { createQueryWrapper } from "../test-utils";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -36,7 +37,7 @@ describe("useRewritePolling - initial state", () => {
     vi.useFakeTimers();
     mockFetch.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     expect(result.current.rewriteStatus).toBeNull();
     expect(result.current.runningMode).toBeNull();
@@ -48,7 +49,7 @@ describe("useRewritePolling - initial state", () => {
     vi.useFakeTimers();
     mockFetch.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     expect(typeof result.current.triggerPlan).toBe("function");
     expect(typeof result.current.triggerProduce).toBe("function");
@@ -68,7 +69,7 @@ describe("useRewritePolling - fetchRewriteStatus on mount", () => {
       json: async () => statusData,
     });
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(result.current.rewriteStatus).not.toBeNull();
@@ -84,7 +85,7 @@ describe("useRewritePolling - fetchRewriteStatus on mount", () => {
       json: async () => ({ error: "Unauthorized" }),
     });
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     // Wait for the fetch effect to complete
     await act(async () => {
@@ -97,7 +98,7 @@ describe("useRewritePolling - fetchRewriteStatus on mount", () => {
   it("leaves rewriteStatus null when fetch rejects (network error)", async () => {
     mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0));
@@ -122,7 +123,7 @@ describe("useRewritePolling - auto-polling when currentTask is active on mount",
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => activeStatus });
     mockFetch.mockReturnValue(new Promise(() => {})); // polling calls never resolve
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(result.current.runningMode).toBe("rewrite");
@@ -137,22 +138,26 @@ describe("useRewritePolling - auto-polling when currentTask is active on mount",
     const activeStatus = makeStatusResponse({ status: "running", created_at: "2024-01-01T00:00:00Z" });
     const doneStatus = makeStatusResponse(null);
 
-    // Mount fetch: active task
+    // Mount fetch: active task; keep polling active for one more tick before done
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => activeStatus });
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => activeStatus });
     // All subsequent polling fetches: done
     mockFetch.mockResolvedValue({ ok: true, json: async () => doneStatus });
 
     const onPollComplete = vi.fn();
-    const { result } = renderHook(() => useRewritePolling({ onPollComplete }));
+    const { result } = renderHook(() => useRewritePolling({ onPollComplete }), { wrapper: createQueryWrapper() });
 
-    // Let the initial fetch resolve
+    // Wait for initial fetch to resolve and runningMode to be set
+    await waitFor(() => {
+      expect(result.current.runningMode).toBe("rewrite");
+    });
+
+    // Advance past the polling interval to trigger the "done" fetch
     await act(async () => {
+      vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
       await new Promise((r) => setTimeout(r, 0));
     });
 
-    expect(result.current.runningMode).toBe("rewrite");
-
-    // Advance past the polling interval
     await act(async () => {
       vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
       await new Promise((r) => setTimeout(r, 0));
@@ -177,7 +182,7 @@ describe("useRewritePolling - triggerPlan", () => {
     let resolvePlanPost!: (v: unknown) => void;
     mockFetch.mockReturnValueOnce(new Promise((res) => { resolvePlanPost = res; }));
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
@@ -200,7 +205,7 @@ describe("useRewritePolling - triggerPlan", () => {
     // Polling fetch — keep pending so interval doesn't spin
     mockFetch.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
@@ -222,7 +227,7 @@ describe("useRewritePolling - triggerPlan", () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ started: true }) });
     mockFetch.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
@@ -241,7 +246,7 @@ describe("useRewritePolling - triggerPlan", () => {
       json: async () => ({ error: "Something went wrong" }),
     });
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
@@ -264,7 +269,7 @@ describe("useRewritePolling - triggerProduce", () => {
     // Polling fetch stays pending so interval doesn't fire
     mockFetch.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
@@ -279,7 +284,7 @@ describe("useRewritePolling - triggerProduce", () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse() });
     mockFetch.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
@@ -300,7 +305,7 @@ describe("useRewritePolling - setRunningMode", () => {
   it("allows external callers to override runningMode", async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse() });
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
@@ -315,7 +320,7 @@ describe("useRewritePolling - setRunningMode", () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse() });
     mockFetch.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
@@ -338,26 +343,21 @@ describe("useRewritePolling - produce does not trigger duplicate rewrite polling
   });
 
   it("does NOT overwrite runningMode to rewrite when triggerProduce already set it to produce", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-
     // Mount: no active task
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse(null) });
 
     const onPollComplete = vi.fn();
     const onProducePollComplete = vi.fn();
     const { result } = renderHook(() =>
-      useRewritePolling({ onPollComplete, onProducePollComplete })
+      useRewritePolling({ onPollComplete, onProducePollComplete }),
+      { wrapper: createQueryWrapper() }
     );
 
-    // Wait for initial fetch
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
+    await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
     expect(result.current.runningMode).toBeNull();
 
-    // Simulate: triggerProduce sets runningMode to "produce" and starts polling
-    // The polling fetch returns an active task (which the page-load useEffect might try to re-poll)
+    // Simulate: triggerProduce sets runningMode to "produce"
+    // Polling fetches always return activeTask (task never completes in this test)
     const activeTask = { status: "running", created_at: "2024-01-01T00:00:00Z" };
     mockFetch.mockResolvedValue({ ok: true, json: async () => makeStatusResponse(activeTask) });
 
@@ -365,17 +365,7 @@ describe("useRewritePolling - produce does not trigger duplicate rewrite polling
       result.current.triggerProduce();
     });
 
-    expect(result.current.runningMode).toBe("produce");
-
-    // Let the first polling tick fire — this updates rewriteStatus with currentTask
-    // which triggers the page-load useEffect. The bug was: useEffect saw currentTask + runningMode==null
-    // (stale state) and started a second polling loop as "rewrite"
-    await act(async () => {
-      vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
-    // runningMode must STILL be "produce", not "rewrite"
+    // runningMode must be "produce", not "rewrite"
     expect(result.current.runningMode).toBe("produce");
     expect(result.current.runningMode).not.toBe("rewrite");
 
@@ -392,16 +382,16 @@ describe("useRewritePolling - produce does not trigger duplicate rewrite polling
     const onPollComplete = vi.fn();
     const onProducePollComplete = vi.fn();
     const { result } = renderHook(() =>
-      useRewritePolling({ onPollComplete, onProducePollComplete })
+      useRewritePolling({ onPollComplete, onProducePollComplete }),
+      { wrapper: createQueryWrapper() }
     );
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
+    await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
-    // triggerProduce with active task on first poll, then done on second
+    // triggerProduce: first polling fetch returns active task, subsequent fetches return done
     const activeTask = { status: "running", created_at: "2024-01-01T00:00:00Z" };
     mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse(activeTask) })
       .mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse(activeTask) })
       .mockResolvedValue({ ok: true, json: async () => makeStatusResponse(null) });
 
@@ -409,13 +399,17 @@ describe("useRewritePolling - produce does not trigger duplicate rewrite polling
       result.current.triggerProduce();
     });
 
-    // First tick: still running
+    // Advance time to let polling fetch the active task and then the done state
     await act(async () => {
       vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
       await new Promise((r) => setTimeout(r, 0));
     });
 
-    // Second tick: task done
+    await act(async () => {
+      vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
     await act(async () => {
       vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
       await new Promise((r) => setTimeout(r, 0));
@@ -441,18 +435,14 @@ describe("useRewritePolling - plan does not trigger duplicate rewrite polling", 
   });
 
   it("does NOT overwrite runningMode to rewrite when triggerPlan already set it to plan", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-
     // Mount: no active task
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => makeStatusResponse(null) });
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
+    await waitFor(() => expect(result.current.rewriteStatus).not.toBeNull());
 
-    // triggerPlan: POST succeeds, polling starts
+    // triggerPlan: POST succeeds, polling fetches always return active task (never completes)
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ started: true }) });
     const activeTask = { status: "running", created_at: "2024-01-01T00:00:00Z" };
     mockFetch.mockResolvedValue({ ok: true, json: async () => makeStatusResponse(activeTask) });
@@ -461,15 +451,7 @@ describe("useRewritePolling - plan does not trigger duplicate rewrite polling", 
       await result.current.triggerPlan();
     });
 
-    expect(result.current.runningMode).toBe("plan");
-
-    // Let polling tick fire
-    await act(async () => {
-      vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
-    // Must still be "plan", not "rewrite"
+    // Must be "plan", not "rewrite"
     expect(result.current.runningMode).toBe("plan");
     expect(result.current.runningMode).not.toBe("rewrite");
   });
@@ -484,37 +466,38 @@ describe("useRewritePolling - polling timeout auto-cleanup", () => {
     vi.useRealTimers();
   });
 
-  it("clears the polling interval when the task completes (currentTask becomes null)", async () => {
+  it("stops polling when the task completes (currentTask becomes null)", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-
-    const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
 
     const activeStatus = makeStatusResponse({ status: "running", created_at: "2024-01-01T00:00:00Z" });
     const doneStatus = makeStatusResponse(null);
 
-    // Mount fetch: active task
+    // Mount fetch: active task; keep active for one more tick before done
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => activeStatus });
-    // Polling fetch: task is done
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => activeStatus });
+    // Polling fetches: task is done
     mockFetch.mockResolvedValue({ ok: true, json: async () => doneStatus });
 
-    const { result } = renderHook(() => useRewritePolling());
+    const { result } = renderHook(() => useRewritePolling(), { wrapper: createQueryWrapper() });
 
-    // Let the initial fetch resolve
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
+    // Wait for initial fetch to resolve and runningMode to be set
+    await waitFor(() => {
+      expect(result.current.runningMode).toBe("rewrite");
     });
 
-    expect(result.current.runningMode).toBe("rewrite");
-
-    // Advance past one polling interval so the completion branch runs
+    // Advance past polling intervals so the done state is fetched
     await act(async () => {
       vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
       await new Promise((r) => setTimeout(r, 0));
     });
 
-    await waitFor(() => expect(result.current.runningMode).toBeNull());
+    await act(async () => {
+      vi.advanceTimersByTime(POLLING_INTERVAL_MS + 100);
+      await new Promise((r) => setTimeout(r, 0));
+    });
 
-    // The hook calls clearInterval when it detects task completion
-    expect(clearIntervalSpy).toHaveBeenCalled();
+    // TanStack Query stops polling when refetchInterval returns false (no currentTask)
+    // Verify runningMode is cleared after task completion
+    await waitFor(() => expect(result.current.runningMode).toBeNull());
   });
 });

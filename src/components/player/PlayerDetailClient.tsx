@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,34 +52,36 @@ export function PlayerDetailClient({
   sport: string;
   playerId: string;
 }) {
-  const [player, setPlayer] = useState<PlayerInfo | null>(null);
-  const [stats, setStats] = useState<PlayerStat[]>([]);
-  const [gamelog, setGamelog] = useState<PlayerGameLog | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showGameLog, setShowGameLog] = useState(false);
 
-  useEffect(() => {
-    fetch(`/api/public/player?sport=${sport}&id=${playerId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setPlayer(d.player ?? null);
-        setStats(d.stats ?? []);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [sport, playerId]);
+  const { data: playerData, isLoading } = useQuery({
+    queryKey: ["player-detail", sport, playerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/player?sport=${sport}&id=${playerId}`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return {
+        player: (d.player ?? null) as PlayerInfo | null,
+        stats: (d.stats ?? []) as PlayerStat[],
+      };
+    },
+  });
 
-  // Fetch game log on demand
-  useEffect(() => {
-    if (!showGameLog || gamelog) return;
+  const player = playerData?.player ?? null;
+  const stats = playerData?.stats ?? [];
 
-    fetch(`/api/public/player?sport=${sport}&id=${playerId}&type=gamelog`)
-      .then((r) => r.json())
-      .then((d) => setGamelog(d.gamelog ?? { labels: [], entries: [] }))
-      .catch(() => setGamelog({ labels: [], entries: [] }));
-  }, [showGameLog, sport, playerId, gamelog]);
+  const { data: gamelog = null } = useQuery({
+    queryKey: ["player-gamelog", sport, playerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/player?sport=${sport}&id=${playerId}&type=gamelog`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.gamelog ?? { labels: [], entries: [] }) as PlayerGameLog;
+    },
+    enabled: showGameLog,
+  });
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

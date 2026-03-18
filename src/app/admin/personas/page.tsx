@@ -1,28 +1,69 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { PersonaForm } from "@/components/admin/personas/PersonaForm";
 import { PersonaCard } from "@/components/admin/personas/PersonaCard";
 import { emptyForm, type Persona, type PersonaFormData } from "@/components/admin/personas/types";
 
 export default function PersonasPage() {
-  const [personas, setPersonas] = useState<Persona[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState<PersonaFormData>(emptyForm);
   const [teamInput, setTeamInput] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const fetchPersonas = useCallback(async () => {
-    const res = await fetch("/api/personas");
-    const data = await res.json();
-    setPersonas(data.personas || []);
-    setLoading(false);
-  }, []);
+  const { data, isLoading } = useQuery<{ personas: Persona[] }>({
+    queryKey: ["personas"],
+    queryFn: async () => {
+      const res = await fetch("/api/personas");
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    },
+  });
 
-  useEffect(() => { fetchPersonas(); }, [fetchPersonas]);
+  const personas = data?.personas || [];
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: { id?: string } & PersonaFormData) => {
+      const { id, ...body } = payload;
+      const res = await fetch("/api/personas", {
+        method: id ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(id ? { id, ...body } : body),
+      });
+      if (!res.ok) throw new Error("save failed");
+    },
+    onSuccess: () => {
+      cancel();
+      queryClient.invalidateQueries({ queryKey: ["personas"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/personas?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("delete failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["personas"] });
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async (p: Persona) => {
+      const res = await fetch("/api/personas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: p.id, is_active: !p.is_active }),
+      });
+      if (!res.ok) throw new Error("toggle failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["personas"] });
+    },
+  });
 
   const startEdit = (p: Persona) => {
     setEditingId(p.id);
@@ -58,45 +99,23 @@ export default function PersonasPage() {
 
   const handleSave = async () => {
     if (!form.name || !form.style_prompt) return;
-    setSaving(true);
-
-    try {
-      if (editingId) {
-        await fetch("/api/personas", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editingId, ...form }),
-        });
-      } else {
-        await fetch("/api/personas", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
-      }
-      cancel();
-      fetchPersonas();
-    } finally {
-      setSaving(false);
+    if (editingId) {
+      saveMutation.mutate({ id: editingId, ...form });
+    } else {
+      saveMutation.mutate(form);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("確定要刪除此寫手？")) return;
-    await fetch(`/api/personas?id=${id}`, { method: "DELETE" });
-    fetchPersonas();
+    deleteMutation.mutate(id);
   };
 
   const handleToggleActive = async (p: Persona) => {
-    await fetch("/api/personas", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: p.id, is_active: !p.is_active }),
-    });
-    fetchPersonas();
+    toggleActiveMutation.mutate(p);
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div className="text-center py-12 text-gray-500">載入中...</div>;
   }
 
@@ -114,7 +133,7 @@ export default function PersonasPage() {
           editingId={editingId}
           form={form}
           teamInput={teamInput}
-          saving={saving}
+          saving={saveMutation.isPending}
           onFormChange={(updater) => setForm(updater)}
           onTeamInputChange={setTeamInput}
           onSave={handleSave}
