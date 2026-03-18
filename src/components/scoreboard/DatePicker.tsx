@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface DatePickerProps {
@@ -43,6 +44,14 @@ function shiftDate(dateStr: string, days: number): string {
   return `${ny}${nm}${nd}`;
 }
 
+function toInputDate(dateStr: string): string {
+  return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
+}
+
+function fromInputDate(inputDate: string): string {
+  return inputDate.replace(/-/g, "");
+}
+
 function getTodayStr(): string {
   const now = new Date();
   const y = now.getFullYear();
@@ -52,26 +61,40 @@ function getTodayStr(): string {
 }
 
 export default function DatePicker({ currentDate, onDateChange }: DatePickerProps) {
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const today = getTodayStr();
   const isToday = currentDate === today;
 
+  // Close calendar on click outside
+  useEffect(() => {
+    if (!calendarOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setCalendarOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [calendarOpen]);
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 relative" ref={calendarRef}>
       <Button
         variant="ghost"
         size="sm"
         onClick={() => onDateChange(shiftDate(currentDate, -1))}
-        className="h-8 w-8 p-0"
+        className="h-9 w-9 p-0"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
 
       <button
-        onClick={() => onDateChange(today)}
-        className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+        onClick={() => isToday ? setCalendarOpen(!calendarOpen) : onDateChange(today)}
+        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors min-w-[80px] ${
           isToday
-            ? "bg-blue-600 text-white"
-            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            ? "bg-brand text-brand-foreground"
+            : "bg-secondary text-foreground hover:bg-accent"
         }`}
       >
         {formatDisplayDate(currentDate)}
@@ -81,10 +104,36 @@ export default function DatePicker({ currentDate, onDateChange }: DatePickerProp
         variant="ghost"
         size="sm"
         onClick={() => onDateChange(shiftDate(currentDate, 1))}
-        className="h-8 w-8 p-0"
+        className="h-9 w-9 p-0"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setCalendarOpen(!calendarOpen)}
+        className="h-9 w-9 p-0 text-muted-foreground"
+      >
+        <Calendar className="h-4 w-4" />
+      </Button>
+
+      {/* Calendar dropdown */}
+      {calendarOpen && (
+        <div className="absolute top-full right-0 mt-2 z-50 bg-card border border-border rounded-xl shadow-lg p-3">
+          <input
+            type="date"
+            value={toInputDate(currentDate)}
+            onChange={(e) => {
+              if (e.target.value) {
+                onDateChange(fromInputDate(e.target.value));
+                setCalendarOpen(false);
+              }
+            }}
+            className="px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
+          />
+        </div>
+      )}
     </div>
   );
 }

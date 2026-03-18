@@ -105,10 +105,10 @@ export default function ScoreboardClient({
     return (
       <div className="text-center py-20">
         <div className="text-5xl mb-4">🏟️</div>
-        <h2 className="text-xl font-semibold text-slate-700 mb-2">
+        <h2 className="text-xl font-semibold text-foreground mb-2">
           即時比分功能即將上線
         </h2>
-        <p className="text-slate-500">敬請期待</p>
+        <p className="text-muted-foreground">敬請期待</p>
       </div>
     );
   }
@@ -117,7 +117,7 @@ export default function ScoreboardClient({
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-slate-900 truncate min-w-0">
+        <h1 className="text-2xl font-bold text-foreground truncate min-w-0">
           {isToday ? "即時比分" : "歷史比分"}
         </h1>
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -149,8 +149,8 @@ export default function ScoreboardClient({
             onClick={() => setActiveLeague(league.key)}
             className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
               activeLeague === league.key
-                ? "bg-blue-600 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                ? "bg-brand text-brand-foreground"
+                : "bg-secondary text-muted-foreground hover:bg-accent"
             }`}
           >
             {league.label}
@@ -168,10 +168,10 @@ export default function ScoreboardClient({
       ) : !data || data.games.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-4xl mb-3">📋</div>
-          <h3 className="text-lg font-medium text-slate-600 mb-1">
+          <h3 className="text-lg font-medium text-muted-foreground mb-1">
             {isToday ? "今日暫無比賽" : "該日暫無比賽"}
           </h3>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             {data?.label ?? ""} 目前沒有進行中或已排定的比賽
           </p>
         </div>
