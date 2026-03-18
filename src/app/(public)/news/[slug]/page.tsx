@@ -6,7 +6,8 @@ import { CATEGORY_COLORS, formatDateFull, formatRelativeTime, getCategorySlug, g
 import ViewTracker from "./ViewTracker";
 import LikeButton from "./LikeButton";
 import { TelegramArticleCTA } from "@/components/TelegramCTA";
-import { ArticleContent, extractHeadings } from "@/components/public/ArticleContent";
+import { ArticleContent } from "@/components/public/ArticleContent";
+import { extractHeadings } from "@/lib/markdown-utils";
 import { TableOfContents } from "@/components/public/TableOfContents";
 import { ShareButtons } from "@/components/public/ShareButtons";
 import { ReactionButtons } from "@/components/public/ReactionButtons";
