@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArticleHeader } from "@/components/admin/article-detail/ArticleHeader";
 import { PublishStatusCard } from "@/components/admin/article-detail/PublishStatusCard";
 import { PublishOptionsCard } from "@/components/admin/article-detail/PublishOptionsCard";
@@ -20,10 +21,7 @@ export default function ArticleDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const [article, setArticle] = useState<ArticleDetail | null>(null);
-  const [rawArticles, setRawArticles] = useState<RawArticle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -31,149 +29,106 @@ export default function ArticleDetailPage({
   const [isEditing, setIsEditing] = useState(false);
 
   // Publish/schedule state
-  const [channels, setChannels] = useState<PublishChannel[]>([]);
   const [selectedChannelIds, setSelectedChannelIds] = useState<number[]>([]);
   const [scheduledDateTime, setScheduledDateTime] = useState("");
-  const [publishing, setPublishing] = useState(false);
 
+  const { data: articleData, isLoading: articleLoading } = useQuery<{
+    article: ArticleDetail;
+    rawArticles: RawArticle[];
+  }>({
+    queryKey: ["article", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/articles/generated/${id}`);
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    },
+  });
+
+  const { data: channelData } = useQuery<PublishChannel[]>({
+    queryKey: ["active-channels"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/channels");
+      if (!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.channels || [];
+      return list.filter((c: PublishChannel) => c.is_active);
+    },
+  });
+
+  const article = articleData?.article ?? null;
+  const rawArticles = articleData?.rawArticles ?? [];
+  const channels = channelData ?? [];
+
+  // Initialize form state when article data loads
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/articles/generated/${id}`).then((res) => res.json()),
-      fetch("/api/settings/channels").then((res) => res.json()),
-    ])
-      .then(([articleData, channelData]) => {
-        setArticle(articleData.article);
-        setRawArticles(articleData.rawArticles || []);
-        setEditTitle(articleData.article.title);
-        setEditContent(articleData.article.content);
-        setReviewerNote(articleData.article.reviewer_note || "");
+    if (article) {
+      setEditTitle(article.title);
+      setEditContent(article.content);
+      setReviewerNote(article.reviewer_note || "");
+    }
+  }, [article]);
 
-        const channelList = Array.isArray(channelData) ? channelData : channelData.channels || [];
-        const activeChannels = channelList.filter((c: PublishChannel) => c.is_active);
-        setChannels(activeChannels);
+  // Initialize channel selection when both article and channels load
+  useEffect(() => {
+    if (article && channels.length > 0) {
+      const articleChannels = article.publish_channel_ids || [];
+      setSelectedChannelIds(
+        articleChannels.length > 0
+          ? articleChannels
+          : channels.map((c) => c.id)
+      );
+    }
+  }, [article, channels]);
 
-        // 文章有指定頻道就用，沒有就預設全選
-        const articleChannels = articleData.article.publish_channel_ids || [];
-        setSelectedChannelIds(
-          articleChannels.length > 0
-            ? articleChannels
-            : activeChannels.map((c: PublishChannel) => c.id)
-        );
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
+  const patchMutation = useMutation({
+    mutationFn: async (body: Record<string, unknown>) => {
       const res = await fetch(`/api/articles/generated/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: editTitle,
-          content: editContent,
-        }),
+        body: JSON.stringify(body),
       });
+      if (!res.ok) throw new Error("patch failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["article", id] });
+    },
+  });
 
-      if (res.ok) {
-        const data = await res.json();
-        setArticle((prev) => (prev ? { ...prev, ...data.article } : prev));
-        setIsEditing(false);
-      }
-    } catch (err) {
-      console.error("Save failed:", err);
-    } finally {
-      setSaving(false);
-    }
+  const handleSave = async () => {
+    patchMutation.mutate(
+      { title: editTitle, content: editContent },
+      { onSuccess: () => setIsEditing(false) }
+    );
   };
 
   const handlePublishNow = async () => {
-    setPublishing(true);
-    try {
-      const res = await fetch(`/api/articles/generated/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "published",
-          published_at: new Date().toISOString(),
-          publish_channel_ids: selectedChannelIds,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setArticle((prev) => (prev ? { ...prev, ...data.article } : prev));
-      }
-    } catch (err) {
-      console.error("Publish failed:", err);
-    } finally {
-      setPublishing(false);
-    }
+    patchMutation.mutate({
+      status: "published",
+      published_at: new Date().toISOString(),
+      publish_channel_ids: selectedChannelIds,
+    });
   };
 
   const handleSchedule = async () => {
     if (!scheduledDateTime) return;
-    setPublishing(true);
-    try {
-      const res = await fetch(`/api/articles/generated/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scheduled_at: new Date(scheduledDateTime).toISOString(),
-          publish_channel_ids: selectedChannelIds,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setArticle((prev) => (prev ? { ...prev, ...data.article } : prev));
-        setScheduledDateTime("");
-      }
-    } catch (err) {
-      console.error("Schedule failed:", err);
-    } finally {
-      setPublishing(false);
-    }
+    patchMutation.mutate(
+      {
+        scheduled_at: new Date(scheduledDateTime).toISOString(),
+        publish_channel_ids: selectedChannelIds,
+      },
+      { onSuccess: () => setScheduledDateTime("") }
+    );
   };
 
   const handleCancelSchedule = async () => {
-    setPublishing(true);
-    try {
-      const res = await fetch(`/api/articles/generated/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scheduled_at: null,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setArticle((prev) => (prev ? { ...prev, ...data.article } : prev));
-      }
-    } catch (err) {
-      console.error("Cancel schedule failed:", err);
-    } finally {
-      setPublishing(false);
-    }
+    patchMutation.mutate({ scheduled_at: null });
   };
 
   const handleRemoveImage = async (index: number) => {
     if (!article) return;
     const newImages = article.images.filter((_, i) => i !== index);
-    try {
-      const res = await fetch(`/api/articles/generated/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images: newImages }),
-      });
-      if (res.ok) {
-        setArticle((prev) => prev ? { ...prev, images: newImages } : prev);
-      }
-    } catch (err) {
-      console.error("Remove image failed:", err);
-    }
+    patchMutation.mutate({ images: newImages });
   };
 
   const toggleChannel = (channelId: number) => {
@@ -184,7 +139,7 @@ export default function ArticleDetailPage({
     );
   };
 
-  if (loading) {
+  if (articleLoading) {
     return <div className="text-center py-12 text-gray-500">載入中...</div>;
   }
 
@@ -197,7 +152,7 @@ export default function ArticleDetailPage({
       <ArticleHeader
         article={article}
         isEditing={isEditing}
-        saving={saving}
+        saving={patchMutation.isPending}
         onBack={() => router.back()}
         onEdit={() => setIsEditing(true)}
         onCancelEdit={() => setIsEditing(false)}
@@ -206,7 +161,7 @@ export default function ArticleDetailPage({
 
       <PublishStatusCard
         article={article}
-        publishing={publishing}
+        publishing={patchMutation.isPending}
         onCancelSchedule={handleCancelSchedule}
       />
 
@@ -215,7 +170,7 @@ export default function ArticleDetailPage({
           channels={channels}
           selectedChannelIds={selectedChannelIds}
           scheduledDateTime={scheduledDateTime}
-          publishing={publishing}
+          publishing={patchMutation.isPending}
           onToggleChannel={toggleChannel}
           onScheduledDateTimeChange={setScheduledDateTime}
           onPublishNow={handlePublishNow}

@@ -1,21 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SPORTS, type SportKey } from "@/lib/sport-config";
 import { CrawlSourceList } from "@/components/admin/sports/CrawlSourceList";
 import { SportCard } from "@/components/admin/sports/SportCard";
 import type { CrawlSource, SportSettings, CrawlResult } from "@/components/admin/sports/types";
 
 export default function SportsSettingsPage() {
-  const [settings, setSettings] = useState<SportSettings>({});
-  const [crawlSources, setCrawlSources] = useState<CrawlSource[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [updating, setUpdating] = useState<string | null>(null);
 
   // 新增來源表單
   const [newName, setNewName] = useState("");
   const [newUrl, setNewUrl] = useState("");
-  const [adding, setAdding] = useState(false);
 
   // 編輯來源
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -26,48 +24,178 @@ export default function SportsSettingsPage() {
   const [crawlingId, setCrawlingId] = useState<number | null>(null);
   const [crawlResult, setCrawlResult] = useState<CrawlResult | null>(null);
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [settingsRes, sourcesRes] = await Promise.all([
-        fetch("/api/settings/sports"),
-        fetch("/api/settings/sources"),
-      ]);
-      const settingsData = await settingsRes.json();
-      const sourcesData = await sourcesRes.json();
+  const { data: settings = {} as SportSettings, isLoading: settingsLoading } = useQuery<SportSettings>({
+    queryKey: ["sport-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/sports");
+      if (!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      return data.error ? {} : data;
+    },
+  });
 
-      if (!settingsData.error) setSettings(settingsData);
-      if (Array.isArray(sourcesData)) setCrawlSources(sourcesData);
-    } catch (err) {
-      console.error("Failed to fetch:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: crawlSources = [], isLoading: sourcesLoading } = useQuery<CrawlSource[]>({
+    queryKey: ["crawl-sources"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/sources");
+      if (!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const loading = settingsLoading || sourcesLoading;
 
-  async function toggleSport(sportKey: SportKey, enabled: boolean) {
-    setUpdating(sportKey);
-    try {
+  const toggleSportMutation = useMutation({
+    mutationFn: async ({ sportKey, enabled }: { sportKey: SportKey; enabled: boolean }) => {
+      setUpdating(sportKey);
       const res = await fetch("/api/settings/sports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sport_key: sportKey, enabled }),
       });
       const data = await res.json();
-      if (data.success) {
-        setSettings((prev) => ({
-          ...prev,
-          [sportKey]: { ...prev[sportKey], enabled },
-        }));
-      }
-    } catch (err) {
-      console.error("Failed to update:", err);
-    } finally {
+      if (!data.success) throw new Error("update failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sport-settings"] });
+    },
+    onSettled: () => {
       setUpdating(null);
-    }
+    },
+  });
+
+  const toggleSourceMutation = useMutation({
+    mutationFn: async ({ sportKey, newSources }: { sportKey: SportKey; sourceName: string; newSources: string[] }) => {
+      setUpdating(`${sportKey}-${newSources}`);
+      const res = await fetch("/api/settings/sports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sport_key: sportKey, sources: newSources }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error("update failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sport-settings"] });
+    },
+    onSettled: () => {
+      setUpdating(null);
+    },
+  });
+
+  const toggleCrawlImagesMutation = useMutation({
+    mutationFn: async ({ id, crawl_images }: { id: number; crawl_images: boolean }) => {
+      const res = await fetch("/api/settings/sources", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, crawl_images }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error("toggle failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crawl-sources"] });
+    },
+  });
+
+  const addSourceMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/settings/sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim(), base_url: newUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!data.id) throw new Error(data.error || "新增失敗");
+      return data;
+    },
+    onSuccess: () => {
+      setNewName("");
+      setNewUrl("");
+      queryClient.invalidateQueries({ queryKey: ["crawl-sources"] });
+    },
+    onError: (err) => {
+      alert(err.message);
+    },
+  });
+
+  const deleteSourceMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: number; name: string }) => {
+      const res = await fetch(`/api/settings/sources?id=${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!data.success) throw new Error("delete failed");
+      return { id, name };
+    },
+    onSuccess: ({ name }) => {
+      // Also update sport settings that reference this source
+      const updatedSettings = { ...settings };
+      for (const key of Object.keys(updatedSettings)) {
+        const sources = updatedSettings[key].sources.filter((s) => s !== name);
+        if (sources.length !== updatedSettings[key].sources.length) {
+          updatedSettings[key] = { ...updatedSettings[key], sources };
+          fetch("/api/settings/sports", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sport_key: key, sources }),
+          }).catch((err) => console.error("Failed to update sport sources after delete:", err));
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["crawl-sources"] });
+      queryClient.invalidateQueries({ queryKey: ["sport-settings"] });
+    },
+  });
+
+  const saveEditMutation = useMutation({
+    mutationFn: async ({ id, oldName }: { id: number; oldName: string }) => {
+      const res = await fetch("/api/settings/sources", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, name: editName.trim(), base_url: editUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error("update failed");
+      return { oldName };
+    },
+    onSuccess: ({ oldName }) => {
+      if (oldName !== editName.trim()) {
+        // Update sport settings referencing old name
+        for (const key of Object.keys(settings)) {
+          const idx = settings[key].sources.indexOf(oldName);
+          if (idx !== -1) {
+            const newSources = [...settings[key].sources];
+            newSources[idx] = editName.trim();
+            fetch("/api/settings/sports", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sport_key: key, sources: newSources }),
+            }).catch((err) => console.error("Failed to update sport sources after rename:", err));
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["sport-settings"] });
+      }
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ["crawl-sources"] });
+    },
+  });
+
+  const saveTitlePromptMutation = useMutation({
+    mutationFn: async ({ sportKey, title_prompt }: { sportKey: SportKey; title_prompt: string }) => {
+      const res = await fetch("/api/settings/sports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sport_key: sportKey, title_prompt }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error("save failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sport-settings"] });
+    },
+  });
+
+  async function toggleSport(sportKey: SportKey, enabled: boolean) {
+    toggleSportMutation.mutate({ sportKey, enabled });
   }
 
   async function toggleSource(sportKey: SportKey, sourceName: string, checked: boolean) {
@@ -75,96 +203,22 @@ export default function SportsSettingsPage() {
     const newSources = checked
       ? [...current, sourceName]
       : current.filter((s) => s !== sourceName);
-
     setUpdating(`${sportKey}-${sourceName}`);
-    try {
-      const res = await fetch("/api/settings/sports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sport_key: sportKey, sources: newSources }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSettings((prev) => ({
-          ...prev,
-          [sportKey]: { ...prev[sportKey], sources: newSources },
-        }));
-      }
-    } catch (err) {
-      console.error("Failed to update sources:", err);
-    } finally {
-      setUpdating(null);
-    }
+    toggleSourceMutation.mutate({ sportKey, sourceName, newSources });
   }
 
   async function toggleCrawlImages(id: number, crawl_images: boolean) {
-    try {
-      const res = await fetch("/api/settings/sources", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, crawl_images }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCrawlSources((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, crawl_images } : s))
-        );
-      }
-    } catch (err) {
-      console.error("Failed to toggle crawl_images:", err);
-    }
+    toggleCrawlImagesMutation.mutate({ id, crawl_images });
   }
 
-  async function addSource() {
+  function addSource() {
     if (!newName.trim() || !newUrl.trim()) return;
-    setAdding(true);
-    try {
-      const res = await fetch("/api/settings/sources", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim(), base_url: newUrl.trim() }),
-      });
-      const data = await res.json();
-      if (data.id) {
-        setCrawlSources((prev) => [...prev, data]);
-        setNewName("");
-        setNewUrl("");
-      } else {
-        alert(data.error || "新增失敗");
-      }
-    } catch (err) {
-      console.error("Failed to add source:", err);
-    } finally {
-      setAdding(false);
-    }
+    addSourceMutation.mutate();
   }
 
-  async function deleteSource(id: number, name: string) {
+  function deleteSource(id: number, name: string) {
     if (!confirm(`確定刪除「${name}」？`)) return;
-    try {
-      const res = await fetch(`/api/settings/sources?id=${id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCrawlSources((prev) => prev.filter((s) => s.id !== id));
-        const updatedSettings = { ...settings };
-        for (const key of Object.keys(updatedSettings)) {
-          const sources = updatedSettings[key].sources.filter((s) => s !== name);
-          if (sources.length !== updatedSettings[key].sources.length) {
-            updatedSettings[key] = { ...updatedSettings[key], sources };
-            fetch("/api/settings/sports", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ sport_key: key, sources }),
-            }).catch((err) => console.error("Failed to update sport sources after delete:", err));
-          }
-        }
-        setSettings(updatedSettings);
-      }
-    } catch (err) {
-      console.error("Failed to delete:", err);
-    }
+    deleteSourceMutation.mutate({ id, name });
   }
 
   async function triggerCrawl(source: CrawlSource) {
@@ -190,62 +244,13 @@ export default function SportsSettingsPage() {
     }
   }
 
-  async function saveEdit(id: number, oldName: string) {
+  function saveEdit(id: number, oldName: string) {
     if (!editName.trim() || !editUrl.trim()) return;
-    try {
-      const res = await fetch("/api/settings/sources", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, name: editName.trim(), base_url: editUrl.trim() }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCrawlSources((prev) =>
-          prev.map((s) =>
-            s.id === id ? { ...s, name: editName.trim(), base_url: editUrl.trim() } : s
-          )
-        );
-        if (oldName !== editName.trim()) {
-          const updatedSettings = { ...settings };
-          for (const key of Object.keys(updatedSettings)) {
-            const idx = updatedSettings[key].sources.indexOf(oldName);
-            if (idx !== -1) {
-              const newSources = [...updatedSettings[key].sources];
-              newSources[idx] = editName.trim();
-              updatedSettings[key] = { ...updatedSettings[key], sources: newSources };
-              fetch("/api/settings/sports", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sport_key: key, sources: newSources }),
-              }).catch((err) => console.error("Failed to update sport sources after rename:", err));
-            }
-          }
-          setSettings(updatedSettings);
-        }
-        setEditingId(null);
-      }
-    } catch (err) {
-      console.error("Failed to update:", err);
-    }
+    saveEditMutation.mutate({ id, oldName });
   }
 
-  async function saveTitlePrompt(sportKey: SportKey, title_prompt: string) {
-    try {
-      const res = await fetch("/api/settings/sports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sport_key: sportKey, title_prompt }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSettings((prev) => ({
-          ...prev,
-          [sportKey]: { ...prev[sportKey], title_prompt },
-        }));
-      }
-    } catch (err) {
-      console.error("Failed to save title prompt:", err);
-    }
+  function saveTitlePrompt(sportKey: SportKey, title_prompt: string) {
+    saveTitlePromptMutation.mutate({ sportKey, title_prompt });
   }
 
   function handleStartEdit(source: CrawlSource) {
@@ -280,7 +285,7 @@ export default function SportsSettingsPage() {
         crawlResult={crawlResult}
         newName={newName}
         newUrl={newUrl}
-        adding={adding}
+        adding={addSourceMutation.isPending}
         onEditNameChange={setEditName}
         onEditUrlChange={setEditUrl}
         onNewNameChange={setNewName}

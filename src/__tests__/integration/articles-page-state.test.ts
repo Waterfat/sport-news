@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useState, useCallback, useEffect } from "react";
 import { useRewritePolling } from "@/hooks/useRewritePolling";
+import { createQueryWrapper } from "../test-utils";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -188,7 +189,7 @@ describe("filter change resets state", () => {
     const articles = [makeArticle("a1"), makeArticle("a2"), makeArticle("a3")];
     setupDefaultFetch(articles);
 
-    const { result } = renderHook(() => useArticlesPageState());
+    const { result } = renderHook(() => useArticlesPageState(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -221,7 +222,7 @@ describe("pageSize change resets page", () => {
   it("handlePageSizeChange resets page to 1", async () => {
     setupDefaultFetch();
 
-    const { result } = renderHook(() => useArticlesPageState());
+    const { result } = renderHook(() => useArticlesPageState(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -257,7 +258,7 @@ describe("filter during running mode", () => {
       return new Promise(() => {}); // keep polling pending
     });
 
-    const { result } = renderHook(() => useArticlesPageState());
+    const { result } = renderHook(() => useArticlesPageState(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -292,7 +293,7 @@ describe("batch publish", () => {
     const articles = [makeArticle("a1"), makeArticle("a2")];
     setupDefaultFetch(articles);
 
-    const { result } = renderHook(() => useArticlesPageState());
+    const { result } = renderHook(() => useArticlesPageState(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.articles).toHaveLength(2));
 
@@ -321,7 +322,7 @@ describe("single publish", () => {
     const articles = [makeArticle("a1"), makeArticle("a2"), makeArticle("a3")];
     setupDefaultFetch(articles);
 
-    const { result } = renderHook(() => useArticlesPageState());
+    const { result } = renderHook(() => useArticlesPageState(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.articles).toHaveLength(3));
 

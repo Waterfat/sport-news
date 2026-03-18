@@ -2,7 +2,7 @@
  * User Story E2E: 文章管理完整操作流程
  * 模擬管理者從規劃 → 產出 → 篩選 → 發布 → 排程的完整操作情境
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures/reload-verify";
 
 function skipIfNoCredentials() {
   if (!process.env.E2E_USERNAME || !process.env.E2E_PASSWORD) {
@@ -129,7 +129,7 @@ test.describe("規劃 → 產出文章流程", () => {
     }
   });
 
-  test("按下規劃後，任務成功完成且規劃列表出現", async ({ page }) => {
+  test("按下規劃後，任務成功完成且規劃列表出現", async ({ page, verifyAfterReload }) => {
     // 此測試依賴 Mac Mini listener 正在運行
     test.setTimeout(180_000); // 規劃需要 AI 呼叫，給 3 分鐘
 
@@ -229,19 +229,20 @@ test.describe("規劃 → 產出文章流程", () => {
     // plans 可能為空（素材都跟已發布文章重複時是合理結果）
     expect(Array.isArray(plansRes.plans), "規劃 API 應回傳 plans 陣列").toBe(true);
 
-    // 如果有規劃項目，UI 上規劃表格應出現
+    // 如果有規劃項目，UI 上規劃表格應出現，且 reload 後仍持久
     if (plansRes.plans.length > 0) {
-      await page.reload();
-      await expect(page.getByRole("heading", { name: "文章管理" })).toBeVisible({
-        timeout: 15_000,
-      });
+      await verifyAfterReload(async () => {
+        await expect(page.getByRole("heading", { name: "文章管理" })).toBeVisible({
+          timeout: 15_000,
+        });
 
-      const plansTable = page.locator("table").filter({ hasText: /預計標題|預測標題|規劃/ });
-      await expect(plansTable).toBeVisible({ timeout: 10_000 });
+        const plansTable = page.locator("table").filter({ hasText: /預計標題|預測標題|規劃/ });
+        await expect(plansTable).toBeVisible({ timeout: 10_000 });
+      });
     }
   });
 
-  test("產出文章時後端不會回傳 schema / column 錯誤", async ({ page }) => {
+  test("產出文章時後端不會回傳 schema / column 錯誤", async ({ page, verifyAfterReload }) => {
     await page.goto("/admin/articles");
     await expect(page.getByRole("heading", { name: "文章管理" })).toBeVisible({
       timeout: 15_000,
@@ -300,13 +301,15 @@ test.describe("規劃 → 產出文章流程", () => {
       `出現錯誤 alert: "${errorDialog?.message ?? ""}"`
     ).toBeUndefined();
 
-    // 如果 201 成功，驗證 UI 進入產出中狀態
+    // 如果 201 成功，驗證 UI 進入產出中狀態，且 reload 後狀態持久
     if (status === 201) {
-      await expect(
-        page.getByRole("button", { name: "產出中..." }).or(
-          page.getByText("文章產出中")
-        )
-      ).toBeVisible({ timeout: 5000 });
+      await verifyAfterReload(async () => {
+        await expect(
+          page.getByRole("button", { name: "產出中..." }).or(
+            page.getByText("文章產出中")
+          )
+        ).toBeVisible({ timeout: 5000 });
+      });
     }
   });
 });

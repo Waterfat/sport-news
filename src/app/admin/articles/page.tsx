@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryState, parseAsInteger, parseAsString } from "nuqs";
 import {
   Select,
   SelectContent,
@@ -22,42 +24,40 @@ import { useRewritePolling } from "@/hooks/useRewritePolling";
 import { usePlanManager } from "@/hooks/usePlanManager";
 
 export default function ArticlesPage() {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [status, setStatus] = useState<string>("all");
-  const [category, setCategory] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+  const [pageSize, setPageSize] = useQueryState("pageSize", parseAsInteger.withDefault(20));
+  const [status, setStatus] = useQueryState("status", parseAsString.withDefault("all"));
+  const [category, setCategory] = useQueryState("category", parseAsString.withDefault("all"));
   const [jumpInput, setJumpInput] = useState("");
 
   // 批次選取
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [batchLoading, setBatchLoading] = useState(false);
 
   // 單篇發布 loading
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set());
 
-  const fetchArticles = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: pageSize.toString(),
-    });
-    if (status !== "all") params.set("status", status);
-    if (category !== "all") params.set("category", category);
-
-    try {
+  const { data, isLoading: loading } = useQuery<{ articles: Article[]; total: number }>({
+    queryKey: ["articles", status, category, page, pageSize],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: pageSize.toString(),
+      });
+      if (status !== "all") params.set("status", status);
+      if (category !== "all") params.set("category", category);
       const res = await fetch(`/api/articles/generated?${params}`);
-      const data = await res.json();
-      setArticles(data.articles || []);
-      setTotal(data.total || 0);
-    } catch (err) {
-      console.error("Failed to fetch articles:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, status, category]);
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    },
+  });
+
+  const articles = data?.articles || [];
+  const total = data?.total || 0;
+
+  const invalidateArticles = () => {
+    queryClient.invalidateQueries({ queryKey: ["articles"] });
+  };
 
   const planManager = usePlanManager({
     onProduceSuccess: () => {
@@ -66,22 +66,86 @@ export default function ArticlesPage() {
   });
 
   const rewritePolling = useRewritePolling({
-    onPollComplete: () => {
-      fetchArticles();
-    },
+    onPollComplete: invalidateArticles,
     onPlanPollComplete: () => {
       planManager.fetchPlans();
-      fetchArticles();
+      invalidateArticles();
     },
     onProducePollComplete: () => {
       planManager.fetchPlans();
-      fetchArticles();
+      invalidateArticles();
     },
   });
 
-  useEffect(() => {
-    fetchArticles();
-  }, [fetchArticles]);
+  // --- Batch mutations ---
+  const batchMutation = useMutation({
+    mutationFn: async ({ ids, action }: { ids: string[]; action: "publish" | "delete" }) => {
+      const res = await fetch("/api/articles/generated/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "操作失敗");
+      }
+    },
+    onSuccess: () => {
+      setSelectedIds(new Set());
+      invalidateArticles();
+    },
+    onError: (err) => {
+      alert(err.message);
+    },
+  });
+
+  const publishOneMutation = useMutation({
+    mutationFn: async (articleId: string) => {
+      setPublishingIds((prev) => new Set(prev).add(articleId));
+      const res = await fetch("/api/articles/generated/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [articleId], action: "publish" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "發布失敗");
+      }
+      return articleId;
+    },
+    onSuccess: () => {
+      invalidateArticles();
+    },
+    onError: (err) => {
+      alert(err.message);
+    },
+    onSettled: (_data, _error, articleId) => {
+      setPublishingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(articleId);
+        return next;
+      });
+    },
+  });
+
+  const scheduleOneMutation = useMutation({
+    mutationFn: async ({ articleId, datetime }: { articleId: string; datetime: string }) => {
+      const res = await fetch(`/api/articles/generated/${articleId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduled_at: new Date(datetime).toISOString(),
+        }),
+      });
+      if (!res.ok) throw new Error("排程設定失敗");
+    },
+    onSuccess: () => {
+      invalidateArticles();
+    },
+    onError: (err) => {
+      alert(err.message);
+    },
+  });
 
   // --- Article callbacks ---
 
@@ -109,81 +173,15 @@ export default function ArticlesPage() {
     const labels = { publish: "發布", delete: "刪除" };
     if (!confirm(`確定要將 ${ids.length} 篇文章${labels[action]}？`)) return;
 
-    setBatchLoading(true);
-    try {
-      const res = await fetch("/api/articles/generated/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, action }),
-      });
-      if (res.ok) {
-        setSelectedIds(new Set());
-        fetchArticles();
-      } else {
-        const data = await res.json();
-        alert(data.error || "操作失敗");
-      }
-    } catch {
-      alert("操作失敗");
-    } finally {
-      setBatchLoading(false);
-    }
+    batchMutation.mutate({ ids, action });
   };
 
   const handlePublishOne = async (articleId: string) => {
-    setPublishingIds((prev) => new Set(prev).add(articleId));
-    try {
-      const res = await fetch("/api/articles/generated/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [articleId], action: "publish" }),
-      });
-      if (res.ok) {
-        setArticles((prev) =>
-          prev.map((a) =>
-            a.id === articleId
-              ? { ...a, status: "published", published_at: new Date().toISOString() }
-              : a
-          )
-        );
-      } else {
-        const data = await res.json();
-        alert(data.error || "發布失敗");
-      }
-    } catch {
-      alert("發布失敗");
-    } finally {
-      setPublishingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(articleId);
-        return next;
-      });
-    }
+    publishOneMutation.mutate(articleId);
   };
 
   const handleScheduleOne = async (articleId: string, datetime: string) => {
-    try {
-      const res = await fetch(`/api/articles/generated/${articleId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scheduled_at: new Date(datetime).toISOString(),
-        }),
-      });
-      if (res.ok) {
-        setArticles((prev) =>
-          prev.map((a) =>
-            a.id === articleId
-              ? { ...a, scheduled_at: new Date(datetime).toISOString() }
-              : a
-          )
-        );
-      } else {
-        alert("排程設定失敗");
-      }
-    } catch {
-      alert("排程設定失敗");
-    }
+    scheduleOneMutation.mutate({ articleId, datetime });
   };
 
   const handleStatusChange = (value: string) => {
@@ -297,7 +295,7 @@ export default function ArticlesPage() {
       {/* 批次操作列 */}
       <BatchActionsBar
         selectedCount={selectedIds.size}
-        batchLoading={batchLoading}
+        batchLoading={batchMutation.isPending}
         onPublish={() => handleBatchAction("publish")}
         onDelete={() => handleBatchAction("delete")}
         onClear={() => setSelectedIds(new Set())}

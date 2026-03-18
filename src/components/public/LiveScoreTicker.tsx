@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { SCOREBOARD_POLLING_MS } from "@/lib/constants";
 import type { Game } from "@/lib/scoreboard";
@@ -76,13 +76,9 @@ function TickerGameCard({ game, league }: { game: Game; league: string }) {
 }
 
 export function LiveScoreTicker({ leagues }: { leagues: League[] }) {
-  const [games, setGames] = useState<{ game: Game; league: string }[]>([]);
-  const [loading, setLoading] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const fetchAllGames = useCallback(async (showLoading = false) => {
-    if (showLoading) setLoading(true);
-    try {
+  const { data: games = [], isLoading } = useQuery({
+    queryKey: ["live-ticker", leagues.map((l) => l.key)],
+    queryFn: async () => {
       const results = await Promise.allSettled(
         leagues.map(async (l) => {
           const res = await fetch(`/api/public/scoreboard?league=${l.key}`);
@@ -100,43 +96,14 @@ export function LiveScoreTicker({ leagues }: { leagues: League[] }) {
       const statusOrder: Record<string, number> = { in_progress: 0, scheduled: 1, final: 2 };
       allGames.sort((a, b) => (statusOrder[a.game.status] ?? 2) - (statusOrder[b.game.status] ?? 2));
 
-      setGames(allGames);
-    } catch {
-      // silent fail
-    } finally {
-      setLoading(false);
-    }
-  }, [leagues]);
-
-  const startPolling = useCallback(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    fetchAllGames(true);
-    intervalRef.current = setInterval(() => fetchAllGames(), SCOREBOARD_POLLING_MS);
-  }, [fetchAllGames]);
-
-  useEffect(() => {
-    if (leagues.length === 0) return;
-    startPolling();
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [leagues, startPolling]);
-
-  // Pause polling when hidden
-  useEffect(() => {
-    function handleVisibility() {
-      if (document.visibilityState === "visible") {
-        startPolling();
-      } else {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-      }
-    }
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [startPolling]);
+      return allGames;
+    },
+    enabled: leagues.length > 0,
+    refetchInterval: SCOREBOARD_POLLING_MS,
+  });
 
   // Don't render if no games and not loading
-  if (!loading && games.length === 0) return null;
+  if (!isLoading && games.length === 0) return null;
 
   return (
     <section className="mb-6">
@@ -147,7 +114,7 @@ export function LiveScoreTicker({ leagues }: { leagues: League[] }) {
         </Link>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex gap-3 overflow-hidden">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex-shrink-0 w-[150px] h-[82px] rounded-xl bg-muted animate-pulse" />

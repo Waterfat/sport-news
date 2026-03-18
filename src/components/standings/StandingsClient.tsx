@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useQueryState, parseAsString } from "nuqs";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,18 +30,20 @@ export function StandingsClient({
 }: {
   defaultLeague?: string;
 }) {
-  const [league, setLeague] = useState(defaultLeague);
-  const [groups, setGroups] = useState<StandingsGroup[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [league, setLeague] = useQueryState(
+    "league",
+    parseAsString.withDefault(defaultLeague)
+  );
 
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/public/standings?league=${league}`)
-      .then((r) => r.json())
-      .then((d) => setGroups(d.standings ?? []))
-      .catch(() => setGroups([]))
-      .finally(() => setLoading(false));
-  }, [league]);
+  const { data: groups = [], isLoading } = useQuery({
+    queryKey: ["standings", league],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/standings?league=${league}`);
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.standings ?? []) as StandingsGroup[];
+    },
+  });
 
   // NBA/MLB 常見 stat keys
   const statKeys =
@@ -75,7 +78,6 @@ export function StandingsClient({
     if (!value) return undefined;
     const num = parseFloat(value);
     if (isNaN(num)) return undefined;
-    // Map 0.0-1.0 to a green intensity
     const intensity = Math.round(num * 100);
     const alpha = Math.min(0.25, num * 0.3);
     if (intensity > 50) {
@@ -97,7 +99,7 @@ export function StandingsClient({
 
   return (
     <div className="space-y-4">
-      <Tabs value={league} onValueChange={setLeague}>
+      <Tabs value={league} onValueChange={(v) => setLeague(v)}>
         <TabsList>
           {LEAGUE_OPTIONS.map((opt) => (
             <TabsTrigger key={opt.value} value={opt.value}>
@@ -108,7 +110,7 @@ export function StandingsClient({
 
         {LEAGUE_OPTIONS.map((opt) => (
           <TabsContent key={opt.value} value={opt.value}>
-            {loading ? (
+            {isLoading ? (
               <div className="flex justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
               </div>

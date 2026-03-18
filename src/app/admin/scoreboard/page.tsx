@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,51 +42,80 @@ const EMPTY_FORM = {
 };
 
 export default function AdminScoreboardPage() {
-  const [configs, setConfigs] = useState<ScoreboardConfig[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
-  const fetchConfigs = useCallback(async () => {
-    try {
+  const { data, isLoading } = useQuery<{ configs: ScoreboardConfig[] }>({
+    queryKey: ["scoreboard-configs"],
+    queryFn: async () => {
       const res = await fetch("/api/settings/scoreboard");
-      if (res.ok) {
-        const json = await res.json();
-        setConfigs(json.configs ?? []);
-      }
-    } catch (err) {
-      console.error("Fetch scoreboard configs error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    },
+  });
 
-  useEffect(() => {
-    fetchConfigs();
-  }, [fetchConfigs]);
+  const configs = data?.configs ?? [];
 
-  async function handleToggle(config: ScoreboardConfig) {
-    try {
+  const toggleMutation = useMutation({
+    mutationFn: async (config: ScoreboardConfig) => {
       const res = await fetch("/api/settings/scoreboard", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: config.id, enabled: !config.enabled }),
       });
-      if (res.ok) {
-        setConfigs((prev) =>
-          prev.map((c) =>
-            c.id === config.id ? { ...c, enabled: !c.enabled } : c
-          )
-        );
-      } else {
-        alert("更新失敗");
-      }
-    } catch {
+      if (!res.ok) throw new Error("更新失敗");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scoreboard-configs"] });
+    },
+    onError: () => {
       alert("更新失敗");
-    }
-  }
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const method = editingId ? "PUT" : "POST";
+      const payload = editingId ? { id: editingId, ...form } : form;
+      const res = await fetch("/api/settings/scoreboard", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "儲存失敗");
+      }
+    },
+    onSuccess: () => {
+      setDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["scoreboard-configs"] });
+    },
+    onError: (err) => {
+      alert(err.message);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch("/api/settings/scoreboard", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error("刪除失敗");
+    },
+    onSuccess: () => {
+      setDeleteConfirmId(null);
+      queryClient.invalidateQueries({ queryKey: ["scoreboard-configs"] });
+    },
+    onError: () => {
+      alert("刪除失敗");
+    },
+  });
 
   function openCreate() {
     setEditingId(null);
@@ -105,56 +135,15 @@ export default function AdminScoreboardPage() {
     setDialogOpen(true);
   }
 
-  async function handleSave() {
-    const method = editingId ? "PUT" : "POST";
-    const payload = editingId ? { id: editingId, ...form } : form;
-
-    try {
-      const res = await fetch("/api/settings/scoreboard", {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        setDialogOpen(false);
-        fetchConfigs();
-      } else {
-        const json = await res.json();
-        alert(json.error || "儲存失敗");
-      }
-    } catch {
-      alert("儲存失敗");
-    }
-  }
-
-  async function handleDelete() {
-    if (!deleteConfirmId) return;
-    try {
-      const res = await fetch("/api/settings/scoreboard", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: deleteConfirmId }),
-      });
-      if (res.ok) {
-        setDeleteConfirmId(null);
-        fetchConfigs();
-      } else {
-        alert("刪除失敗");
-      }
-    } catch {
-      alert("刪除失敗");
-    }
-  }
-
   function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    handleSave();
+    saveMutation.mutate();
   }
 
   function handleFormKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSave();
+      saveMutation.mutate();
     }
   }
 
@@ -165,7 +154,7 @@ export default function AdminScoreboardPage() {
         <Button onClick={openCreate}>+ 新增比分來源</Button>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="text-center py-10 text-slate-400">載入中...</div>
       ) : configs.length === 0 ? (
         <div className="text-center py-10 text-slate-400">
@@ -198,7 +187,7 @@ export default function AdminScoreboardPage() {
                   <TableCell>
                     <Switch
                       checked={config.enabled}
-                      onCheckedChange={() => handleToggle(config)}
+                      onCheckedChange={() => toggleMutation.mutate(config)}
                     />
                   </TableCell>
                   <TableCell>
@@ -330,7 +319,7 @@ export default function AdminScoreboardPage() {
             >
               取消
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button variant="destructive" onClick={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)}>
               刪除
             </Button>
           </DialogFooter>

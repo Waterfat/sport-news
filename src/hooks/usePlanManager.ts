@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PlanItem, RawArticleInfo } from "@/components/admin/PlansTable";
 
 interface UsePlanManagerOptions {
@@ -8,87 +9,104 @@ interface UsePlanManagerOptions {
 }
 
 export function usePlanManager(options: UsePlanManagerOptions = {}) {
-  const [plans, setPlans] = useState<PlanItem[]>([]);
-  const [rawArticleMap, setRawArticleMap] = useState<Record<string, RawArticleInfo>>({});
-  const [earliestCrawledAt, setEarliestCrawledAt] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
-  const [planLoading, setPlanLoading] = useState(false);
 
-  const fetchPlans = useCallback(async () => {
-    try {
+  const { data: planData, isLoading: planLoading } = useQuery<{
+    plans: PlanItem[];
+    rawArticleMap: Record<string, RawArticleInfo>;
+    earliestCrawledAt: string | null;
+  }>({
+    queryKey: ["rewrite-plans"],
+    queryFn: async () => {
       const res = await fetch("/api/rewrite/plan");
-      if (res.ok) {
-        const data = await res.json();
-        setPlans(data.plans || []);
-        setRawArticleMap(data.rawArticleMap || {});
-        setEarliestCrawledAt(data.earliestCrawledAt || null);
-      }
-    } catch (err) {
-      console.error("Failed to fetch plans:", err);
-    }
-  }, []);
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    },
+  });
 
-  useEffect(() => {
-    fetchPlans();
-  }, [fetchPlans]);
+  const plans = planData?.plans || [];
+  const rawArticleMap = planData?.rawArticleMap || {};
+  const earliestCrawledAt = planData?.earliestCrawledAt || null;
+
+  const fetchPlans = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["rewrite-plans"] });
+  }, [queryClient]);
 
   const clearPlans = useCallback(() => {
-    setPlans([]);
+    queryClient.setQueryData(["rewrite-plans"], {
+      plans: [],
+      rawArticleMap: {},
+      earliestCrawledAt: null,
+    });
     setSelectedPlanIds(new Set());
-  }, []);
+  }, [queryClient]);
+
+  const produceMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await fetch("/api/rewrite/plan/produce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "產出失敗");
+      return ids;
+    },
+    onSuccess: (ids) => {
+      // Remove produced plans from cache optimistically
+      queryClient.setQueryData(["rewrite-plans"], (old: typeof planData) => {
+        if (!old) return old;
+        return {
+          ...old,
+          plans: old.plans.filter((p) => !ids.includes(p.id)),
+        };
+      });
+      setSelectedPlanIds(new Set());
+    },
+    onError: (err) => {
+      alert(err.message);
+      options.onProduceSuccess?.([]); // signal failure to reset runningMode
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await fetch("/api/rewrite/plan", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error("delete failed");
+    },
+    onSuccess: () => {
+      setSelectedPlanIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["rewrite-plans"] });
+    },
+    onError: () => {
+      alert("移除失敗");
+    },
+  });
 
   const handlePlanProduce = useCallback(
     async (onStartPolling: () => void) => {
       const ids = Array.from(selectedPlanIds);
       if (ids.length === 0) return;
-      setPlanLoading(true);
-      try {
-        const res = await fetch("/api/rewrite/plan/produce", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          alert(data.error || "產出失敗");
-          options.onProduceSuccess?.([]); // signal failure to reset runningMode
-          return;
-        }
-        setPlans((prev) => prev.filter((p) => !ids.includes(p.id)));
-        setSelectedPlanIds(new Set());
-        onStartPolling();
-      } catch {
-        alert("產出失敗");
-        options.onProduceSuccess?.([]); // signal failure to reset runningMode
-      } finally {
-        setPlanLoading(false);
-      }
+      produceMutation.mutate(ids, {
+        onSuccess: () => {
+          onStartPolling();
+        },
+      });
     },
-    [selectedPlanIds, options]
+    [selectedPlanIds, produceMutation]
   );
 
   const handlePlanDelete = useCallback(async () => {
     const ids = Array.from(selectedPlanIds);
     if (ids.length === 0) return;
     if (!confirm(`確定要移除 ${ids.length} 個規劃項目？`)) return;
-
-    setPlanLoading(true);
-    try {
-      const res = await fetch("/api/rewrite/plan", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
-      if (res.ok) {
-        setSelectedPlanIds(new Set());
-        fetchPlans();
-      }
-    } catch {
-      alert("移除失敗");
-    } finally {
-      setPlanLoading(false);
-    }
-  }, [selectedPlanIds, fetchPlans]);
+    deleteMutation.mutate(ids);
+  }, [selectedPlanIds, deleteMutation]);
 
   const togglePlanSelect = useCallback((id: string) => {
     setSelectedPlanIds((prev) => {

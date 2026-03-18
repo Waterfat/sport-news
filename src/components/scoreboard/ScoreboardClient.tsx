@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useQueryState, parseAsString } from "nuqs";
 import ScoreCard from "./ScoreCard";
 import ScoreCardSkeleton from "./ScoreCardSkeleton";
 import DatePicker, { getTodayStr } from "./DatePicker";
@@ -23,85 +24,40 @@ export default function ScoreboardClient({
 }: {
   initialLeagues: League[];
 }) {
-  const [leagues] = useState<League[]>(initialLeagues);
-  const [activeLeague, setActiveLeague] = useState<string>(
-    initialLeagues[0]?.key ?? ""
+  const [activeLeague, setActiveLeague] = useQueryState(
+    "league",
+    parseAsString.withDefault(initialLeagues[0]?.key ?? "")
   );
-  const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
-  const [data, setData] = useState<ScoreboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<string>("");
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [selectedDate, setSelectedDate] = useQueryState(
+    "date",
+    parseAsString.withDefault(getTodayStr())
+  );
 
   const isToday = selectedDate === getTodayStr();
 
-  const fetchData = useCallback(
-    async (league: string, date: string, showLoading = false) => {
-      if (!league) return;
-      if (showLoading) setLoading(true);
-      try {
-        const dateParam = date === getTodayStr() ? "" : `&date=${date}`;
-        const res = await fetch(
-          `/api/public/scoreboard?league=${league}${dateParam}`
-        );
-        if (res.ok) {
-          const json: ScoreboardData = await res.json();
-          setData(json);
-          setLastUpdated(
-            new Date().toLocaleTimeString("zh-TW", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          );
-        }
-      } catch (err) {
-        console.error("Scoreboard fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
+  const { data, isLoading, dataUpdatedAt } = useQuery({
+    queryKey: ["scoreboard", activeLeague, selectedDate],
+    queryFn: async () => {
+      if (!activeLeague) return null;
+      const dateParam = selectedDate === getTodayStr() ? "" : `&date=${selectedDate}`;
+      const res = await fetch(
+        `/api/public/scoreboard?league=${activeLeague}${dateParam}`
+      );
+      if (!res.ok) throw new Error("fetch failed");
+      return (await res.json()) as ScoreboardData;
     },
-    []
-  );
+    enabled: !!activeLeague,
+    refetchInterval: isToday ? SCOREBOARD_POLLING_MS : false,
+  });
 
-  // Start/reset polling (only for today)
-  const startPolling = useCallback(
-    (league: string, date: string) => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      fetchData(league, date, true);
-      // Only poll for today's games
-      if (date === getTodayStr()) {
-        intervalRef.current = setInterval(
-          () => fetchData(league, date),
-          SCOREBOARD_POLLING_MS
-        );
-      }
-    },
-    [fetchData]
-  );
+  const lastUpdated = dataUpdatedAt
+    ? new Date(dataUpdatedAt).toLocaleTimeString("zh-TW", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
-  // Tab / date switch
-  useEffect(() => {
-    if (activeLeague) startPolling(activeLeague, selectedDate);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [activeLeague, selectedDate, startPolling]);
-
-  // Visibility API: pause when hidden, resume when visible
-  useEffect(() => {
-    function handleVisibility() {
-      if (document.visibilityState === "visible") {
-        startPolling(activeLeague, selectedDate);
-      } else {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-      }
-    }
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibility);
-  }, [activeLeague, selectedDate, startPolling]);
-
-  if (leagues.length === 0) {
+  if (initialLeagues.length === 0) {
     return (
       <div className="text-center py-20">
         <div className="text-5xl mb-4">🏟️</div>
@@ -143,7 +99,7 @@ export default function ScoreboardClient({
 
       {/* Tabs */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto scrollbar-hide pb-1">
-        {leagues.map((league) => (
+        {initialLeagues.map((league) => (
           <button
             key={league.key}
             onClick={() => setActiveLeague(league.key)}
@@ -159,7 +115,7 @@ export default function ScoreboardClient({
       </div>
 
       {/* Content */}
-      {loading ? (
+      {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <ScoreCardSkeleton key={i} />

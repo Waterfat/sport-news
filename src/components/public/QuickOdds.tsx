@@ -1,25 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { Game } from "@/lib/scoreboard";
 
 export function QuickOdds() {
-  const [games, setGames] = useState<Game[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/public/scoreboard?league=nba")
-      .then((r) => r.json())
-      .then((d) => {
-        const allGames: Game[] = d.games ?? [];
-        const upcoming = allGames.filter((g) => g.status !== "final");
-        const display = upcoming.length > 0 ? upcoming.slice(0, 3) : allGames.slice(0, 3);
-        setGames(display);
-      })
-      .catch(() => setGames([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: games = [], isLoading } = useQuery({
+    queryKey: ["scoreboard", "nba"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/scoreboard?league=nba");
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      const allGames: Game[] = d.games ?? [];
+      const upcoming = allGames.filter((g) => g.status !== "final");
+      return upcoming.length > 0 ? upcoming.slice(0, 3) : allGames.slice(0, 3);
+    },
+  });
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -30,7 +26,7 @@ export function QuickOdds() {
         </Link>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-12 rounded bg-muted animate-pulse" />

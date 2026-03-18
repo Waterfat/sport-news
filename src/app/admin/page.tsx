@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CHANNEL_TYPE_LABELS } from "@/lib/constants";
@@ -26,22 +26,20 @@ interface Stats {
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: stats, isLoading, error } = useQuery<Stats>({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/stats");
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    },
+  });
 
-  useEffect(() => {
-    fetch("/api/dashboard/stats")
-      .then((res) => res.json())
-      .then(setStats)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="text-center py-12 text-gray-500">載入中...</div>;
   }
 
-  if (!stats) {
+  if (error || !stats) {
     return (
       <div className="text-center py-12 text-red-500">
         無法載入統計資料，請確認 Supabase 連線設定

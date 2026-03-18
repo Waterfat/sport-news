@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime, getFirstImageUrl } from "@/lib/constants";
@@ -42,15 +43,17 @@ export function PersonalizedArticleGrid({
   articles: ArticleItem[];
 }) {
   const { data: session } = useSession();
-  const [favorites, setFavorites] = useState<FavoriteTeam[]>([]);
 
-  useEffect(() => {
-    if (!session?.user) return;
-    fetch("/api/member/favorites")
-      .then((r) => r.json())
-      .then((d) => setFavorites(d.favorites ?? []))
-      .catch(() => {});
-  }, [session]);
+  const { data: favorites = [] } = useQuery({
+    queryKey: ["favorites"],
+    queryFn: async () => {
+      const res = await fetch("/api/member/favorites");
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.favorites ?? []) as FavoriteTeam[];
+    },
+    enabled: !!session?.user,
+  });
 
   const sortedArticles = useMemo(() => {
     if (favorites.length === 0) return articles;

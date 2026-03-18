@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { usePlanManager } from "@/hooks/usePlanManager";
 import type { PlanItem, RawArticleInfo } from "@/components/admin/PlansTable";
+import { createQueryWrapper } from "../test-utils";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -33,22 +34,23 @@ beforeEach(() => {
 });
 
 describe("usePlanManager - initial state", () => {
-  it("starts with empty plans, empty rawArticleMap, empty selection, and planLoading false", () => {
-    // Keep fetch pending so we see initial state
+  it("starts with empty plans, empty rawArticleMap, empty selection, and planLoading true (fetching)", () => {
+    // Keep fetch pending so we see initial loading state
     mockFetch.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     expect(result.current.plans).toEqual([]);
     expect(result.current.rawArticleMap).toEqual({});
     expect(result.current.selectedPlanIds.size).toBe(0);
-    expect(result.current.planLoading).toBe(false);
+    // TanStack Query isLoading is true while the initial fetch is in flight
+    expect(result.current.planLoading).toBe(true);
   });
 
   it("exposes all required handlers", () => {
     mockFetch.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     expect(typeof result.current.fetchPlans).toBe("function");
     expect(typeof result.current.clearPlans).toBe("function");
@@ -69,7 +71,7 @@ describe("usePlanManager - fetchPlans", () => {
       json: async () => ({ plans, rawArticleMap }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(result.current.plans).toHaveLength(2);
@@ -86,7 +88,7 @@ describe("usePlanManager - fetchPlans", () => {
       json: async () => ({}),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -99,7 +101,7 @@ describe("usePlanManager - fetchPlans", () => {
   it("does not throw when fetch rejects", async () => {
     mockFetch.mockRejectedValueOnce(new Error("Network failure"));
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0));
@@ -116,15 +118,15 @@ describe("usePlanManager - fetchPlans", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ plans: firstPlans, rawArticleMap: {} }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ plans: secondPlans, rawArticleMap: {} }) });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(1));
 
-    await act(async () => {
-      await result.current.fetchPlans();
+    act(() => {
+      result.current.fetchPlans();
     });
 
-    expect(result.current.plans).toHaveLength(2);
+    await waitFor(() => expect(result.current.plans).toHaveLength(2));
   });
 });
 
@@ -136,7 +138,7 @@ describe("usePlanManager - clearPlans", () => {
       json: async () => ({ plans, rawArticleMap: {} }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
 
@@ -158,7 +160,7 @@ describe("usePlanManager - togglePlanSelect", () => {
       json: async () => ({ plans: [makePlan("plan-1")], rawArticleMap: {} }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(1));
 
@@ -173,7 +175,7 @@ describe("usePlanManager - togglePlanSelect", () => {
       json: async () => ({ plans: [makePlan("plan-1")], rawArticleMap: {} }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(1));
 
@@ -191,7 +193,7 @@ describe("usePlanManager - togglePlanSelect", () => {
       json: async () => ({ plans, rawArticleMap: {} }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(3));
 
@@ -215,7 +217,7 @@ describe("usePlanManager - togglePlanSelectAll", () => {
       json: async () => ({ plans, rawArticleMap: {} }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(3));
 
@@ -234,7 +236,7 @@ describe("usePlanManager - togglePlanSelectAll", () => {
       json: async () => ({ plans, rawArticleMap: {} }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
 
@@ -254,7 +256,7 @@ describe("usePlanManager - togglePlanSelectAll", () => {
       json: async () => ({ plans, rawArticleMap: {} }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(3));
 
@@ -286,7 +288,7 @@ describe("usePlanManager - handlePlanDelete", () => {
 
     vi.mocked(confirm).mockReturnValueOnce(true);
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
 
@@ -314,7 +316,7 @@ describe("usePlanManager - handlePlanDelete", () => {
 
     vi.mocked(confirm).mockReturnValueOnce(true);
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
 
@@ -334,7 +336,7 @@ describe("usePlanManager - handlePlanDelete", () => {
       json: async () => ({ plans: [makePlan("p1")], rawArticleMap: {} }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(1));
 
@@ -353,7 +355,7 @@ describe("usePlanManager - handlePlanDelete", () => {
 
     vi.mocked(confirm).mockReturnValueOnce(false);
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(1));
 
@@ -381,7 +383,7 @@ describe("usePlanManager - handlePlanDelete", () => {
 
     vi.mocked(confirm).mockReturnValueOnce(true);
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
 
@@ -403,7 +405,7 @@ describe("usePlanManager - handlePlanProduce", () => {
       json: async () => ({ plans: [makePlan("p1")], rawArticleMap: {} }),
     });
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(1));
 
@@ -423,7 +425,7 @@ describe("usePlanManager - handlePlanProduce", () => {
 
     vi.mocked(confirm).mockReturnValueOnce(true);
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
 
@@ -455,7 +457,7 @@ describe("usePlanManager - handlePlanProduce", () => {
 
     vi.mocked(confirm).mockReturnValueOnce(true);
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(1));
 
@@ -476,7 +478,7 @@ describe("usePlanManager - handlePlanProduce", () => {
 
     vi.mocked(confirm).mockReturnValueOnce(true);
 
-    const { result } = renderHook(() => usePlanManager());
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
 
