@@ -6,7 +6,7 @@ export const runtime = "edge";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
-    const title = searchParams.get("title") || "小豪哥體育資訊網";
+    const title = searchParams.get("title") || "超級運動資訊網";
     const subtitle = searchParams.get("subtitle") || "";
     const type = searchParams.get("type") || "article";
 
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
                 display: "flex",
               }}
             >
-              小豪哥體育資訊網
+              超級運動資訊網
             </div>
             <div
               style={{

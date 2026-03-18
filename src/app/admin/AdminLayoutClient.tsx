@@ -36,7 +36,7 @@ export default function AdminLayout({
               <Link href="/admin" className="flex items-center">
                 <Image
                   src="/logo.png"
-                  alt="小豪哥體育資訊網 後台"
+                  alt="超級運動資訊網 後台"
                   width={224}
                   height={40}
                   className="h-7 w-auto"

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, formatDateFull, formatRelativeTime, getCategorySlug, getFirstImageUrl, SITE_URL } from "@/lib/constants";
+import { CATEGORY_COLORS, formatDateFull, formatRelativeTime, getCategorySlug, getFirstImageUrl, SITE_NAME, SITE_URL } from "@/lib/constants";
 import ViewTracker from "./ViewTracker";
 import LikeButton from "./LikeButton";
 import { TelegramArticleCTA } from "@/components/TelegramCTA";
@@ -53,7 +53,7 @@ export async function generateMetadata({
   const article = await getArticle(slug);
 
   if (!article) {
-    return { title: "文章未找到 - 小豪哥體育資訊網" };
+    return { title: "文章未找到 - 超級運動資訊網" };
   }
 
   const description = getContentExcerpt(article.content);
@@ -62,7 +62,7 @@ export async function generateMetadata({
   const ogImageUrl = `${SITE_URL}/api/og?title=${encodeURIComponent(article.title)}&subtitle=${encodeURIComponent(article.category || "")}&type=article`;
 
   return {
-    title: `${article.title} - 小豪哥體育資訊網`,
+    title: `${article.title} - 超級運動資訊網`,
     description,
     alternates: {
       canonical: articleUrl,
@@ -76,7 +76,7 @@ export async function generateMetadata({
       authors: article.writer_personas?.name
         ? [article.writer_personas.name]
         : undefined,
-      siteName: "小豪哥體育資訊網",
+      siteName: SITE_NAME,
       locale: "zh_TW",
       images: [{ url: ogImageUrl, width: 1200, height: 630 }],
     },
@@ -142,7 +142,7 @@ export default async function ArticlePage({
     author: writer ? { "@type": "Person", name: writer.name } : undefined,
     publisher: {
       "@type": "Organization",
-      name: "小豪哥體育資訊網",
+      name: SITE_NAME,
     },
     mainEntityOfPage: {
       "@type": "WebPage",

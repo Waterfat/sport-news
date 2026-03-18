@@ -5,7 +5,7 @@ import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime, getFirst
 import { SearchInput } from "./SearchInput";
 
 export const metadata: Metadata = {
-  title: "搜尋文章 - 小豪哥體育資訊網",
+  title: "搜尋文章 - 超級運動資訊網",
 };
 
 interface SearchResult {

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, formatDateShort } from "@/lib/constants";
+import { CATEGORY_COLORS, formatDateShort, SITE_NAME } from "@/lib/constants";
 
 async function getWriter(id: string) {
   const supabase = createServiceClient();
@@ -23,16 +23,16 @@ export async function generateMetadata({
   const writer = await getWriter(id);
 
   if (!writer) {
-    return { title: "作者未找到 - 小豪哥體育資訊網" };
+    return { title: "作者未找到 - ${SITE_NAME}" };
   }
 
   return {
-    title: `${writer.name} - 小豪哥體育資訊網 作者`,
+    title: `${writer.name} - ${SITE_NAME} 作者`,
     description: writer.description || `閱讀 ${writer.name} 的體育報導`,
     openGraph: {
-      title: `${writer.name} - 小豪哥體育資訊網 作者`,
+      title: `${writer.name} - ${SITE_NAME} 作者`,
       description: writer.description || `閱讀 ${writer.name} 的體育報導`,
-      siteName: "小豪哥體育資訊網",
+      siteName: SITE_NAME,
     },
   };
 }

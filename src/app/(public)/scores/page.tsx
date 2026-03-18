@@ -3,7 +3,7 @@ import ScoreboardClient from "@/components/scoreboard/ScoreboardClient";
 import { createServiceClient } from "@/lib/supabase";
 
 export const metadata: Metadata = {
-  title: "即時比分 — 小豪哥體育資訊網",
+  title: "即時比分 — 超級運動資訊網",
   description: "NBA、MLB 即時比分，自動更新賽事資訊",
 };
 

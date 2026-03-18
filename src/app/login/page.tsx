@@ -43,7 +43,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <Image
             src="/logo.png"
-            alt="小豪哥體育資訊網"
+            alt="超級運動資訊網"
             width={336}
             height={60}
             className="h-12 w-auto mx-auto mb-2"

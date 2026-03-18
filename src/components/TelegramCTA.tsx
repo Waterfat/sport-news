@@ -20,7 +20,7 @@ export function TelegramBanner() {
               即時體育新聞直送手機
             </h2>
             <p className="text-white/75 text-xs sm:text-sm truncate">
-              加入 Telegram 頻道「跟著小豪哥一起看球」
+              加入 Telegram 頻道「超級運動資訊網」
             </p>
           </div>
           <Link
