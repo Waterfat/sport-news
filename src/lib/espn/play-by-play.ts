@@ -194,8 +194,31 @@ export async function fetchBoxScore(
 // ---------- Leaders ----------
 
 function parseLeaders(data: SummaryResponse): TeamLeaders[] {
-  const competitors = data.header?.competitions?.[0]?.competitors ?? [];
+  // Leaders data is at top-level data.leaders, NOT header.competitions[].competitors[].leaders
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const topLeaders: any[] = (data as any).leaders ?? [];
 
+  if (topLeaders.length > 0) {
+    return topLeaders.map((teamGroup: any) => {
+      const team = teamGroup.team ?? {};
+      const leaders: GameLeader[] = (teamGroup.leaders ?? []).map((cat: any) => {
+        const topAthlete = cat.leaders?.[0] ?? {};
+        return {
+          category: cat.name ?? cat.displayName ?? "",
+          displayName: topAthlete.athlete?.displayName ?? "",
+          displayValue: topAthlete.displayValue ?? "",
+        };
+      });
+      return {
+        teamName: getTeamNameZh(team.displayName ?? ""),
+        logo: team.logo ?? team.logos?.[0]?.href ?? "",
+        leaders,
+      };
+    });
+  }
+
+  // Fallback: try header.competitions (older API format)
+  const competitors = data.header?.competitions?.[0]?.competitors ?? [];
   return competitors.map((c) => {
     const logo = c.team.logo ?? c.team.logos?.[0]?.href ?? "";
     const leaders: GameLeader[] = (c.leaders ?? []).map((l) => ({
@@ -203,7 +226,6 @@ function parseLeaders(data: SummaryResponse): TeamLeaders[] {
       displayName: l.leaders?.[0]?.athlete?.displayName ?? "",
       displayValue: l.leaders?.[0]?.displayValue ?? "",
     }));
-
     return {
       teamName: getTeamNameZh(c.team.displayName),
       logo,
@@ -340,22 +362,36 @@ export interface SeasonSeriesGame {
   status: string;
 }
 
+export interface SeasonSeriesData {
+  summary: string;
+  seriesScore: string;
+  games: SeasonSeriesGame[];
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function parseSeasonSeries(data: any): SeasonSeriesGame[] {
-  const series: any[] = data.seasonseries ?? [];
-  return series.map((g: any) => {
-    const competitors = g.competitors ?? [];
+function parseSeasonSeries(data: any): SeasonSeriesData | null {
+  const seriesArr: any[] = data.seasonseries ?? [];
+  if (seriesArr.length === 0) return null;
+  const series = seriesArr[0];
+  const events: any[] = series.events ?? [];
+  const games: SeasonSeriesGame[] = events.map((e: any) => {
+    const competitors = e.competitors ?? [];
     const home = competitors.find((c: any) => c.homeAway === "home") ?? competitors[0] ?? {};
     const away = competitors.find((c: any) => c.homeAway === "away") ?? competitors[1] ?? {};
     return {
-      date: g.date ?? "",
+      date: e.date ?? "",
       homeTeam: getTeamNameZh(home.team?.displayName ?? ""),
       awayTeam: getTeamNameZh(away.team?.displayName ?? ""),
       homeScore: home.score ?? "0",
       awayScore: away.score ?? "0",
-      status: g.status?.type?.shortDetail ?? "",
+      status: e.statusType?.shortDetail ?? e.status ?? "",
     };
   });
+  return {
+    summary: series.summary ?? "",
+    seriesScore: series.seriesScore ?? "",
+    games,
+  };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -366,7 +402,7 @@ export async function fetchSeasonSeries(
   league: string,
   eventId: string,
   isCompleted = false
-): Promise<SeasonSeriesGame[]> {
+): Promise<SeasonSeriesData | null> {
   const sportPath = getSportPath(league);
   const ttl = isCompleted ? CACHE_TTL.PBP_FINAL : CACHE_TTL.LIVE;
 
@@ -378,7 +414,7 @@ export async function fetchSeasonSeries(
     return parseSeasonSeries(data);
   } catch (err) {
     console.error("[ESPN] fetchSeasonSeries error:", err);
-    return [];
+    return null;
   }
 }
 
@@ -391,15 +427,36 @@ export interface PickCenterData {
   awayWinPct: number;
 }
 
+/** Convert American moneyline to implied probability */
+function moneyLineToProb(ml: number): number {
+  if (ml === 0) return 0;
+  if (ml < 0) return Math.abs(ml) / (Math.abs(ml) + 100);
+  return 100 / (ml + 100);
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function parsePickCenter(data: any): PickCenterData[] {
   const picks: any[] = data.pickcenter ?? [];
-  return picks.map((p: any) => ({
-    provider: p.provider?.name ?? "",
-    details: p.details ?? "",
-    homeWinPct: p.homeTeamOdds?.winPercentage ?? p.homeTeamOdds?.averageScore ?? 0,
-    awayWinPct: p.awayTeamOdds?.winPercentage ?? p.awayTeamOdds?.averageScore ?? 0,
-  }));
+  return picks.map((p: any) => {
+    const homeMl = p.homeTeamOdds?.moneyLine ?? 0;
+    const awayMl = p.awayTeamOdds?.moneyLine ?? 0;
+    let homeWinPct = p.homeTeamOdds?.winPercentage ?? 0;
+    let awayWinPct = p.awayTeamOdds?.winPercentage ?? 0;
+    // If no winPercentage, derive from moneyLine
+    if (homeWinPct === 0 && awayWinPct === 0 && (homeMl !== 0 || awayMl !== 0)) {
+      const rawHome = moneyLineToProb(homeMl);
+      const rawAway = moneyLineToProb(awayMl);
+      const total = rawHome + rawAway;
+      homeWinPct = total > 0 ? Math.round((rawHome / total) * 100) : 50;
+      awayWinPct = total > 0 ? Math.round((rawAway / total) * 100) : 50;
+    }
+    return {
+      provider: p.provider?.name ?? "",
+      details: p.details ?? "",
+      homeWinPct,
+      awayWinPct,
+    };
+  });
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
