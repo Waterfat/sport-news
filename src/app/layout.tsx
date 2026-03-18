@@ -27,15 +27,15 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://howger-sport.com"),
   title: {
-    default: "小豪哥體育資訊網 - 體育新聞",
-    template: "%s | 小豪哥體育資訊網",
+    default: "超級運動資訊網 - 體育新聞",
+    template: "%s | 超級運動資訊網",
   },
   description: "最新體育新聞、NBA、MLB、足球賽事報導與深度分析",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "小豪哥體育",
+    title: "超級運動",
   },
   icons: {
     icon: "/favicon.ico",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "zh_TW",
-    siteName: "小豪哥體育資訊網",
+    siteName: "超級運動資訊網",
   },
 };
 

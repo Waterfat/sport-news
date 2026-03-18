@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_FALLBACK_IMAGES, CATEGORY_LABELS, formatRelativeTime, getFirstImageUrl } from "@/lib/constants";
+import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_FALLBACK_IMAGES, CATEGORY_LABELS, formatRelativeTime, getFirstImageUrl, SITE_NAME } from "@/lib/constants";
 
 export const revalidate = 60;
 
@@ -60,16 +60,16 @@ export async function generateMetadata({
   const displayLabel = CATEGORY_LABELS[slug];
 
   if (!displayLabel) {
-    return { title: "分類未找到 - 小豪哥體育資訊網" };
+    return { title: "分類未找到 - ${SITE_NAME}" };
   }
 
   return {
-    title: `${displayLabel}新聞 - 小豪哥體育資訊網`,
+    title: `${displayLabel}新聞 - ${SITE_NAME}`,
     description: `閱讀最新的${displayLabel}體育新聞報導`,
     openGraph: {
-      title: `${displayLabel}新聞 - 小豪哥體育資訊網`,
+      title: `${displayLabel}新聞 - ${SITE_NAME}`,
       description: `閱讀最新的${displayLabel}體育新聞報導`,
-      siteName: "小豪哥體育資訊網",
+      siteName: SITE_NAME,
     },
   };
 }
@@ -125,7 +125,7 @@ export default async function CategoryPage({
           </div>
           <h2 className="text-2xl font-bold text-foreground mb-3">敬請期待</h2>
           <p className="text-muted-foreground max-w-md">
-            {displayLabel}新聞即將上線，請持續關注 小豪哥體育資訊網！
+            {displayLabel}新聞即將上線，請持續關注 {SITE_NAME}！
           </p>
           <Link
             href="/"
