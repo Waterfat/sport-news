@@ -65,7 +65,7 @@ export default function PublicLayout({
             </div>
             <div className="border-t border-border pt-3">
               <div className="text-sm text-muted-foreground/60 text-center">
-                &copy; {new Date().getFullYear()} 小豪哥體育資訊網. All rights reserved.
+                &copy; {new Date().getFullYear()} 超級運動資訊網. All rights reserved.
               </div>
             </div>
           </div>

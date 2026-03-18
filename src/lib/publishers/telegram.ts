@@ -39,7 +39,7 @@ export async function publishToTelegram(
     if (link) {
       text += `\n\n📖 <a href="${link}">閱讀全文</a>`;
     }
-    text += `\n\n——————————————\n📢 <a href="${TELEGRAM_CHANNEL_URL}">跟著小豪哥一起看球</a>｜即時體育新聞直送手機`;
+    text += `\n\n——————————————\n📢 <a href="${TELEGRAM_CHANNEL_URL}">超級運動資訊網</a>｜即時體育新聞直送手機`;
 
     const imageUrl = article.images?.[0];
 

@@ -94,7 +94,7 @@ export function PublicHeader() {
             <Link href="/" className="flex items-center flex-shrink-0">
               <Image
                 src="/logo.png"
-                alt="小豪哥體育資訊網"
+                alt="超級運動資訊網"
                 width={280}
                 height={50}
                 className="h-7 sm:h-9 w-auto"

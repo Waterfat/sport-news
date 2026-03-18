@@ -118,6 +118,10 @@ export function getTeamNameZh(englishName: string): string {
   return TEAM_NAME_ZH[englishName] ?? englishName;
 }
 
+export const SITE_NAME = "超級運動資訊網";
+export const SITE_NAME_SHORT = "超級運動";
+export const SITE_DESCRIPTION = "最新體育新聞、NBA、MLB、足球賽事報導與深度分析";
+
 export const SITE_URL =
   (process.env.NEXT_PUBLIC_SITE_URL || "https://howger-sport.com").trim();
 
