@@ -113,7 +113,7 @@ export function TeamDetailClient({
   if (!team) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-500">找不到此球隊</p>
+        <p className="text-muted-foreground">找不到此球隊</p>
         <Link href={`/standings/${sport}`} className="text-blue-600 text-sm mt-2 inline-block">
           返回排名頁
         </Link>
@@ -125,7 +125,7 @@ export function TeamDetailClient({
     <div className="space-y-6">
       <Link
         href={`/standings/${sport}`}
-        className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-blue-600"
       >
         <ArrowLeft className="w-4 h-4" />
         返回排名
@@ -139,15 +139,15 @@ export function TeamDetailClient({
               <img src={team.logo} alt={team.name} className="w-16 h-16" />
             )}
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-slate-900">{team.name}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{team.name}</h1>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary">{team.abbreviation}</Badge>
                 {team.record && (
-                  <span className="text-sm text-slate-500">{team.record}</span>
+                  <span className="text-sm text-muted-foreground">{team.record}</span>
                 )}
               </div>
               {team.standingSummary && (
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {team.standingSummary}
                 </p>
               )}
@@ -204,7 +204,7 @@ export function TeamDetailClient({
         </CardHeader>
         <CardContent className="p-0">
           {roster.length === 0 ? (
-            <p className="p-6 text-slate-400 text-center">暫無球員資料</p>
+            <p className="p-6 text-muted-foreground text-center">暫無球員資料</p>
           ) : (
             <MemberGate
               message="登入查看完整球員名單與數據"
@@ -212,7 +212,7 @@ export function TeamDetailClient({
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-slate-50">
+                      <tr className="border-b bg-muted/50">
                         <th className="text-left py-2 px-3">#</th>
                         <th className="text-left py-2 px-3">球員</th>
                         <th className="text-center py-2 px-3">位置</th>
@@ -222,7 +222,7 @@ export function TeamDetailClient({
                     <tbody>
                       {roster.slice(0, 5).map((p) => (
                         <tr key={p.id} className="border-b">
-                          <td className="py-2 px-3 text-slate-500">{p.jersey}</td>
+                          <td className="py-2 px-3 text-muted-foreground">{p.jersey}</td>
                           <td className="py-2 px-3 font-medium">{p.displayName}</td>
                           <td className="text-center py-2 px-3">{p.position}</td>
                           <td className="text-center py-2 px-3">{p.age}</td>
@@ -244,7 +244,7 @@ export function TeamDetailClient({
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-slate-50">
+                    <tr className="border-b bg-muted/50">
                       <th className="text-left py-2 px-3">#</th>
                       <th className="text-left py-2 px-3">球員</th>
                       <th className="text-center py-2 px-3">位置</th>
@@ -256,7 +256,7 @@ export function TeamDetailClient({
                   <tbody>
                     {roster.map((p) => (
                       <tr key={p.id} className="border-b last:border-0">
-                        <td className="py-2 px-3 text-slate-500">{p.jersey}</td>
+                        <td className="py-2 px-3 text-muted-foreground">{p.jersey}</td>
                         <td className="py-2 px-3">
                           <Link
                             href={`/player/${sport}/${p.id}`}

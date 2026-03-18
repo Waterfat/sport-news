@@ -26,7 +26,7 @@ function StatusBadge({ game }: { game: Game }) {
   }
   if (game.status === "final") {
     return (
-      <div className="text-sm font-medium text-slate-500">
+      <div className="text-sm font-medium text-muted-foreground">
         已結束
       </div>
     );
@@ -49,11 +49,11 @@ function TeamRow({ team, isWinner }: { team: TeamInfo; isWinner: boolean }) {
         className="w-6 h-6 object-contain"
         loading="lazy"
       />
-      <span className="text-sm font-medium text-slate-700 w-10">{team.abbreviation}</span>
-      <span className={`text-sm flex-1 min-w-0 truncate ${isWinner ? "font-semibold text-slate-900" : "text-slate-600"}`}>
+      <span className="text-sm font-medium text-foreground w-10">{team.abbreviation}</span>
+      <span className={`text-sm flex-1 min-w-0 truncate ${isWinner ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
         {team.name}
       </span>
-      <span className={`text-lg tabular-nums ${isWinner ? "font-bold text-slate-900" : "text-slate-600"}`}>
+      <span className={`text-lg tabular-nums ${isWinner ? "font-bold text-foreground" : "text-muted-foreground"}`}>
         {team.score}
       </span>
     </div>
@@ -75,7 +75,7 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
         : "border-l-4 border-l-blue-400";
 
   const content = (
-    <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden ${borderClass} ${league ? "hover:shadow-md transition-all duration-150 active:scale-[0.98] cursor-pointer" : ""}`}>
+    <div className={`bg-card border border-border rounded-xl shadow-sm overflow-hidden ${borderClass} ${league ? "hover:shadow-md transition-all duration-150 active:scale-[0.98] cursor-pointer" : ""}`}>
       {/* Status */}
       <div className="px-4 pt-3 pb-2 flex items-center justify-between">
         <StatusBadge game={game} />
@@ -89,7 +89,7 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
       {/* Teams */}
       <div className="px-4 pb-2">
         <TeamRow team={game.awayTeam} isWinner={awayWins} />
-        <div className="border-t border-slate-100" />
+        <div className="border-t border-border/50" />
         <TeamRow team={game.homeTeam} isWinner={homeWins} />
       </div>
 
@@ -98,30 +98,30 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
         <div className="px-4 pb-2">
           <table className="w-full text-xs tabular-nums">
             <thead>
-              <tr className="text-slate-400">
+              <tr className="text-muted-foreground">
                 <th className="text-left font-normal py-0.5 w-10"></th>
                 {game.homeTeam.linescores.map((ls) => (
                   <th key={ls.period} className="text-center font-normal py-0.5 w-7">
                     {ls.period}
                   </th>
                 ))}
-                <th className="text-center font-medium py-0.5 w-7 text-slate-600">T</th>
+                <th className="text-center font-medium py-0.5 w-7 text-muted-foreground">T</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="text-slate-600">
+              <tr className="text-muted-foreground">
                 <td className="text-left font-medium py-0.5">{game.awayTeam.abbreviation}</td>
                 {game.awayTeam.linescores.map((ls) => (
                   <td key={ls.period} className="text-center py-0.5">{ls.value}</td>
                 ))}
-                <td className={`text-center py-0.5 font-medium ${awayWins ? "text-slate-900" : ""}`}>{game.awayTeam.score}</td>
+                <td className={`text-center py-0.5 font-medium ${awayWins ? "text-foreground" : ""}`}>{game.awayTeam.score}</td>
               </tr>
-              <tr className="text-slate-600">
+              <tr className="text-muted-foreground">
                 <td className="text-left font-medium py-0.5">{game.homeTeam.abbreviation}</td>
                 {game.homeTeam.linescores.map((ls) => (
                   <td key={ls.period} className="text-center py-0.5">{ls.value}</td>
                 ))}
-                <td className={`text-center py-0.5 font-medium ${homeWins ? "text-slate-900" : ""}`}>{game.homeTeam.score}</td>
+                <td className={`text-center py-0.5 font-medium ${homeWins ? "text-foreground" : ""}`}>{game.homeTeam.score}</td>
               </tr>
             </tbody>
           </table>
