@@ -15,8 +15,7 @@ const navItems = [
   { href: "/admin/sports", label: "球種與來源" },
   { href: "/admin/channels", label: "發布頻道" },
   { href: "/admin/scoreboard", label: "即時比分" },
-  { href: "/admin/analytics", label: "成效分析" },
-  { href: "/admin/visitors", label: "訪客分析" },
+  { href: "/admin/analytics", label: "數據分析" },
 ];
 
 export default function AdminLayout({

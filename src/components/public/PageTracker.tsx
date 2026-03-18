@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 const SESSION_KEY = "pv_session_id";
 const SESSION_EXPIRY_KEY = "pv_session_expiry";
@@ -24,22 +25,23 @@ function getSessionId(): string {
 
 export function PageTracker() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const lastTracked = useRef<string>("");
 
   useEffect(() => {
-    // Don't double-track the same path
     if (pathname === lastTracked.current) return;
     lastTracked.current = pathname;
 
     try {
       const sessionId = getSessionId();
       const referrer = document.referrer || "";
+      const memberId = (session?.user as { id?: string } | undefined)?.id || null;
 
-      // Use sendBeacon for fire-and-forget (doesn't block navigation)
       const data = JSON.stringify({
         sessionId,
         path: pathname,
         referrer,
+        memberId,
       });
 
       if (navigator.sendBeacon) {
@@ -53,9 +55,9 @@ export function PageTracker() {
         }).catch(() => {});
       }
     } catch {
-      // Silent fail — analytics should never break the app
+      // Silent fail
     }
-  }, [pathname]);
+  }, [pathname, session]);
 
   return null;
 }
