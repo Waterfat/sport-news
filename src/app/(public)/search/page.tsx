@@ -43,7 +43,7 @@ export default async function SearchPage({
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto bg-card rounded-xl p-6 sm:p-8 shadow-sm">
       <h1 className="text-2xl font-bold text-foreground mb-6">搜尋文章</h1>
 
       <SearchInput defaultValue={query} />
