@@ -16,6 +16,7 @@ const navItems = [
   { href: "/admin/channels", label: "發布頻道" },
   { href: "/admin/scoreboard", label: "即時比分" },
   { href: "/admin/analytics", label: "成效分析" },
+  { href: "/admin/visitors", label: "訪客分析" },
 ];
 
 export default function AdminLayout({
