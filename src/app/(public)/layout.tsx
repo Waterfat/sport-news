@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { PullToRefresh } from "@/components/public/PullToRefresh";
+import { PageTracker } from "@/components/public/PageTracker";
 
 const footerLinks = [
   { href: "/scores", label: "即時比分" },
@@ -25,6 +26,7 @@ export default function PublicLayout({
       {/* Scrollable content area */}
       <div id="scroll-container" className="flex-1 overflow-y-auto overscroll-contain">
         <PullToRefresh scrollContainerId="scroll-container" />
+        <PageTracker />
         {/* Main Content */}
         <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
           {children}
