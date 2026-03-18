@@ -44,6 +44,9 @@ export function PageTracker() {
     lastTracked.current = pathname;
 
     try {
+      // Skip tracking in automated environments (Playwright, Puppeteer, etc.)
+      if ((navigator as { webdriver?: boolean }).webdriver) return;
+
       const visitorId = getVisitorId();
       const sessionId = getSessionId();
       const referrer = document.referrer || "";
@@ -57,16 +60,13 @@ export function PageTracker() {
         memberId,
       });
 
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon("/api/public/pageview", new Blob([data], { type: "application/json" }));
-      } else {
-        fetch("/api/public/pageview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: data,
-          keepalive: true,
-        }).catch(() => {});
-      }
+      // Use fetch instead of sendBeacon so we can set custom headers
+      fetch("/api/public/pageview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: data,
+        keepalive: true,
+      }).catch(() => {});
     } catch {
       // Silent fail
     }

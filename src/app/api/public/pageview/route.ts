@@ -8,16 +8,22 @@ const BOT_PATTERNS = [
   /yandexbot/i, /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i,
   /whatsapp/i, /telegrambot/i, /applebot/i, /mj12bot/i, /ahrefsbot/i,
   /semrushbot/i, /dotbot/i, /petalbot/i, /bytespider/i,
+  /vercel-screenshot/i, /vercel\//i, /lighthouse/i, /pagespeed/i,
 ];
 
 function isBot(ua: string): boolean {
-  return BOT_PATTERNS.some((p) => p.test(ua));
+  if (BOT_PATTERNS.some((p) => p.test(ua))) return true;
+  // Detect automated Chromium: navigator.webdriver is set in automation
+  // but we can't check that server-side. Instead, we rely on the client
+  // sending an `x-is-bot` header (set by PageTracker when webdriver detected)
+  return false;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const userAgent = req.headers.get("user-agent") || "";
-    if (isBot(userAgent)) {
+    const clientIsBot = req.headers.get("x-is-bot") === "1";
+    if (isBot(userAgent) || clientIsBot) {
       return NextResponse.json({ ok: true, filtered: "bot" });
     }
 
