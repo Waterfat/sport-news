@@ -127,6 +127,37 @@ export const SITE_URL =
 
 export const TELEGRAM_CHANNEL_URL = "https://t.me/howger_sport_news";
 
+/** 頁面路徑 → 中文名稱，用於後台分析顯示 */
+const PAGE_NAME_MAP: Record<string, string> = {
+  "/": "首頁",
+  "/scores": "即時比分",
+  "/odds": "賠率",
+  "/search": "搜尋",
+  "/install": "安裝 App",
+  "/settings": "設定",
+  "/privacy": "隱私權政策",
+  "/standings/nba": "NBA 排名",
+  "/standings/mlb": "MLB 排名",
+  "/category/nba": "NBA 新聞",
+  "/category/mlb": "MLB 新聞",
+  "/category/soccer": "足球新聞",
+  "/category/general": "綜合新聞",
+};
+
+export function getPageName(path: string): string {
+  // Exact match
+  if (PAGE_NAME_MAP[path]) return PAGE_NAME_MAP[path];
+  // Pattern match
+  if (path.startsWith("/news/")) return "文章";
+  if (path.startsWith("/game/")) return "比賽詳情";
+  if (path.startsWith("/team/")) return "球隊頁";
+  if (path.startsWith("/player/")) return "球員頁";
+  if (path.startsWith("/writer/")) return "作者頁";
+  if (path.startsWith("/standings/")) return "排名";
+  if (path.startsWith("/category/")) return "分類";
+  return path;
+}
+
 export const CATEGORY_COLORS: Record<string, string> = {
   NBA: "bg-orange-500 text-white rounded-md",
   籃球: "bg-orange-500 text-white rounded-md",
