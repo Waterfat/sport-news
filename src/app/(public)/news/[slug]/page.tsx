@@ -151,7 +151,7 @@ export default async function ArticlePage({
   });
 
   return (
-    <article className="max-w-3xl mx-auto">
+    <article className="max-w-3xl mx-auto bg-card rounded-xl p-6 sm:p-8 shadow-sm">
       {/* JSON-LD structured data for SEO - trusted server-generated content */}
       <script type="application/ld+json" suppressHydrationWarning>
         {jsonLdData}
