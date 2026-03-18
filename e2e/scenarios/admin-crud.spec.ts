@@ -161,9 +161,9 @@ test.describe("原始新聞瀏覽", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 成效分析
+// 數據分析
 // ---------------------------------------------------------------------------
-test.describe("成效分析頁", () => {
+test.describe("數據分析頁", () => {
   test.beforeEach(skipIfNoCredentials);
 
   test("管理者可以查看分析統計", async ({ page }) => {
@@ -219,8 +219,8 @@ test.describe("管理者完整巡覽流程", () => {
     await page.waitForURL("**/admin/channels", { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: "發布頻道" })).toBeVisible();
 
-    // 7. 進入成效分析
-    await page.locator("header").getByRole("link", { name: "成效分析" }).click();
+    // 7. 進入數據分析
+    await page.locator("header").getByRole("link", { name: "數據分析" }).click();
     await page.waitForURL("**/admin/analytics", { timeout: 10_000 });
     await page.waitForLoadState("networkidle", { timeout: 10_000 });
 

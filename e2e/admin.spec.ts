@@ -67,7 +67,7 @@ test.describe("後台導覽列", () => {
     await expect(header.getByRole("link", { name: "寫手管理" })).toBeVisible();
     await expect(header.getByRole("link", { name: "球種與來源" })).toBeVisible();
     await expect(header.getByRole("link", { name: "發布頻道" })).toBeVisible();
-    await expect(header.getByRole("link", { name: "成效分析" })).toBeVisible();
+    await expect(header.getByRole("link", { name: "數據分析" })).toBeVisible();
 
     // Logout button
     await expect(header.getByRole("button", { name: "登出" })).toBeVisible();
