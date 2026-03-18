@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQueryState, parseAsString } from "nuqs";
 import Link from "next/link";
 import { HomeCategoryFilter } from "./HomeCategoryFilter";
 import { PersonalizedArticleGrid } from "./PersonalizedArticleGrid";
@@ -23,7 +24,10 @@ export function HomeArticleSection({
 }: {
   articles: ArticleItem[];
 }) {
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] = useQueryState(
+    "category",
+    parseAsString.withDefault("all")
+  );
   const [transitioning, setTransitioning] = useState(false);
 
   const filtered = useMemo(() => {

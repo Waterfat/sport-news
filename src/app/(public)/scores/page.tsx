@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import ScoreboardClient from "@/components/scoreboard/ScoreboardClient";
 import { createServiceClient } from "@/lib/supabase";
@@ -30,5 +31,9 @@ async function getEnabledLeagues() {
 export default async function ScoresPage() {
   const leagues = await getEnabledLeagues();
 
-  return <ScoreboardClient initialLeagues={leagues} />;
+  return (
+    <Suspense fallback={<div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" /></div>}>
+      <ScoreboardClient initialLeagues={leagues} />
+    </Suspense>
+  );
 }

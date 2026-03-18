@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { getTeamNameZh } from "@/lib/constants";
 
@@ -17,25 +17,22 @@ interface StandingsGroup {
 }
 
 export function QuickStandings() {
-  const [entries, setEntries] = useState<StandingsEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/public/standings?league=nba")
-      .then((r) => r.json())
-      .then((d) => {
-        const groups: StandingsGroup[] = d.standings ?? [];
-        const all = groups.flatMap((g) => g.entries);
-        all.sort((a, b) => {
-          const aWins = parseInt(a.stats.wins ?? "0", 10);
-          const bWins = parseInt(b.stats.wins ?? "0", 10);
-          return bWins - aWins;
-        });
-        setEntries(all.slice(0, 5));
-      })
-      .catch(() => setEntries([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: entries = [], isLoading } = useQuery({
+    queryKey: ["standings", "nba"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/standings?league=nba");
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      const groups: StandingsGroup[] = d.standings ?? [];
+      const all = groups.flatMap((g) => g.entries);
+      all.sort((a, b) => {
+        const aWins = parseInt(a.stats.wins ?? "0", 10);
+        const bWins = parseInt(b.stats.wins ?? "0", 10);
+        return bWins - aWins;
+      });
+      return all.slice(0, 5);
+    },
+  });
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -46,7 +43,7 @@ export function QuickStandings() {
         </Link>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-8 rounded bg-muted animate-pulse" />

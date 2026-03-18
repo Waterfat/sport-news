@@ -9,6 +9,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { useRewritePolling } from "@/hooks/useRewritePolling";
 import { usePlanManager } from "@/hooks/usePlanManager";
 import { POLLING_INTERVAL_MS } from "@/lib/constants";
+import { createQueryWrapper } from "../test-utils";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -86,7 +87,7 @@ describe("triggerPlan → clearPlans cross-hook", () => {
       return new Promise(() => {});
     });
 
-    const { result } = renderHook(() => useCrossHookWiring());
+    const { result } = renderHook(() => useCrossHookWiring(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(result.current.planManager.plans).toHaveLength(3);
@@ -121,7 +122,7 @@ describe("handlePlanProduce → triggerProduce cross-hook", () => {
       return new Promise(() => {});
     });
 
-    const { result } = renderHook(() => useCrossHookWiring());
+    const { result } = renderHook(() => useCrossHookWiring(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(result.current.planManager.plans).toHaveLength(2);
@@ -167,7 +168,7 @@ describe("produce completion → cross-hook refresh", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useCrossHookWiring());
+    const { result } = renderHook(() => useCrossHookWiring(), { wrapper: createQueryWrapper() });
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0));
@@ -239,7 +240,7 @@ describe("plan API failure recovery", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useCrossHookWiring());
+    const { result } = renderHook(() => useCrossHookWiring(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(result.current.planManager.plans).toHaveLength(2);
@@ -271,7 +272,7 @@ describe("plan API failure recovery", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useCrossHookWiring());
+    const { result } = renderHook(() => useCrossHookWiring(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(result.current.planManager.plans).toHaveLength(2);
@@ -305,7 +306,7 @@ describe("produce API failure recovery", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useCrossHookWiring());
+    const { result } = renderHook(() => useCrossHookWiring(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(result.current.planManager.plans).toHaveLength(2);
@@ -339,7 +340,7 @@ describe("produce API failure recovery", () => {
       return { ok: true, json: async () => ({}) };
     });
 
-    const { result } = renderHook(() => useCrossHookWiring());
+    const { result } = renderHook(() => useCrossHookWiring(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
       expect(result.current.planManager.plans).toHaveLength(2);

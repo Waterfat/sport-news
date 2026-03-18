@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, Eye } from "lucide-react";
 
@@ -14,16 +14,15 @@ interface TrendingArticle {
 }
 
 export function TrendingArticles() {
-  const [articles, setArticles] = useState<TrendingArticle[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/public/articles/trending")
-      .then((r) => r.json())
-      .then((d) => setArticles(d.articles ?? []))
-      .catch(() => setArticles([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: articles = [], isLoading } = useQuery({
+    queryKey: ["trending-articles"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/articles/trending");
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      return (d.articles ?? []) as TrendingArticle[];
+    },
+  });
 
   return (
     <div className="bg-card border border-border rounded-xl p-5">
@@ -32,7 +31,7 @@ export function TrendingArticles() {
         熱門文章
       </h3>
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="animate-pulse">

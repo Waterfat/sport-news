@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useQueryState, parseAsInteger, parseAsString } from "nuqs";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -31,38 +33,27 @@ interface RawArticle {
 }
 
 export default function RawArticlesPage() {
-  const [articles, setArticles] = useState<RawArticle[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [source, setSource] = useState("all");
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+  const [pageSize, setPageSize] = useQueryState("pageSize", parseAsInteger.withDefault(20));
+  const [source, setSource] = useQueryState("source", parseAsString.withDefault("all"));
   const [jumpInput, setJumpInput] = useState("");
 
-  const fetchArticles = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: pageSize.toString(),
-    });
-    if (source !== "all") params.set("source", source);
-
-    try {
+  const { data, isLoading } = useQuery<{ articles: RawArticle[]; total: number }>({
+    queryKey: ["raw-articles", page, pageSize, source],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: pageSize.toString(),
+      });
+      if (source !== "all") params.set("source", source);
       const res = await fetch(`/api/articles/raw?${params}`);
-      const data = await res.json();
-      setArticles(data.articles || []);
-      setTotal(data.total || 0);
-    } catch (err) {
-      console.error("Failed to fetch:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, source]);
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    },
+  });
 
-  useEffect(() => {
-    fetchArticles();
-  }, [fetchArticles]);
-
+  const articles = data?.articles || [];
+  const total = data?.total || 0;
   const totalPages = Math.ceil(total / pageSize);
 
   const handleJump = () => {
@@ -117,7 +108,7 @@ export default function RawArticlesPage() {
         </div>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="text-center py-12 text-gray-500">載入中...</div>
       ) : articles.length === 0 ? (
         <div className="text-center py-12 text-gray-500">暫無新聞資料</div>

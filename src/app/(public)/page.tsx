@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createServiceClient } from "@/lib/supabase";
 import { HeroSection } from "@/components/public/HeroSection";
 import { LiveScoreTicker } from "@/components/public/LiveScoreTicker";
@@ -81,19 +82,21 @@ export default async function HomePage() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Main content area */}
         <div className="flex-1 min-w-0">
-          <HomeArticleSection
-            articles={gridArticles.map((article) => ({
-              id: article.id,
-              title: article.title,
-              content: article.content,
-              category: article.category,
-              published_at: article.published_at,
-              view_count: article.view_count,
-              slug: article.slug,
-              images: article.images,
-              writerName: article.writer_personas?.name ?? null,
-            }))}
-          />
+          <Suspense fallback={null}>
+            <HomeArticleSection
+              articles={gridArticles.map((article) => ({
+                id: article.id,
+                title: article.title,
+                content: article.content,
+                category: article.category,
+                published_at: article.published_at,
+                view_count: article.view_count,
+                slug: article.slug,
+                images: article.images,
+                writerName: article.writer_personas?.name ?? null,
+              }))}
+            />
+          </Suspense>
         </div>
 
         {/* Sidebar - PC only */}

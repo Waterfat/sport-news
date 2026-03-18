@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,66 +43,74 @@ export function TeamDetailClient({
   teamId: string;
 }) {
   const { data: session } = useSession();
-  const [team, setTeam] = useState<TeamInfo | null>(null);
-  const [roster, setRoster] = useState<RosterPlayer[]>([]);
-  const [ats, setAts] = useState<TeamATS | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const queryClient = useQueryClient();
 
   const isMember = !!session?.user;
 
-  useEffect(() => {
-    Promise.all([
-      fetch(`/api/public/team?sport=${sport}&id=${teamId}`).then((r) => r.json()),
-      fetch(`/api/public/team?sport=${sport}&id=${teamId}&type=roster`).then((r) => r.json()),
-      fetch(`/api/public/team?sport=${sport}&id=${teamId}&type=ats`).then((r) => r.json()),
-    ])
-      .then(([teamData, rosterData, atsData]) => {
-        setTeam(teamData.team ?? null);
-        setRoster(rosterData.roster ?? []);
-        setAts(atsData.ats ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [sport, teamId]);
+  // Fetch team info, roster, and ATS together
+  const { data: teamData, isLoading } = useQuery({
+    queryKey: ["team-detail", sport, teamId],
+    queryFn: async () => {
+      const [teamRes, rosterRes, atsRes] = await Promise.all([
+        fetch(`/api/public/team?sport=${sport}&id=${teamId}`).then((r) => r.json()),
+        fetch(`/api/public/team?sport=${sport}&id=${teamId}&type=roster`).then((r) => r.json()),
+        fetch(`/api/public/team?sport=${sport}&id=${teamId}&type=ats`).then((r) => r.json()),
+      ]);
+      return {
+        team: (teamRes.team ?? null) as TeamInfo | null,
+        roster: (rosterRes.roster ?? []) as RosterPlayer[],
+        ats: (atsRes.ats ?? null) as TeamATS | null,
+      };
+    },
+  });
+
+  const team = teamData?.team ?? null;
+  const roster = teamData?.roster ?? [];
+  const ats = teamData?.ats ?? null;
 
   // Check if favorite
-  useEffect(() => {
-    if (!isMember) return;
-    fetch("/api/member/favorites")
-      .then((r) => r.json())
-      .then((d) => {
-        const favs = d.favorites ?? [];
-        setIsFavorite(
-          favs.some(
-            (f: { sport: string; teamId: string }) =>
-              f.sport === sport && f.teamId === teamId
-          )
-        );
-      })
-      .catch(() => {});
-  }, [isMember, sport, teamId]);
+  const { data: isFavorite = false } = useQuery({
+    queryKey: ["team-favorite", sport, teamId],
+    queryFn: async () => {
+      const res = await fetch("/api/member/favorites");
+      if (!res.ok) throw new Error("fetch failed");
+      const d = await res.json();
+      const favs = d.favorites ?? [];
+      return favs.some(
+        (f: { sport: string; teamId: string }) =>
+          f.sport === sport && f.teamId === teamId
+      );
+    },
+    enabled: isMember,
+  });
 
-  async function toggleFavorite() {
-    if (!isMember || !team) return;
-    if (isFavorite) {
-      await fetch("/api/member/favorites", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sport, teamId }),
-      });
-      setIsFavorite(false);
-    } else {
-      await fetch("/api/member/favorites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sport, teamId, name: team.name }),
-      });
-      setIsFavorite(true);
-    }
-  }
+  const { mutate: toggleFavorite } = useMutation({
+    mutationFn: async () => {
+      if (!team) return;
+      if (isFavorite) {
+        await fetch("/api/member/favorites", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sport, teamId }),
+        });
+        return false;
+      } else {
+        await fetch("/api/member/favorites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sport, teamId, name: team.name }),
+        });
+        return true;
+      }
+    },
+    onSuccess: (newValue) => {
+      queryClient.setQueryData(["team-favorite", sport, teamId], newValue);
+      // Also invalidate the favorites list used by PersonalizedArticleGrid
+      queryClient.invalidateQueries({ queryKey: ["favorites"] });
+    },
+  });
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -156,7 +164,7 @@ export function TeamDetailClient({
               <Button
                 variant={isFavorite ? "default" : "outline"}
                 size="sm"
-                onClick={toggleFavorite}
+                onClick={() => toggleFavorite()}
                 className="gap-1"
               >
                 <Star

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { POLLING_INTERVAL_MS, POLLING_TIMEOUT_MS } from "@/lib/constants";
 import type { RewriteStatus } from "@/types/rewrite";
 
@@ -11,29 +12,33 @@ interface UseRewritePollingOptions {
 }
 
 export function useRewritePolling(options: UseRewritePollingOptions = {}) {
+  const queryClient = useQueryClient();
   const [rewriteStatus, setRewriteStatus] = useState<RewriteStatus | null>(null);
   const [runningMode, setRunningMode] = useState<string | null>(null);
   const [planTriggering, setPlanTriggering] = useState(false);
-  const [triggering, setTriggering] = useState(false);
+  const [triggering] = useState(false);
   // Ref to prevent the page-load effect from starting a duplicate polling loop
-  // when triggerProduce/triggerPlan has already set runningMode (state update is async)
   const isPollingRef = useRef(false);
 
-  const fetchRewriteStatus = useCallback(async () => {
-    try {
+  // Initial fetch using useQuery
+  const { data: initialStatus } = useQuery<RewriteStatus>({
+    queryKey: ["rewrite-status"],
+    queryFn: async () => {
       const res = await fetch("/api/rewrite");
-      if (res.ok) {
-        const data = await res.json();
-        setRewriteStatus(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch rewrite status:", err);
-    }
-  }, []);
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    },
+    // Only fetch once on mount; polling is handled manually
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+  });
 
+  // Sync query data to local state on initial load
   useEffect(() => {
-    fetchRewriteStatus();
-  }, [fetchRewriteStatus]);
+    if (initialStatus) {
+      setRewriteStatus(initialStatus);
+    }
+  }, [initialStatus]);
 
   const pollRewriteStatus = useCallback(
     (callbacks?: { onComplete?: () => void }) => {
@@ -44,6 +49,8 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
           if (res.ok) {
             const data = await res.json();
             setRewriteStatus(data);
+            // Also update the query cache so other consumers see the latest
+            queryClient.setQueryData(["rewrite-status"], data);
             if (!data.currentTask) {
               clearInterval(interval);
               clearTimeout(timeout);
@@ -62,13 +69,10 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
         isPollingRef.current = false;
       }, POLLING_TIMEOUT_MS);
     },
-    []
+    [queryClient]
   );
 
   // If page loads with an active task, start polling.
-  // Guard with isPollingRef to prevent a duplicate loop when triggerProduce/triggerPlan
-  // has already called pollRewriteStatus synchronously but setRunningMode(state) hasn't
-  // re-rendered yet (stale closure race condition).
   useEffect(() => {
     if (rewriteStatus?.currentTask && !runningMode && !isPollingRef.current) {
       setRunningMode("rewrite");
@@ -79,6 +83,21 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rewriteStatus?.currentTask?.status]);
 
+  const triggerPlanMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/rewrite/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "規劃產生失敗");
+      }
+      return data;
+    },
+  });
+
   const triggerPlan = useCallback(
     async (clearPlans?: () => void) => {
       isPollingRef.current = true;
@@ -86,30 +105,20 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
       setRunningMode("plan");
       clearPlans?.();
       try {
-        const res = await fetch("/api/rewrite/plan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ force: true }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          alert(data.error || "規劃產生失敗");
-          isPollingRef.current = false;
-          setRunningMode(null);
-          return;
-        }
+        await triggerPlanMutation.mutateAsync();
         pollRewriteStatus({
           onComplete: options.onPlanPollComplete,
         });
-      } catch {
-        alert("規劃失敗，請確認監聽器是否正在運行");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "規劃失敗，請確認監聽器是否正在運行";
+        alert(message);
         isPollingRef.current = false;
         setRunningMode(null);
       } finally {
         setPlanTriggering(false);
       }
     },
-    [pollRewriteStatus, options.onPlanPollComplete]
+    [triggerPlanMutation, pollRewriteStatus, options.onPlanPollComplete]
   );
 
   const triggerProduce = useCallback(
