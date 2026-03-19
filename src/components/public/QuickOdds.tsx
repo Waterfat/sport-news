@@ -68,7 +68,7 @@ export function QuickOdds() {
                   )}
                   {game.odds && (
                     <span className="text-[10px] text-muted-foreground">
-                      O/U {game.odds.overUnder}
+                      O/U (大小分) {game.odds.overUnder}
                     </span>
                   )}
                 </div>

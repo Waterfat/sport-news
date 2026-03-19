@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useQueryState, parseAsString } from "nuqs";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +43,7 @@ interface GameOdds {
 }
 
 interface TeamInfo {
+  id: string;
   name: string;
   abbreviation: string;
   logo: string;
@@ -152,7 +153,7 @@ export function GameDetailClient({
   eventId: string;
 }) {
   const { data: session } = useSession();
-  const [tab, setTab] = useState("summary");
+  const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("summary"));
 
   const isMember = !!session?.user;
   const apiBase = getGameApiBase(isMember);
@@ -302,7 +303,7 @@ export function GameDetailClient({
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center gap-6">
-            <Link href={`/team/${sport}/${game.awayTeam.abbreviation}`} className="text-center hover:opacity-80">
+            <Link href={`/team/${sport}/${game.awayTeam.id}`} className="text-center hover:opacity-80">
               {game.awayTeam.logo && (
                 <img src={game.awayTeam.logo} alt="" className="w-14 h-14 mx-auto" />
               )}
@@ -325,7 +326,7 @@ export function GameDetailClient({
                 {game.statusDetail}
               </Badge>
             </div>
-            <Link href={`/team/${sport}/${game.homeTeam.abbreviation}`} className="text-center hover:opacity-80">
+            <Link href={`/team/${sport}/${game.homeTeam.id}`} className="text-center hover:opacity-80">
               {game.homeTeam.logo && (
                 <img src={game.homeTeam.logo} alt="" className="w-14 h-14 mx-auto" />
               )}
@@ -381,11 +382,20 @@ export function GameDetailClient({
                   <CardTitle className="text-base">勝率走勢</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    主隊（{game.homeTeam.name}）勝率
-                  </p>
+                  <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                    <span className="text-blue-600 font-medium">{game.homeTeam.name}（主）</span>
+                    <span className="text-red-500 font-medium">{game.awayTeam.name}（客）</span>
+                  </div>
                   <ResponsiveContainer width="100%" height={220}>
                     <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="homeWinGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
+                          <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.05} />
+                          <stop offset="50%" stopColor="#ef4444" stopOpacity={0.05} />
+                          <stop offset="100%" stopColor="#ef4444" stopOpacity={0.3} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                       <XAxis
                         dataKey="elapsed"
@@ -403,23 +413,31 @@ export function GameDetailClient({
                       />
                       <YAxis
                         domain={[0, 100]}
+                        ticks={[0, 25, 50, 75, 100]}
                         tick={{ fontSize: 11 }}
-                        tickFormatter={(val: number) => `${val}%`}
+                        tickFormatter={(val: number) => {
+                          if (val === 0) return "客隊";
+                          if (val === 100) return "主隊";
+                          return `${val}%`;
+                        }}
                         className="text-muted-foreground"
                       />
                       <Tooltip
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        formatter={(value: any) => [`${Number(value).toFixed(1)}%`, "主隊勝率"]}
+                        formatter={(value: any) => {
+                          const homeVal = Number(value).toFixed(1);
+                          const awayVal = (100 - Number(value)).toFixed(1);
+                          return [`主隊 ${homeVal}% / 客隊 ${awayVal}%`, "勝率"];
+                        }}
                         labelFormatter={() => ""}
                         contentStyle={{ fontSize: 12 }}
                       />
-                      <ReferenceLine y={50} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" />
+                      <ReferenceLine y={50} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" label={{ value: "50%", fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                       <Area
                         type="monotone"
                         dataKey="homeWinPct"
-                        stroke="hsl(var(--primary))"
-                        fill="hsl(var(--primary))"
-                        fillOpacity={0.15}
+                        stroke="#3b82f6"
+                        fill="url(#homeWinGrad)"
                         strokeWidth={2}
                       />
                     </AreaChart>
@@ -500,7 +518,6 @@ export function GameDetailClient({
                     {pickCenter.map((p, idx) => (
                       <div key={idx} className="text-sm">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-muted-foreground">{p.provider || "ESPN"}</span>
                           <span className="text-xs text-muted-foreground">{p.details}</span>
                         </div>
                         <div className="flex h-5 rounded-full overflow-hidden bg-muted">
@@ -537,25 +554,22 @@ export function GameDetailClient({
                 <CardContent>
                   <div className="grid grid-cols-3 gap-4 text-center text-sm">
                     <div>
-                      <p className="font-medium text-muted-foreground">Spread</p>
+                      <p className="font-medium text-muted-foreground">Spread (讓分)</p>
                       <p className="text-lg tabular-nums">{game.odds.details || "-"}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-muted-foreground">O/U</p>
+                      <p className="font-medium text-muted-foreground">O/U (大小分)</p>
                       <p className="text-lg tabular-nums">{game.odds.overUnder || "-"}</p>
                     </div>
                     <MemberGate message="登入查看 Money Line">
                       <div>
-                        <p className="font-medium text-muted-foreground">ML</p>
+                        <p className="font-medium text-muted-foreground">ML (勝負盤)</p>
                         <p className="text-lg tabular-nums">
                           {game.odds.awayMoneyLine} / {game.odds.homeMoneyLine}
                         </p>
                       </div>
                     </MemberGate>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">
-                    來源：{game.odds.provider}
-                  </p>
                 </CardContent>
               </Card>
             )}
@@ -742,16 +756,12 @@ export function GameDetailClient({
                   </thead>
                   <tbody>
                     <tr className="border-b">
-                      <td className="py-2 px-3 text-muted-foreground">Spread</td>
+                      <td className="py-2 px-3 text-muted-foreground">Spread (讓分)</td>
                       <td className="text-center py-2 px-3 tabular-nums">{game.odds.details}</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-3 text-muted-foreground">Over/Under</td>
+                      <td className="py-2 px-3 text-muted-foreground">O/U (大小分)</td>
                       <td className="text-center py-2 px-3 tabular-nums">{game.odds.overUnder}</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="py-2 px-3 text-muted-foreground">來源</td>
-                      <td className="text-center py-2 px-3">{game.odds.provider}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -759,7 +769,7 @@ export function GameDetailClient({
                   <table className="w-full text-sm mt-4">
                     <thead>
                       <tr className="border-b bg-muted">
-                        <th className="text-left py-2 px-3 text-muted-foreground">Money Line</th>
+                        <th className="text-left py-2 px-3 text-muted-foreground">ML (勝負盤)</th>
                         <th className="text-center py-2 px-3 text-muted-foreground">客隊</th>
                         <th className="text-center py-2 px-3 text-muted-foreground">主隊</th>
                       </tr>

@@ -7,6 +7,7 @@ const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 // ---------- Types ----------
 
 export interface TeamInfo {
+  id: string;
   name: string;
   abbreviation: string;
   logo: string;
@@ -86,6 +87,7 @@ function parseTeam(competitor: Record<string, unknown>): TeamInfo {
   const rawLinescores = Array.isArray(competitor.linescores) ? competitor.linescores : undefined;
 
   return {
+    id: String(team.id ?? ""),
     name: getTeamNameZh(String(team.displayName ?? team.name ?? "")),
     abbreviation: String(team.abbreviation ?? ""),
     logo: String(team.logo ?? ""),
