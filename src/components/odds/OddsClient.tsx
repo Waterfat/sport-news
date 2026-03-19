@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Lock } from "lucide-react";
 import { gameUrl } from "@/lib/routes";
+import { LEAGUE_OPTIONS } from "@/lib/constants";
 
 interface GameOdds {
   provider: string;
@@ -39,11 +40,6 @@ interface Game {
   awayTeam: { name: string; abbreviation: string; logo: string; score: string };
   odds?: GameOdds;
 }
-
-const LEAGUE_OPTIONS = [
-  { value: "nba", label: "NBA" },
-  { value: "mlb", label: "MLB" },
-];
 
 /** 將 ESPN 時間格式（如 "3/17 - 7:00 PM EDT"）轉為台灣時間 */
 function formatStatusDetail(detail: string): string {

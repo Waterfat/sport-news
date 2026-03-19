@@ -17,7 +17,8 @@
   "protected_apis": [
     "/api/dashboard/stats",
     "/api/articles/generated?page=1&limit=1",
-    "/api/articles/raw?page=1&limit=1"
+    "/api/articles/raw?page=1&limit=1",
+    "/api/admin/visitors?period=7d"
   ],
 
   "public_apis": [
@@ -27,6 +28,7 @@
     "/api/public/standings?league=nba",
     "/api/public/team?sport=nba&id=13",
     "/api/public/team?sport=nba&id=13&type=roster",
+    "/api/public/pageview",
     "/robots.txt",
     "/sitemap.xml"
   ],

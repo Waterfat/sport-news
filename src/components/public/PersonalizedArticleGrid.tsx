@@ -7,6 +7,7 @@ import Link from "next/link";
 import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime, getFirstImageUrl } from "@/lib/constants";
 import { Star } from "lucide-react";
 import { newsUrl } from "@/lib/routes";
+import { getExcerpt } from "@/lib/utils";
 
 interface FavoriteTeam {
   sport: string;
@@ -24,18 +25,6 @@ interface ArticleItem {
   slug: string | null;
   images: { url: string }[] | null;
   writerName: string | null;
-}
-
-function getExcerpt(content: string | null): string {
-  if (!content) return "";
-  const lines = content.split("\n").filter(Boolean);
-  const firstParagraph = lines.find(
-    (line) => !line.startsWith("#") && !line.startsWith("-") && !line.startsWith(">") && line.trim().length > 20
-  );
-  if (firstParagraph) {
-    return firstParagraph.replace(/[#*_\[\]()>`~]/g, "").trim().slice(0, 120);
-  }
-  return content.replace(/[#*_>\-\n\[\]()>`~]/g, " ").trim().slice(0, 120);
 }
 
 export function PersonalizedArticleGrid({

@@ -2,6 +2,17 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SPORTS, type SportKey } from "@/lib/sport-config";
 import { CrawlSourceList } from "@/components/admin/sports/CrawlSourceList";
 import { SportCard } from "@/components/admin/sports/SportCard";
@@ -19,6 +30,9 @@ export default function SportsSettingsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
+
+  // 刪除確認
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   // 手動觸發爬蟲
   const [crawlingId, setCrawlingId] = useState<number | null>(null);
@@ -116,7 +130,7 @@ export default function SportsSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["crawl-sources"] });
     },
     onError: (err) => {
-      alert(err.message);
+      toast.error(err.message);
     },
   });
 
@@ -217,8 +231,13 @@ export default function SportsSettingsPage() {
   }
 
   function deleteSource(id: number, name: string) {
-    if (!confirm(`確定刪除「${name}」？`)) return;
-    deleteSourceMutation.mutate({ id, name });
+    setDeleteTarget({ id, name });
+  }
+
+  function confirmDeleteSource() {
+    if (!deleteTarget) return;
+    deleteSourceMutation.mutate(deleteTarget);
+    setDeleteTarget(null);
   }
 
   async function triggerCrawl(source: CrawlSource) {
@@ -234,11 +253,11 @@ export default function SportsSettingsPage() {
       if (data.success) {
         setCrawlResult({ id: source.id, total: data.total, saved: data.saved, duplicate: data.duplicate || 0, filtered: data.filtered || 0 });
       } else {
-        alert(`爬蟲失敗：${data.error || "未知錯誤"}`);
+        toast.error(`爬蟲失敗：${data.error || "未知錯誤"}`);
       }
     } catch (err) {
       console.error("Crawl failed:", err);
-      alert("爬蟲執行失敗");
+      toast.error("爬蟲執行失敗");
     } finally {
       setCrawlingId(null);
     }
@@ -326,6 +345,22 @@ export default function SportsSettingsPage() {
           }
         )}
       </div>
+
+      {/* 刪除確認 Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認刪除</AlertDialogTitle>
+            <AlertDialogDescription>
+              確定刪除「{deleteTarget?.name}」？此操作無法復原。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteSource}>刪除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

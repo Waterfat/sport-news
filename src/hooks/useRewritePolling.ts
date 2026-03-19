@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { POLLING_INTERVAL_MS, POLLING_TIMEOUT_MS } from "@/lib/constants";
 import type { RewriteStatus } from "@/types/rewrite";
 
@@ -19,6 +20,8 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
   const [triggering] = useState(false);
   // Ref to prevent the page-load effect from starting a duplicate polling loop
   const isPollingRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initial fetch using useQuery
   const { data: initialStatus } = useQuery<RewriteStatus>({
@@ -42,6 +45,10 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
 
   const pollRewriteStatus = useCallback(
     (callbacks?: { onComplete?: () => void }) => {
+      // Clear any existing polling before starting a new one
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
       isPollingRef.current = true;
       const interval = setInterval(async () => {
         try {
@@ -54,6 +61,8 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
             if (!data.currentTask) {
               clearInterval(interval);
               clearTimeout(timeout);
+              intervalRef.current = null;
+              timeoutRef.current = null;
               isPollingRef.current = false;
               setRunningMode(null);
               callbacks?.onComplete?.();
@@ -66,11 +75,24 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
 
       const timeout = setTimeout(() => {
         clearInterval(interval);
+        intervalRef.current = null;
+        timeoutRef.current = null;
         isPollingRef.current = false;
       }, POLLING_TIMEOUT_MS);
+
+      intervalRef.current = interval;
+      timeoutRef.current = timeout;
     },
     [queryClient]
   );
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   // If page loads with an active task, start polling.
   useEffect(() => {
@@ -111,7 +133,7 @@ export function useRewritePolling(options: UseRewritePollingOptions = {}) {
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "規劃失敗，請確認監聽器是否正在運行";
-        alert(message);
+        toast.error(message);
         isPollingRef.current = false;
         setRunningMode(null);
       } finally {

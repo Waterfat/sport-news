@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { PlanItem, RawArticleInfo } from "@/components/admin/PlansTable";
 
 interface UsePlanManagerOptions {
@@ -11,6 +12,7 @@ interface UsePlanManagerOptions {
 export function usePlanManager(options: UsePlanManagerOptions = {}) {
   const queryClient = useQueryClient();
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null);
 
   const { data: planData, isLoading: planLoading } = useQuery<{
     plans: PlanItem[];
@@ -65,7 +67,7 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
       setSelectedPlanIds(new Set());
     },
     onError: (err) => {
-      alert(err.message);
+      toast.error(err.message);
       options.onProduceSuccess?.([]); // signal failure to reset runningMode
     },
   });
@@ -84,7 +86,7 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ["rewrite-plans"] });
     },
     onError: () => {
-      alert("移除失敗");
+      toast.error("移除失敗");
     },
   });
 
@@ -104,9 +106,18 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
   const handlePlanDelete = useCallback(async () => {
     const ids = Array.from(selectedPlanIds);
     if (ids.length === 0) return;
-    if (!confirm(`確定要移除 ${ids.length} 個規劃項目？`)) return;
-    deleteMutation.mutate(ids);
-  }, [selectedPlanIds, deleteMutation]);
+    setPendingDeleteIds(ids);
+  }, [selectedPlanIds]);
+
+  const confirmPlanDelete = useCallback(() => {
+    if (!pendingDeleteIds) return;
+    deleteMutation.mutate(pendingDeleteIds);
+    setPendingDeleteIds(null);
+  }, [pendingDeleteIds, deleteMutation]);
+
+  const cancelPlanDelete = useCallback(() => {
+    setPendingDeleteIds(null);
+  }, []);
 
   const togglePlanSelect = useCallback((id: string) => {
     setSelectedPlanIds((prev) => {
@@ -132,10 +143,13 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
     earliestCrawledAt,
     selectedPlanIds,
     planLoading,
+    pendingDeleteIds,
     fetchPlans,
     clearPlans,
     handlePlanProduce,
     handlePlanDelete,
+    confirmPlanDelete,
+    cancelPlanDelete,
     togglePlanSelect,
     togglePlanSelectAll,
   };
