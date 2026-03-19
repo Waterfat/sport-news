@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MemberGate } from "@/components/auth/MemberGate";
 import { ArrowLeft } from "lucide-react";
+import { teamUrl } from "@/lib/routes";
 import {
   AreaChart,
   Area,
@@ -303,7 +304,7 @@ export function GameDetailClient({
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center gap-6">
-            <Link href={`/team/${sport}/${game.awayTeam.id}`} className="text-center hover:opacity-80">
+            <Link href={teamUrl(sport, game.awayTeam.id)} className="text-center hover:opacity-80">
               {game.awayTeam.logo && (
                 <img src={game.awayTeam.logo} alt="" className="w-14 h-14 mx-auto" />
               )}
@@ -326,7 +327,7 @@ export function GameDetailClient({
                 {game.statusDetail}
               </Badge>
             </div>
-            <Link href={`/team/${sport}/${game.homeTeam.id}`} className="text-center hover:opacity-80">
+            <Link href={teamUrl(sport, game.homeTeam.id)} className="text-center hover:opacity-80">
               {game.homeTeam.logo && (
                 <img src={game.homeTeam.logo} alt="" className="w-14 h-14 mx-auto" />
               )}

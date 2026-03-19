@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next";
 import { createServiceClient } from "@/lib/supabase";
 import { SITE_URL } from "@/lib/constants";
+import { absoluteCategoryUrl, absoluteNewsUrl, absoluteWriterUrl } from "@/lib/routes";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createServiceClient();
@@ -50,7 +51,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const categories = ["nba", "mlb", "soccer", "general"];
   for (const cat of categories) {
     entries.push({
-      url: `${SITE_URL}/category/${cat}`,
+      url: absoluteCategoryUrl(SITE_URL, cat),
       lastModified: new Date(),
       changeFrequency: "hourly",
       priority: 0.8,
@@ -61,7 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (articles) {
     for (const article of articles) {
       entries.push({
-        url: `${SITE_URL}/news/${article.slug || article.id}`,
+        url: absoluteNewsUrl(SITE_URL, article.slug || article.id),
         lastModified: article.published_at
           ? new Date(article.published_at)
           : new Date(),
@@ -75,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (writers) {
     for (const writer of writers) {
       entries.push({
-        url: `${SITE_URL}/writer/${writer.id}`,
+        url: absoluteWriterUrl(SITE_URL, writer.id),
         lastModified: new Date(),
         changeFrequency: "weekly",
         priority: 0.5,

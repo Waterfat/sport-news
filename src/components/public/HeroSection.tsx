@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CATEGORY_FALLBACK_IMAGES, formatRelativeTime, getFirstImageUrl } from "@/lib/constants";
+import { newsUrl } from "@/lib/routes";
 
 interface HeroArticle {
   id: string;
@@ -13,7 +14,7 @@ interface HeroArticle {
 }
 
 function getHref(article: { slug: string | null; id: string }) {
-  return `/news/${article.slug || article.id}`;
+  return newsUrl(article.slug || article.id);
 }
 
 export function HeroSection({

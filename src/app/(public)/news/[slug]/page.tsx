@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 import { CATEGORY_COLORS, formatDateFull, formatRelativeTime, getCategorySlug, getFirstImageUrl, SITE_NAME, SITE_URL } from "@/lib/constants";
+import { absoluteNewsUrl, categoryUrl, newsUrl, writerUrl } from "@/lib/routes";
 import ViewTracker from "./ViewTracker";
 import LikeButton from "./LikeButton";
 import { TelegramArticleCTA } from "@/components/TelegramCTA";
@@ -58,7 +59,7 @@ export async function generateMetadata({
 
   const description = getContentExcerpt(article.content);
 
-  const articleUrl = `${SITE_URL}/news/${article.slug || slug}`;
+  const articleUrl = absoluteNewsUrl(SITE_URL, article.slug || slug);
   const ogImageUrl = `${SITE_URL}/api/og?title=${encodeURIComponent(article.title)}&subtitle=${encodeURIComponent(article.category || "")}&type=article`;
 
   return {
@@ -125,7 +126,7 @@ export default async function ArticlePage({
   const colorClass =
     CATEGORY_COLORS[article.category ?? ""] ?? "bg-muted text-muted-foreground border border-border rounded-lg";
 
-  const articleUrl = `${SITE_URL}/news/${article.slug || slug}`;
+  const articleUrl = absoluteNewsUrl(SITE_URL, article.slug || slug);
   const contentStr = article.content ?? "";
   const showToc = contentStr.length > 1500;
   const headings = showToc ? extractHeadings(contentStr) : [];
@@ -169,7 +170,7 @@ export default async function ArticlePage({
           {article.category && (
             <>
               <Link
-                href={`/category/${getCategorySlug(article.category)}`}
+                href={categoryUrl(getCategorySlug(article.category))}
                 className="text-muted-foreground hover:text-blue-600 transition-colors"
               >
                 {article.category}
@@ -198,7 +199,7 @@ export default async function ArticlePage({
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-4">
           {writer && (
             <Link
-              href={`/writer/${writer.id}`}
+              href={writerUrl(writer.id)}
               className="font-medium text-foreground hover:text-blue-600 transition-colors"
             >
               {writer.name}
@@ -271,7 +272,7 @@ export default async function ArticlePage({
             </div>
             <div>
               <Link
-                href={`/writer/${writer.id}`}
+                href={writerUrl(writer.id)}
                 className="text-base font-semibold text-foreground hover:text-blue-600 transition-colors"
               >
                 {writer.name}
@@ -294,7 +295,7 @@ export default async function ArticlePage({
             {relatedArticles.map((related) => (
               <Link
                 key={related.id}
-                href={`/news/${related.slug || related.id}`}
+                href={newsUrl(related.slug || related.id)}
                 className="group block rounded-lg border border-border bg-card p-4 hover:shadow-md hover:border-blue-300 transition-all"
               >
                 <h3 className="text-sm font-semibold text-foreground line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">

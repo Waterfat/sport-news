@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime, getFirstImageUrl } from "@/lib/constants";
 import { Star } from "lucide-react";
+import { newsUrl } from "@/lib/routes";
 
 interface FavoriteTeam {
   sport: string;
@@ -80,7 +81,7 @@ export function PersonalizedArticleGrid({
         return (
           <Link
             key={article.id}
-            href={`/news/${article.slug || article.id}`}
+            href={newsUrl(article.slug || article.id)}
             className="group block animate-fade-in-up"
             style={{ animationDelay: `${Math.min(index, 11) * 50}ms` }}
           >

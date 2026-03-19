@@ -3,6 +3,7 @@
 import { espnFetch, CACHE_TTL, getSportPath } from "./client";
 import type { ESPNScoreboardResponse, ESPNOdds, ESPNCompetition } from "./types";
 import { getTeamNameZh } from "@/lib/constants";
+import { safeValidate, numericIdSchema } from "./schemas";
 
 // ---------- 前台使用的型別（保持與現有 scoreboard.ts 相容） ----------
 
@@ -91,7 +92,7 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
       statusDetail: event.status?.type?.shortDetail ?? "",
       broadcast,
       homeTeam: {
-        id: home?.team?.id ?? "",
+        id: safeValidate(numericIdSchema, String(home?.team?.id ?? ""), "homeTeam.id", "0"),
         name: getTeamNameZh(home?.team?.displayName ?? ""),
         abbreviation: home?.team?.abbreviation ?? "",
         logo: home?.team?.logo ?? "",
@@ -103,7 +104,7 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
         })),
       },
       awayTeam: {
-        id: away?.team?.id ?? "",
+        id: safeValidate(numericIdSchema, String(away?.team?.id ?? ""), "awayTeam.id", "0"),
         name: getTeamNameZh(away?.team?.displayName ?? ""),
         abbreviation: away?.team?.abbreviation ?? "",
         logo: away?.team?.logo ?? "",

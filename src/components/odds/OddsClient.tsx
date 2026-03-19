@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Lock } from "lucide-react";
+import { gameUrl } from "@/lib/routes";
 
 interface GameOdds {
   provider: string;
@@ -144,7 +145,7 @@ export function OddsClient() {
                       {/* Game header */}
                       <div className="flex items-center justify-between mb-3">
                         <Link
-                          href={`/game/${league}/${game.id}`}
+                          href={gameUrl(league, game.id)}
                           className="flex items-center gap-2 hover:opacity-80"
                         >
                           {game.awayTeam.logo && (

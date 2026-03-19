@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Game, TeamInfo } from "@/lib/scoreboard";
+import { gameUrl } from "@/lib/routes";
 
 function formatTaiwanTime(dateStr: string): string {
   try {
@@ -146,7 +147,7 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
 
   if (league) {
     return (
-      <Link href={`/game/${league}/${game.id}`}>
+      <Link href={gameUrl(league, game.id)}>
         {content}
       </Link>
     );

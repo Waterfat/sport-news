@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, Eye } from "lucide-react";
+import { newsUrl } from "@/lib/routes";
 
 interface TrendingArticle {
   id: string;
@@ -47,7 +48,7 @@ export function TrendingArticles() {
           {articles.map((article, idx) => (
             <Link
               key={article.id}
-              href={`/news/${article.slug || article.id}`}
+              href={newsUrl(article.slug || article.id)}
               className="group flex items-start gap-3 hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-lg transition-colors"
             >
               <span className="text-xs font-bold text-muted-foreground/60 mt-0.5 w-5 text-center flex-shrink-0">
