@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createServiceClient();
-    const keyword = `%${q}%`;
+    const safeQ = q.replace(/[%_,()[\].\\]/g, "\\$&");
+    const keyword = `%${safeQ}%`;
 
     const { data: articles, error } = await supabase
       .from("generated_articles")

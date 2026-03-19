@@ -30,12 +30,11 @@ export async function POST(
       return NextResponse.json({ error: "Article not found" }, { status: 404 });
     }
 
-    // Increment view_count
-    const newCount = (article.view_count || 0) + 1;
-    await supabase
-      .from("generated_articles")
-      .update({ view_count: newCount })
-      .eq("id", article.id);
+    // Atomic increment view_count via RPC
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc("increment_view_count", { article_id: article.id });
+
+    const newCount = rpcError ? (article.view_count || 0) + 1 : rpcData;
 
     // Record detailed view for analytics
     const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";

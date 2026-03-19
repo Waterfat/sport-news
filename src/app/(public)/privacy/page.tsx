@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TELEGRAM_CHANNEL_URL } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "隱私權政策",
@@ -57,7 +58,7 @@ export default function PrivacyPage() {
         </ul>
         <p className="text-slate-600 leading-relaxed">
           如需行使上述權利，請透過 Telegram 聯繫我們：
-          <a href="https://t.me/howger_sport_news" className="text-blue-600 hover:underline ml-1" target="_blank" rel="noopener noreferrer">
+          <a href={TELEGRAM_CHANNEL_URL} className="text-blue-600 hover:underline ml-1" target="_blank" rel="noopener noreferrer">
             @howger_sport_news
           </a>
         </p>

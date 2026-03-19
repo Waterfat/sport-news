@@ -110,7 +110,7 @@ describe("fetchScoreboard", () => {
     expect(game1.status).toBe("in_progress");
     expect(game1.statusDetail).toBe("Q3 5:23");
     expect(game1.homeTeam.id).toBe("20");
-    expect(game1.homeTeam.name).toBe("費城乘者");
+    expect(game1.homeTeam.name).toBe("費城七六人");
     expect(game1.homeTeam.abbreviation).toBe("PHI");
     expect(game1.homeTeam.score).toBe("104");
     expect(game1.homeTeam.record).toBe("30-42");
