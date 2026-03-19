@@ -118,6 +118,35 @@ export function getTeamNameZh(englishName: string): string {
   return TEAM_NAME_ZH[englishName] ?? englishName;
 }
 
+/** ESPN Conference/Division 英文 → 中文映射 */
+export const CONFERENCE_NAME_ZH: Record<string, string> = {
+  // NBA
+  "Eastern Conference": "東區",
+  "Western Conference": "西區",
+  "Atlantic": "大西洋組",
+  "Central": "中央組",
+  "Southeast": "東南組",
+  "Northwest": "西北組",
+  "Pacific": "太平洋組",
+  "Southwest": "西南組",
+  // MLB
+  "American League": "美國聯盟",
+  "National League": "國家聯盟",
+  "American League East": "美聯東區",
+  "American League Central": "美聯中區",
+  "American League West": "美聯西區",
+  "National League East": "國聯東區",
+  "National League Central": "國聯中區",
+  "National League West": "國聯西區",
+  // 足球
+  "English Premier League": "英超",
+};
+
+/** 將英文 Conference/Division 名稱轉為中文，找不到則回傳原文 */
+export function getConferenceNameZh(englishName: string): string {
+  return CONFERENCE_NAME_ZH[englishName] ?? englishName;
+}
+
 export const SITE_NAME = "超級運動資訊網";
 export const SITE_NAME_SHORT = "超級運動";
 export const SITE_DESCRIPTION = "最新體育新聞、NBA、MLB、足球賽事報導與深度分析";

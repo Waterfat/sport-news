@@ -166,17 +166,15 @@ export function OddsClient() {
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="text-xs text-muted-foreground border-b">
-                                <th className="text-left py-1">來源</th>
-                                <th className="text-center py-1">Spread</th>
-                                <th className="text-center py-1">O/U</th>
-                                <th className="text-center py-1">ML (客)</th>
-                                <th className="text-center py-1">ML (主)</th>
+                                <th className="text-center py-1">Spread (讓分)</th>
+                                <th className="text-center py-1">O/U (大小分)</th>
+                                <th className="text-center py-1">ML 客 (勝負盤)</th>
+                                <th className="text-center py-1">ML 主</th>
                               </tr>
                             </thead>
                             <tbody>
                               {gameMultiOdds.map((odds, idx) => (
                                 <tr key={idx} className="border-b last:border-0">
-                                  <td className="py-1.5 text-muted-foreground">{odds.provider}</td>
                                   <td className="text-center py-1.5 tabular-nums">{odds.details}</td>
                                   <td className="text-center py-1.5 tabular-nums">{odds.overUnder}</td>
                                   <td className="text-center py-1.5 tabular-nums text-xs">{odds.awayMoneyLine || "-"}</td>
@@ -192,15 +190,13 @@ export function OddsClient() {
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="text-xs text-muted-foreground border-b">
-                                <th className="text-left py-1">來源</th>
-                                <th className="text-center py-1">Spread</th>
-                                <th className="text-center py-1">O/U</th>
-                                {isMember && <th className="text-center py-1">ML</th>}
+                                <th className="text-center py-1">Spread (讓分)</th>
+                                <th className="text-center py-1">O/U (大小分)</th>
+                                {isMember && <th className="text-center py-1">ML (勝負盤)</th>}
                               </tr>
                             </thead>
                             <tbody>
                               <tr className="border-b last:border-0">
-                                <td className="py-1.5 text-muted-foreground">{game.odds.provider}</td>
                                 <td className="text-center py-1.5 tabular-nums">{game.odds.details}</td>
                                 <td className="text-center py-1.5 tabular-nums">{game.odds.overUnder}</td>
                                 {isMember && (

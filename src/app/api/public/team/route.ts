@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSportPath } from "@/lib/espn/client";
 import { fetchTeamATS } from "@/lib/espn/team";
+import { getTeamNameZh } from "@/lib/constants";
 
 const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       team: {
         id: t.id ?? "",
-        name: t.displayName ?? "",
+        name: getTeamNameZh(t.displayName ?? ""),
         abbreviation: t.abbreviation ?? "",
         logo: t.logos?.[0]?.href ?? "",
         color: t.color ?? "",

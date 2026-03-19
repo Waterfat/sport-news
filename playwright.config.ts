@@ -45,6 +45,13 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
 
+    // Game detail tests — no auth required
+    {
+      name: "game-detail",
+      testMatch: /game-detail\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+
     // Auth flow tests — no stored state (we're testing the flow itself)
     {
       name: "auth",

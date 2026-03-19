@@ -33,6 +33,7 @@ const MOCK_ESPN_RESPONSE = {
               score: "104",
               records: [{ summary: "30-42" }],
               team: {
+                id: "20",
                 displayName: "Philadelphia 76ers",
                 abbreviation: "PHI",
                 logo: "https://a.espncdn.com/phi.png",
@@ -43,6 +44,7 @@ const MOCK_ESPN_RESPONSE = {
               score: "97",
               records: [{ summary: "25-47" }],
               team: {
+                id: "17",
                 displayName: "Brooklyn Nets",
                 abbreviation: "BKN",
                 logo: "https://a.espncdn.com/bkn.png",
@@ -69,6 +71,7 @@ const MOCK_ESPN_RESPONSE = {
               score: "0",
               records: [{ summary: "50-22" }],
               team: {
+                id: "2",
                 displayName: "Boston Celtics",
                 abbreviation: "BOS",
                 logo: "https://a.espncdn.com/bos.png",
@@ -79,6 +82,7 @@ const MOCK_ESPN_RESPONSE = {
               score: "0",
               records: [{ summary: "45-27" }],
               team: {
+                id: "8",
                 displayName: "Milwaukee Bucks",
                 abbreviation: "MIL",
                 logo: "https://a.espncdn.com/mil.png",
@@ -105,10 +109,12 @@ describe("fetchScoreboard", () => {
     expect(game1.id).toBe("401633205");
     expect(game1.status).toBe("in_progress");
     expect(game1.statusDetail).toBe("Q3 5:23");
+    expect(game1.homeTeam.id).toBe("20");
     expect(game1.homeTeam.name).toBe("費城乘者");
     expect(game1.homeTeam.abbreviation).toBe("PHI");
     expect(game1.homeTeam.score).toBe("104");
     expect(game1.homeTeam.record).toBe("30-42");
+    expect(game1.awayTeam.id).toBe("17");
     expect(game1.awayTeam.name).toBe("布魯克林籃網");
     expect(game1.awayTeam.abbreviation).toBe("BKN");
     expect(game1.awayTeam.score).toBe("97");
