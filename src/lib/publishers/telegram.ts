@@ -1,4 +1,5 @@
 import { SITE_URL, TELEGRAM_CHANNEL_URL } from "@/lib/constants";
+import { absoluteNewsUrl } from "@/lib/routes";
 import type { PublishArticle } from "./types";
 
 interface TelegramConfig {
@@ -26,7 +27,7 @@ export async function publishToTelegram(
 
     const baseUrl = site_url || SITE_URL;
     const link = article.slug
-      ? `${baseUrl}/news/${article.slug}`
+      ? absoluteNewsUrl(baseUrl, article.slug)
       : "";
 
     // 截取前 300 字，搭配「閱讀全文」導流到網站

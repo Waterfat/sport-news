@@ -4,6 +4,7 @@ import { espnFetch, CACHE_TTL, getSportPath } from "./client";
 import { getTeamNameZh } from "@/lib/constants";
 import { translatePbpText } from "./translate-pbp";
 import type { BoxScore, BoxScorePlayerGroup, BoxScoreTeam, TeamLeaders, GameLeader } from "./types";
+import { safeValidate, pctZeroOneSchema, pctZeroHundredSchema } from "./schemas";
 
 export interface Play {
   id: string;
@@ -321,7 +322,7 @@ export interface WinProbabilityPoint {
 function parseWinProbability(data: any): WinProbabilityPoint[] {
   const items: any[] = data.winprobability ?? [];
   return items.map((p: any) => ({
-    homeWinPct: (p.homeWinPercentage ?? 0) * 100,
+    homeWinPct: safeValidate(pctZeroHundredSchema, (p.homeWinPercentage ?? 0) * 100, "winProb.homeWinPct", 50),
     playId: p.playId ?? "",
     secondsLeft: p.secondsLeft ?? 0,
   }));
@@ -450,6 +451,8 @@ function parsePickCenter(data: any): PickCenterData[] {
       homeWinPct = total > 0 ? rawHome / total : 0.5;
       awayWinPct = total > 0 ? rawAway / total : 0.5;
     }
+    homeWinPct = safeValidate(pctZeroOneSchema, homeWinPct, "pickCenter.homeWinPct", 0.5);
+    awayWinPct = safeValidate(pctZeroOneSchema, awayWinPct, "pickCenter.awayWinPct", 0.5);
     return {
       provider: p.provider?.name ?? "",
       details: p.details ?? "",

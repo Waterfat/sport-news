@@ -5,6 +5,7 @@ import { useQueryState, parseAsString } from "nuqs";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { teamUrl } from "@/lib/routes";
 
 interface StandingsEntry {
   teamId: string;
@@ -161,7 +162,7 @@ export function StandingsClient({
                                   </td>
                                   <td className="py-2 px-3">
                                     <Link
-                                      href={`/team/${league}/${entry.teamId}`}
+                                      href={teamUrl(league, entry.teamId)}
                                       className="flex items-center gap-2 hover:text-primary transition-colors"
                                     >
                                       {entry.logo && (

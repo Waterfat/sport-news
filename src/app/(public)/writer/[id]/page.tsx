@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 import { CATEGORY_COLORS, formatDateShort, SITE_NAME } from "@/lib/constants";
+import { newsUrl } from "@/lib/routes";
 
 async function getWriter(id: string) {
   const supabase = createServiceClient();
@@ -107,7 +108,7 @@ export default async function WriterPage({
             return (
               <Link
                 key={article.id}
-                href={`/news/${article.slug || article.id}`}
+                href={newsUrl(article.slug || article.id)}
                 className="group block rounded-xl border border-slate-200 bg-white p-5 hover:shadow-md hover:border-blue-300 transition-all duration-200"
               >
                 <div className="flex items-center gap-2 mb-2">

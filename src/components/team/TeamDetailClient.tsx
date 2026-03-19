@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MemberGate } from "@/components/auth/MemberGate";
 import { ArrowLeft, Star } from "lucide-react";
+import { standingsUrl, playerUrl } from "@/lib/routes";
 
 interface TeamInfo {
   id: string;
@@ -122,7 +123,7 @@ export function TeamDetailClient({
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">找不到此球隊</p>
-        <Link href={`/standings/${sport}`} className="text-blue-600 text-sm mt-2 inline-block">
+        <Link href={standingsUrl(sport)} className="text-blue-600 text-sm mt-2 inline-block">
           返回排名頁
         </Link>
       </div>
@@ -132,7 +133,7 @@ export function TeamDetailClient({
   return (
     <div className="space-y-6">
       <Link
-        href={`/standings/${sport}`}
+        href={standingsUrl(sport)}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-blue-600"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -267,7 +268,7 @@ export function TeamDetailClient({
                         <td className="py-2 px-3 text-muted-foreground">{p.jersey}</td>
                         <td className="py-2 px-3">
                           <Link
-                            href={`/player/${sport}/${p.id}`}
+                            href={playerUrl(sport, p.id)}
                             className="font-medium text-blue-600 hover:underline"
                           >
                             {p.displayName}

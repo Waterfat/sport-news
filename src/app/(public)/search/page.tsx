@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase";
 import { CATEGORY_COLORS, CATEGORY_FALLBACK_IMAGES, formatRelativeTime, getFirstImageUrl } from "@/lib/constants";
+import { newsUrl } from "@/lib/routes";
 import { SearchInput } from "./SearchInput";
 
 export const metadata: Metadata = {
@@ -70,7 +71,7 @@ export default async function SearchPage({
             return (
               <Link
                 key={article.id}
-                href={`/news/${article.slug || article.id}`}
+                href={newsUrl(article.slug || article.id)}
                 className="group block rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-blue-300 transition-all duration-200"
               >
                 <div className="flex items-start gap-4">

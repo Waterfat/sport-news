@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase";
 import { SITE_URL } from "@/lib/constants";
+import { absoluteNewsUrl } from "@/lib/routes";
 
 export async function GET() {
   const supabase = createServiceClient();
@@ -13,7 +14,7 @@ export async function GET() {
 
   const items = (articles || [])
     .map((article) => {
-      const link = `${SITE_URL}/news/${article.slug || article.id}`;
+      const link = absoluteNewsUrl(SITE_URL, article.slug || article.id);
       const description = article.content
         ?.replace(/[#*_>\-\n]/g, " ")
         .slice(0, 300);
