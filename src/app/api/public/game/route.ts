@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (type === "winprobability") {
-      const winprobability = await fetchWinProbability(league, league, eventId);
+      const winprobability = await fetchWinProbability(league, eventId);
       return NextResponse.json({ winprobability });
     }
 

@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { Game } from "@/lib/scoreboard";
+import { gameUrl } from "@/lib/routes";
 
 export function QuickOdds() {
   const { data: games = [], isLoading } = useQuery({
@@ -43,7 +44,7 @@ export function QuickOdds() {
             return (
               <Link
                 key={game.id}
-                href={`/game/nba/${game.id}`}
+                href={gameUrl("nba", game.id)}
                 className={`block rounded-lg border p-2.5 hover:shadow-md transition-all duration-200 ${
                   isLive
                     ? "border-live/30 bg-live-muted/30 hover:border-live/50"

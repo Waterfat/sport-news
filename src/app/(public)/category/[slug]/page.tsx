@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_FALLBACK_IMAGES, CATEGORY_LABELS, formatRelativeTime, getFirstImageUrl, SITE_NAME } from "@/lib/constants";
 import { categoryUrl, newsUrl } from "@/lib/routes";
+import { getExcerpt } from "@/lib/utils";
 
 export const revalidate = 60;
 
@@ -29,28 +30,6 @@ type ArticleWithWriter = {
 };
 
 const ITEMS_PER_PAGE = 20;
-
-function getExcerpt(content: string | null): string {
-  if (!content) return "";
-  const lines = content.split("\n").filter(Boolean);
-  const firstParagraph = lines.find(
-    (line) =>
-      !line.startsWith("#") &&
-      !line.startsWith("-") &&
-      !line.startsWith(">") &&
-      line.trim().length > 20
-  );
-  if (firstParagraph) {
-    return firstParagraph
-      .replace(/[#*_\[\]()>`~]/g, "")
-      .trim()
-      .slice(0, 160);
-  }
-  return content
-    .replace(/[#*_>\-\n\[\]()>`~]/g, " ")
-    .trim()
-    .slice(0, 160);
-}
 
 export async function generateMetadata({
   params,

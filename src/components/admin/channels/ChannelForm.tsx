@@ -46,7 +46,8 @@ export function ChannelForm({
       <CardHeader>
         <CardTitle>新增頻道</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="w-full sm:w-[200px]">
             <Label className="text-sm text-gray-600 mb-1 block">
@@ -92,11 +93,12 @@ export function ChannelForm({
         </div>
 
         <Button
-          onClick={onSubmit}
+          type="submit"
           disabled={adding || !name.trim()}
         >
           {adding ? "新增中..." : "新增頻道"}
         </Button>
+        </form>
       </CardContent>
     </Card>
   );

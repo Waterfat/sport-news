@@ -83,7 +83,8 @@ export function PersonaForm({
       <CardHeader>
         <CardTitle>{editingId ? "編輯寫手" : "新增寫手"}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent>
+        <form onSubmit={(e) => { e.preventDefault(); onSave(); }} className="space-y-4">
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>名稱</Label>
@@ -236,11 +237,12 @@ export function PersonaForm({
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={onSave} disabled={saving}>
+          <Button type="submit" disabled={saving}>
             {saving ? "儲存中..." : "儲存"}
           </Button>
-          <Button variant="outline" onClick={onCancel}>取消</Button>
+          <Button type="button" variant="outline" onClick={onCancel}>取消</Button>
         </div>
+        </form>
       </CardContent>
     </Card>
   );

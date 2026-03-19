@@ -20,6 +20,17 @@ import { ArticlesTable } from "@/components/admin/ArticlesTable";
 import type { Article } from "@/components/admin/ArticlesTable";
 import { BatchActionsBar } from "@/components/admin/BatchActionsBar";
 
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useRewritePolling } from "@/hooks/useRewritePolling";
 import { usePlanManager } from "@/hooks/usePlanManager";
 
@@ -36,6 +47,9 @@ export default function ArticlesPage() {
 
   // 單篇發布 loading
   const [publishingIds, setPublishingIds] = useState<Set<string>>(new Set());
+
+  // 批次操作確認 Dialog
+  const [pendingBatch, setPendingBatch] = useState<{ ids: string[]; action: "publish" | "delete" } | null>(null);
 
   const { data, isLoading: loading } = useQuery<{ articles: Article[]; total: number }>({
     queryKey: ["articles", status, category, page, pageSize],
@@ -95,7 +109,7 @@ export default function ArticlesPage() {
       invalidateArticles();
     },
     onError: (err) => {
-      alert(err.message);
+      toast.error(err.message);
     },
   });
 
@@ -117,7 +131,7 @@ export default function ArticlesPage() {
       invalidateArticles();
     },
     onError: (err) => {
-      alert(err.message);
+      toast.error(err.message);
     },
     onSettled: (_data, _error, articleId) => {
       setPublishingIds((prev) => {
@@ -143,7 +157,7 @@ export default function ArticlesPage() {
       invalidateArticles();
     },
     onError: (err) => {
-      alert(err.message);
+      toast.error(err.message);
     },
   });
 
@@ -170,10 +184,13 @@ export default function ArticlesPage() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
 
-    const labels = { publish: "發布", delete: "刪除" };
-    if (!confirm(`確定要將 ${ids.length} 篇文章${labels[action]}？`)) return;
+    setPendingBatch({ ids, action });
+  };
 
-    batchMutation.mutate({ ids, action });
+  const confirmBatchAction = () => {
+    if (!pendingBatch) return;
+    batchMutation.mutate(pendingBatch);
+    setPendingBatch(null);
   };
 
   const handlePublishOne = async (articleId: string) => {
@@ -322,6 +339,40 @@ export default function ArticlesPage() {
         onJumpInputChange={setJumpInput}
         onJump={handleJump}
       />
+
+      {/* 批次操作確認 Dialog */}
+      <AlertDialog open={!!pendingBatch} onOpenChange={(open) => !open && setPendingBatch(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認{pendingBatch?.action === "publish" ? "發布" : "刪除"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              確定要將 {pendingBatch?.ids.length} 篇文章{pendingBatch?.action === "publish" ? "發布" : "刪除"}？此操作無法復原。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBatchAction}>
+              {pendingBatch?.action === "publish" ? "發布" : "刪除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 規劃項目刪除確認 Dialog */}
+      <AlertDialog open={!!planManager.pendingDeleteIds} onOpenChange={(open) => !open && planManager.cancelPlanDelete()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認移除</AlertDialogTitle>
+            <AlertDialogDescription>
+              確定要移除 {planManager.pendingDeleteIds?.length} 個規劃項目？此操作無法復原。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={planManager.confirmPlanDelete}>移除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

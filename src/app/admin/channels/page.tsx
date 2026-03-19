@@ -2,6 +2,17 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { PublishChannel, ChannelType } from "@/components/admin/channels/channel-types";
 import { resetConfigForType } from "@/components/admin/channels/channel-types";
 import { ChannelForm } from "@/components/admin/channels/ChannelForm";
@@ -14,6 +25,9 @@ export default function ChannelsPage() {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<ChannelType>("telegram");
   const [newConfig, setNewConfig] = useState<Record<string, string>>({});
+
+  // 刪除確認
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   // 編輯
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -53,7 +67,7 @@ export default function ChannelsPage() {
       queryClient.invalidateQueries({ queryKey: ["channels"] });
     },
     onError: (err) => {
-      alert(err.message);
+      toast.error(err.message);
     },
   });
 
@@ -117,8 +131,13 @@ export default function ChannelsPage() {
   }
 
   function deleteChannel(id: number, name: string) {
-    if (!confirm(`確定刪除「${name}」？`)) return;
-    deleteMutation.mutate(id);
+    setDeleteTarget({ id, name });
+  }
+
+  function confirmDeleteChannel() {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget.id);
+    setDeleteTarget(null);
   }
 
   function toggleActive(channel: PublishChannel) {
@@ -194,6 +213,22 @@ export default function ChannelsPage() {
           ))}
         </div>
       )}
+
+      {/* 刪除確認 Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認刪除</AlertDialogTitle>
+            <AlertDialogDescription>
+              確定刪除「{deleteTarget?.name}」？此操作無法復原。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteChannel}>刪除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

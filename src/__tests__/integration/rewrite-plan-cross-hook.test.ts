@@ -13,8 +13,10 @@ import { createQueryWrapper } from "../test-utils";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
-vi.stubGlobal("confirm", vi.fn(() => true));
 vi.stubGlobal("alert", vi.fn());
+
+const mockToast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+vi.mock("sonner", () => ({ toast: mockToast }));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -254,8 +256,8 @@ describe("plan API failure recovery", () => {
     expect(result.current.rewritePolling.runningMode).toBeNull();
     expect(result.current.rewritePolling.planTriggering).toBe(false);
 
-    // alert should have been called
-    expect(alert).toHaveBeenCalled();
+    // toast.error should have been called for plan API failure
+    expect(mockToast.error).toHaveBeenCalled();
   });
 
   it("network error on plan POST resets runningMode", async () => {
@@ -322,8 +324,10 @@ describe("produce API failure recovery", () => {
 
     // planLoading should be false after failure
     expect(result.current.planManager.planLoading).toBe(false);
-    // alert should be called
-    expect(alert).toHaveBeenCalled();
+    // toast.error should be called for produce failures
+    await waitFor(() => {
+      expect(mockToast.error).toHaveBeenCalled();
+    });
   });
 
   it("network error on produce POST resets planLoading to false", async () => {

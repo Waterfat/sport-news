@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { teamUrl } from "@/lib/routes";
+import { LEAGUE_OPTIONS } from "@/lib/constants";
 
 interface StandingsEntry {
   teamId: string;
@@ -19,12 +20,6 @@ interface StandingsGroup {
   name: string;
   entries: StandingsEntry[];
 }
-
-const LEAGUE_OPTIONS = [
-  { value: "nba", label: "NBA" },
-  { value: "mlb", label: "MLB" },
-  { value: "nfl", label: "NFL" },
-];
 
 export function StandingsClient({
   defaultLeague = "nba",

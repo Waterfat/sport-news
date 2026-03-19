@@ -6,7 +6,6 @@ import { createQueryWrapper } from "../test-utils";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
-vi.stubGlobal("confirm", vi.fn(() => true));
 vi.stubGlobal("alert", vi.fn());
 
 function makePlan(id: string, title = `Plan ${id}`): PlanItem {
@@ -271,9 +270,33 @@ describe("usePlanManager - togglePlanSelectAll", () => {
 });
 
 describe("usePlanManager - handlePlanDelete", () => {
-  it("calls DELETE /api/rewrite/plan with selected ids when confirmed", async () => {
+  it("sets pendingDeleteIds with selected ids when handlePlanDelete is called", async () => {
     const plans = [makePlan("p1"), makePlan("p2")];
-    // Mount fetch
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ plans, rawArticleMap: {} }),
+    });
+
+    const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
+
+    await waitFor(() => expect(result.current.plans).toHaveLength(2));
+
+    act(() => result.current.togglePlanSelect("p1"));
+
+    await act(async () => {
+      await result.current.handlePlanDelete();
+    });
+
+    expect(result.current.pendingDeleteIds).toEqual(["p1"]);
+    // No DELETE call yet — only pendingDeleteIds is set
+    const deleteCall = mockFetch.mock.calls.find(
+      (c) => c[0] === "/api/rewrite/plan" && c[1]?.method === "DELETE"
+    );
+    expect(deleteCall).toBeUndefined();
+  });
+
+  it("calls DELETE /api/rewrite/plan when confirmPlanDelete is called", async () => {
+    const plans = [makePlan("p1"), makePlan("p2")];
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ plans, rawArticleMap: {} }),
@@ -286,8 +309,6 @@ describe("usePlanManager - handlePlanDelete", () => {
       json: async () => ({ plans: [makePlan("p2")], rawArticleMap: {} }),
     });
 
-    vi.mocked(confirm).mockReturnValueOnce(true);
-
     const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
@@ -296,6 +317,12 @@ describe("usePlanManager - handlePlanDelete", () => {
 
     await act(async () => {
       await result.current.handlePlanDelete();
+    });
+
+    expect(result.current.pendingDeleteIds).toEqual(["p1"]);
+
+    await act(async () => {
+      result.current.confirmPlanDelete();
     });
 
     const deleteCall = mockFetch.mock.calls.find(
@@ -308,13 +335,11 @@ describe("usePlanManager - handlePlanDelete", () => {
     expect(body.ids).toHaveLength(1);
   });
 
-  it("clears selection after successful delete", async () => {
+  it("clears selection after successful delete via confirmPlanDelete", async () => {
     const plans = [makePlan("p1"), makePlan("p2")];
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ plans, rawArticleMap: {} }) });
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ plans: [], rawArticleMap: {} }) });
-
-    vi.mocked(confirm).mockReturnValueOnce(true);
 
     const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
@@ -327,7 +352,11 @@ describe("usePlanManager - handlePlanDelete", () => {
       await result.current.handlePlanDelete();
     });
 
-    expect(result.current.selectedPlanIds.size).toBe(0);
+    await act(async () => {
+      result.current.confirmPlanDelete();
+    });
+
+    await waitFor(() => expect(result.current.selectedPlanIds.size).toBe(0));
   });
 
   it("does nothing when no plans are selected", async () => {
@@ -345,15 +374,14 @@ describe("usePlanManager - handlePlanDelete", () => {
       await result.current.handlePlanDelete();
     });
 
+    expect(result.current.pendingDeleteIds).toBeNull();
     // Only the initial mount fetch, no DELETE call
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
-  it("does not call DELETE when user cancels confirm dialog", async () => {
+  it("cancelPlanDelete clears pendingDeleteIds without calling DELETE", async () => {
     const plans = [makePlan("p1")];
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ plans, rawArticleMap: {} }) });
-
-    vi.mocked(confirm).mockReturnValueOnce(false);
 
     const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
@@ -365,13 +393,21 @@ describe("usePlanManager - handlePlanDelete", () => {
       await result.current.handlePlanDelete();
     });
 
+    expect(result.current.pendingDeleteIds).toEqual(["p1"]);
+
+    act(() => {
+      result.current.cancelPlanDelete();
+    });
+
+    expect(result.current.pendingDeleteIds).toBeNull();
+
     const deleteCall = mockFetch.mock.calls.find(
       (c) => c[0] === "/api/rewrite/plan" && c[1]?.method === "DELETE"
     );
     expect(deleteCall).toBeUndefined();
   });
 
-  it("re-fetches plans after successful delete", async () => {
+  it("re-fetches plans after successful delete via confirmPlanDelete", async () => {
     const plans = [makePlan("p1"), makePlan("p2")];
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ plans, rawArticleMap: {} }) });
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
@@ -381,8 +417,6 @@ describe("usePlanManager - handlePlanDelete", () => {
       json: async () => ({ plans: [makePlan("p2")], rawArticleMap: {} }),
     });
 
-    vi.mocked(confirm).mockReturnValueOnce(true);
-
     const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
@@ -391,6 +425,10 @@ describe("usePlanManager - handlePlanDelete", () => {
 
     await act(async () => {
       await result.current.handlePlanDelete();
+    });
+
+    await act(async () => {
+      result.current.confirmPlanDelete();
     });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(1));
@@ -423,8 +461,6 @@ describe("usePlanManager - handlePlanProduce", () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ plans, rawArticleMap: {} }) });
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ started: true }) });
 
-    vi.mocked(confirm).mockReturnValueOnce(true);
-
     const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(2));
@@ -455,8 +491,6 @@ describe("usePlanManager - handlePlanProduce", () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ plans, rawArticleMap: {} }) });
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ started: true }) });
 
-    vi.mocked(confirm).mockReturnValueOnce(true);
-
     const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
     await waitFor(() => expect(result.current.plans).toHaveLength(1));
@@ -475,8 +509,6 @@ describe("usePlanManager - handlePlanProduce", () => {
     const plans = [makePlan("p1"), makePlan("p2")];
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ plans, rawArticleMap: {} }) });
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ started: true }) });
-
-    vi.mocked(confirm).mockReturnValueOnce(true);
 
     const { result } = renderHook(() => usePlanManager(), { wrapper: createQueryWrapper() });
 
