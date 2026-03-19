@@ -170,6 +170,105 @@ async function checkPendingTasks() {
   }
 }
 
+/**
+ * 自動管線檢查：讀取 automation_settings，
+ * 判斷是否到了檢查時間 + 素材是否達門檻 → 觸發產文
+ */
+async function checkAutoPipeline() {
+  if (isRunning) return;
+
+  try {
+    const { data: settings } = await supabase
+      .from("automation_settings")
+      .select("*")
+      .eq("id", 1)
+      .single();
+
+    if (!settings || !settings.is_auto_mode) return;
+
+    // 檢查間隔未到 → 跳過
+    const now = new Date();
+    if (settings.last_check_at) {
+      const lastCheck = new Date(settings.last_check_at);
+      const diffMinutes = (now.getTime() - lastCheck.getTime()) / (1000 * 60);
+      if (diffMinutes < settings.check_interval_minutes) return;
+    }
+
+    // 更新 last_check_at
+    await supabase
+      .from("automation_settings")
+      .update({ last_check_at: now.toISOString() })
+      .eq("id", 1);
+
+    // 計算未處理素材數
+    const { count } = await supabase
+      .from("raw_articles")
+      .select("*", { count: "exact", head: true })
+      .eq("is_processed", false);
+
+    const pendingCount = count ?? 0;
+
+    if (pendingCount < settings.article_threshold) {
+      console.log(`[${ts()}] 自動管線：未達門檻 (${pendingCount}/${settings.article_threshold})`);
+      return;
+    }
+
+    // 檢查是否有正在執行的任務
+    const { data: runningTasks } = await supabase
+      .from("rewrite_tasks")
+      .select("id")
+      .in("status", ["pending", "running"])
+      .limit(1);
+
+    if (runningTasks && runningTasks.length > 0) return;
+
+    // 達門檻 → 觸發 auto-pipeline API（由 Vercel 端執行產文+發布）
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://howger-sport.com";
+    const cronSecret = process.env.CRON_SECRET || "";
+
+    console.log(`[${ts()}] 自動管線：達門檻 (${pendingCount}/${settings.article_threshold})，觸發產文`);
+
+    await supabase
+      .from("automation_settings")
+      .update({
+        last_run_at: now.toISOString(),
+        last_run_status: "running",
+        last_run_error: null,
+      })
+      .eq("id", 1);
+
+    // 建立 rewrite_task，標記 auto_publish
+    const { error: insertError } = await supabase
+      .from("rewrite_tasks")
+      .insert({
+        status: "pending",
+        metadata: { auto_publish: true },
+      });
+
+    if (insertError) {
+      console.error(`[${ts()}] 自動管線：建立任務失敗: ${insertError.message}`);
+      await supabase
+        .from("automation_settings")
+        .update({ last_run_status: "failed", last_run_error: insertError.message })
+        .eq("id", 1);
+      return;
+    }
+
+    // 同時呼叫 auto-pipeline API 讓 Vercel 端處理自動發布
+    try {
+      const res = await fetch(`${siteUrl}/api/cron/auto-pipeline`, {
+        headers: { Authorization: `Bearer ${cronSecret}` },
+      });
+      const data = await res.json();
+      console.log(`[${ts()}] 自動管線 API 回應:`, JSON.stringify(data));
+    } catch (e) {
+      console.log(`[${ts()}] 自動管線 API 呼叫失敗（任務已建立，listener 會接手）:`, e);
+    }
+  } catch (err) {
+    console.error(`[${ts()}] 自動管線檢查異常:`, err);
+  }
+}
+
 function startListening() {
   console.log(`[${ts()}] 改寫監聽器啟動，等待任務...`);
 
@@ -196,9 +295,10 @@ function startListening() {
   // 啟動時先檢查有沒有未處理的任務
   checkPendingTasks();
 
-  // 每 30 秒心跳檢查（防止 Realtime 漏接）
-  setInterval(() => {
-    checkPendingTasks();
+  // 每 30 秒心跳檢查（防止 Realtime 漏接）+ 自動管線檢查
+  setInterval(async () => {
+    await checkPendingTasks();
+    await checkAutoPipeline();
   }, 30000);
 
   // 優雅關閉
