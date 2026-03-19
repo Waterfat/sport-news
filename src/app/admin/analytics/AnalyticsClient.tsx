@@ -69,7 +69,7 @@ const DEVICE_ICONS: Record<string, typeof Monitor> = {
 
 export default function AnalyticsClient() {
   const [period, setPeriod] = useQueryState("period", parseAsString.withDefault("7d"));
-  const [tab, setTab] = useState<"visitor" | "content">("visitor");
+  const [tab, setTab] = useQueryState("tab", parseAsString.withDefault("visitor"));
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   const { data: content, isLoading: contentLoading } = useQuery<ContentData>({

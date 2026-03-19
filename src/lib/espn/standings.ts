@@ -3,6 +3,7 @@
 
 import { CACHE_TTL, getSportPath } from "./client";
 import type { ESPNStandingsResponse } from "./types";
+import { getTeamNameZh, getConferenceNameZh } from "@/lib/constants";
 
 const ESPN_V2_BASE = "https://site.api.espn.com/apis/v2/sports";
 
@@ -30,7 +31,7 @@ const STAT_NAME_MAP: Record<string, string> = {
 
 function parseStandings(data: ESPNStandingsResponse): StandingsGroup[] {
   return (data.children ?? []).map((group) => ({
-    name: group.name,
+    name: getConferenceNameZh(group.name),
     entries: (group.standings?.entries ?? []).map((entry) => {
       const statsMap: Record<string, string> = {};
       (entry.stats ?? []).forEach((s) => {
@@ -39,7 +40,7 @@ function parseStandings(data: ESPNStandingsResponse): StandingsGroup[] {
       });
       return {
         teamId: entry.team?.id ?? "",
-        teamName: entry.team?.displayName ?? "",
+        teamName: getTeamNameZh(entry.team?.displayName ?? ""),
         abbreviation: entry.team?.abbreviation ?? "",
         logo: entry.team?.logos?.[0]?.href ?? "",
         stats: statsMap,

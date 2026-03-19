@@ -442,13 +442,13 @@ function parsePickCenter(data: any): PickCenterData[] {
     const awayMl = p.awayTeamOdds?.moneyLine ?? 0;
     let homeWinPct = p.homeTeamOdds?.winPercentage ?? 0;
     let awayWinPct = p.awayTeamOdds?.winPercentage ?? 0;
-    // If no winPercentage, derive from moneyLine
+    // If no winPercentage, derive from moneyLine (return 0-1 scale)
     if (homeWinPct === 0 && awayWinPct === 0 && (homeMl !== 0 || awayMl !== 0)) {
       const rawHome = moneyLineToProb(homeMl);
       const rawAway = moneyLineToProb(awayMl);
       const total = rawHome + rawAway;
-      homeWinPct = total > 0 ? Math.round((rawHome / total) * 100) : 50;
-      awayWinPct = total > 0 ? Math.round((rawAway / total) * 100) : 50;
+      homeWinPct = total > 0 ? rawHome / total : 0.5;
+      awayWinPct = total > 0 ? rawAway / total : 0.5;
     }
     return {
       provider: p.provider?.name ?? "",

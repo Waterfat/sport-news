@@ -98,7 +98,7 @@ describe("fetchSeasonSeries", () => {
 // ─── fetchPickCenter ──────────────────────────────────────────────────────────
 
 describe("fetchPickCenter", () => {
-  it("正確解析 pickcenter 資料，並由 moneyLine 計算 homeWinPct / awayWinPct", async () => {
+  it("正確解析 pickcenter 資料，並由 moneyLine 計算 homeWinPct / awayWinPct（0-1 區間）", async () => {
     mockEspnFetch.mockResolvedValueOnce({
       pickcenter: [
         {
@@ -115,10 +115,13 @@ describe("fetchPickCenter", () => {
     expect(result[0].provider).toBe("Draft Kings");
     expect(result[0].details).toBe("CHA -5.5");
     // moneyLine -205 → rawHome = 205/305 ≈ 0.672；moneyLine 170 → rawAway = 100/270 ≈ 0.370
-    // homeWinPct = round(0.672 / (0.672 + 0.370) * 100) = 65
+    // 回傳值必須在 0-1 區間（API 契約）
     expect(result[0].homeWinPct).toBeGreaterThan(0);
+    expect(result[0].homeWinPct).toBeLessThanOrEqual(1);
     expect(result[0].awayWinPct).toBeGreaterThan(0);
-    expect(result[0].homeWinPct + result[0].awayWinPct).toBe(100);
+    expect(result[0].awayWinPct).toBeLessThanOrEqual(1);
+    // 加總應約等於 1
+    expect(result[0].homeWinPct + result[0].awayWinPct).toBeCloseTo(1, 2);
   });
 
   it("pickcenter 為空陣列時回傳空陣列", async () => {
@@ -135,21 +138,21 @@ describe("fetchPickCenter", () => {
     expect(result).toEqual([]);
   });
 
-  it("winPercentage 已存在時直接使用，不從 moneyLine 計算", async () => {
+  it("winPercentage 已存在時直接使用（0-1 區間），不從 moneyLine 計算", async () => {
     mockEspnFetch.mockResolvedValueOnce({
       pickcenter: [
         {
           provider: { name: "ESPN BET" },
           details: "BOS -3",
-          homeTeamOdds: { moneyLine: -150, winPercentage: 60 },
-          awayTeamOdds: { moneyLine: 130, winPercentage: 40 },
+          homeTeamOdds: { moneyLine: -150, winPercentage: 0.6 },
+          awayTeamOdds: { moneyLine: 130, winPercentage: 0.4 },
         },
       ],
     });
 
     const result = await fetchPickCenter("nba", "401234567");
-    expect(result[0].homeWinPct).toBe(60);
-    expect(result[0].awayWinPct).toBe(40);
+    expect(result[0].homeWinPct).toBe(0.6);
+    expect(result[0].awayWinPct).toBe(0.4);
   });
 
   it("espnFetch 拋出例外時回傳空陣列", async () => {

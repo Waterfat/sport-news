@@ -7,6 +7,7 @@ import { getTeamNameZh } from "@/lib/constants";
 // ---------- 前台使用的型別（保持與現有 scoreboard.ts 相容） ----------
 
 export interface TeamInfo {
+  id: string;
   name: string;
   abbreviation: string;
   logo: string;
@@ -90,6 +91,7 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
       statusDetail: event.status?.type?.shortDetail ?? "",
       broadcast,
       homeTeam: {
+        id: home?.team?.id ?? "",
         name: getTeamNameZh(home?.team?.displayName ?? ""),
         abbreviation: home?.team?.abbreviation ?? "",
         logo: home?.team?.logo ?? "",
@@ -101,6 +103,7 @@ function parseGames(data: ESPNScoreboardResponse): Game[] {
         })),
       },
       awayTeam: {
+        id: away?.team?.id ?? "",
         name: getTeamNameZh(away?.team?.displayName ?? ""),
         abbreviation: away?.team?.abbreviation ?? "",
         logo: away?.team?.logo ?? "",
