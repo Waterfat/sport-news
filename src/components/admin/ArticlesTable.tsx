@@ -28,6 +28,7 @@ export interface Article {
   scheduled_at: string | null;
   images: string[];
   raw_article_ids: string[] | null;
+  view_count: number | null;
   writer_personas: {
     name: string;
   } | null;
@@ -166,6 +167,7 @@ export function ArticlesTable({
               <TableHead>標題</TableHead>
               <TableHead className="w-[80px] hidden md:table-cell">分類</TableHead>
               <TableHead className="w-[100px] hidden md:table-cell">寫手</TableHead>
+              <TableHead className="w-[60px] hidden md:table-cell text-right">瀏覽</TableHead>
               <TableHead className="w-[70px]">狀態</TableHead>
               <TableHead className="w-[150px] hidden lg:table-cell">建立時間</TableHead>
               <TableHead className="w-[210px] text-right">操作</TableHead>
@@ -231,6 +233,11 @@ export function ArticlesTable({
                   </TableCell>
                   <TableCell className="truncate hidden md:table-cell">
                     {article.writer_personas?.name || "-"}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-right tabular-nums text-muted-foreground">
+                    {article.status === "published" && article.view_count != null
+                      ? article.view_count.toLocaleString()
+                      : "-"}
                   </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant}>
@@ -310,9 +317,14 @@ export function ArticlesTable({
                         </span>
                       )}
                     </div>
-                    <Badge variant={statusVariant} className="flex-shrink-0">
-                      {statusLabel}
-                    </Badge>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {article.status === "published" && article.view_count != null && (
+                        <span className="text-xs text-muted-foreground tabular-nums">{article.view_count.toLocaleString()} 瀏覽</span>
+                      )}
+                      <Badge variant={statusVariant}>
+                        {statusLabel}
+                      </Badge>
+                    </div>
                   </div>
                   {article.category && (
                     <span className={`inline-block px-2 py-0.5 text-xs font-medium mt-1 ${CATEGORY_COLORS[article.category] ?? "bg-slate-100 text-slate-600 border border-slate-300 rounded-lg"}`}>
