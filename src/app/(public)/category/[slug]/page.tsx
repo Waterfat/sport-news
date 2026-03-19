@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
 import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_FALLBACK_IMAGES, CATEGORY_LABELS, formatRelativeTime, getFirstImageUrl, SITE_NAME } from "@/lib/constants";
+import { categoryUrl, newsUrl } from "@/lib/routes";
 
 export const revalidate = 60;
 
@@ -170,7 +171,7 @@ export default async function CategoryPage({
     for (const [k, v] of Object.entries(params)) {
       searchParts.push(`${k}=${v}`);
     }
-    return `/category/${slug}?${searchParts.join("&")}`;
+    return `${categoryUrl(slug)}?${searchParts.join("&")}`;
   };
 
   return (
@@ -246,7 +247,7 @@ export default async function CategoryPage({
             return (
               <Link
                 key={article.id}
-                href={`/news/${article.slug || article.id}`}
+                href={newsUrl(article.slug || article.id)}
                 className="group block rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-brand/30 transition-all duration-200"
               >
                 <div className="flex items-start gap-4">

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { SCOREBOARD_POLLING_MS } from "@/lib/constants";
 import type { Game } from "@/lib/scoreboard";
+import { gameUrl } from "@/lib/routes";
 
 interface League {
   key: string;
@@ -16,7 +17,7 @@ function TickerGameCard({ game, league }: { game: Game; league: string }) {
 
   return (
     <Link
-      href={`/game/${league}/${game.id}`}
+      href={gameUrl(league, game.id)}
       className={`flex-shrink-0 w-[150px] rounded-xl border bg-card p-2.5 hover:shadow-lg hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 ${
         isLive ? "border-live/40 ring-1 ring-live/20" : "border-border hover:border-brand/40"
       }`}

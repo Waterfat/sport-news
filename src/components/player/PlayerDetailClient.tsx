@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MemberGate } from "@/components/auth/MemberGate";
 import { ArrowLeft } from "lucide-react";
+import { teamUrl } from "@/lib/routes";
 
 interface PlayerInfo {
   id: string;
@@ -101,7 +102,7 @@ export function PlayerDetailClient({
     <div className="space-y-6">
       {player.team && (
         <Link
-          href={`/team/${sport}/${player.team.id}`}
+          href={teamUrl(sport, player.team.id)}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -129,7 +130,7 @@ export function PlayerDetailClient({
                 <Badge variant="outline">{player.position}</Badge>
                 {player.team && (
                   <Link
-                    href={`/team/${sport}/${player.team.id}`}
+                    href={teamUrl(sport, player.team.id)}
                     className="flex items-center gap-1 text-sm text-primary hover:underline"
                   >
                     {player.team.logo && (

@@ -1,4 +1,5 @@
 import type { PublishArticle } from "./types";
+import { absoluteNewsUrl } from "@/lib/routes";
 
 interface TwitterConfig {
   api_key: string;
@@ -30,7 +31,7 @@ export async function publishToTwitter(
     }
 
     const link = config.site_url && article.slug
-      ? `${config.site_url}/news/${article.slug}`
+      ? absoluteNewsUrl(config.site_url, article.slug)
       : "";
 
     const maxTitleLen = link ? 250 : 280;

@@ -1,4 +1,5 @@
 import type { PublishArticle } from "./types";
+import { absoluteNewsUrl } from "@/lib/routes";
 
 const FACEBOOK_API_VERSION = "v19.0";
 
@@ -26,7 +27,7 @@ export async function publishToFacebook(
     }
 
     const link = site_url && article.slug
-      ? `${site_url}/news/${article.slug}`
+      ? absoluteNewsUrl(site_url, article.slug)
       : undefined;
 
     const contentExcerpt = article.content.length > 500

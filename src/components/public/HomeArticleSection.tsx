@@ -6,6 +6,7 @@ import Link from "next/link";
 import { HomeCategoryFilter } from "./HomeCategoryFilter";
 import { PersonalizedArticleGrid } from "./PersonalizedArticleGrid";
 import { getCategorySlug } from "@/lib/constants";
+import { categoryUrl } from "@/lib/routes";
 
 interface ArticleItem {
   id: string;
@@ -70,7 +71,7 @@ export function HomeArticleSection({
       {showMoreLink && (
         <div className="mt-4 text-center">
           <Link
-            href={`/category/${getCategorySlug(activeCategory)}`}
+            href={categoryUrl(getCategorySlug(activeCategory))}
             className="text-sm text-brand hover:underline"
           >
             查看更多{activeCategory}文章 →

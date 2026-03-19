@@ -22,6 +22,8 @@
 - 純文字、設定檔、環境變數修改
 - 使用者指示非常具體且範圍明確
 
+**注意：跳過 Plan Mode ≠ 跳過 PM 流程。** Bug fix 仍需走 PM 完整流程（Issue → branch → 修復 → review → QA → deploy → evolve），只是不需要在動手前先做需求確認。
+
 ### 變更影響對照表
 
 | 修改範圍 | 需要的動作 |
@@ -42,7 +44,9 @@
 |--------|-----|
 | 正式環境 URL | `https://howger-sport.com` |
 | 本地開發 URL | `http://localhost:3000` |
-| 部署方式 | push main 自動部署（Vercel）；push hook 會自動提醒等待部署 + 跑 QA；未觸發時用 `/deploy manual` 手動部署 |
+| 部署方式 | PR rebase merge 到 main → `/deploy` 將 main merge 到 release → Vercel 從 release 自動部署 prod → QA 通過後 `gh issue close #N`。**禁止直接 push release**。 |
+| 部署確認 | **自動**（QA 通過後直接部署，不需暫停詢問使用者） |
+| Git Push 確認 | **自動**（安全掃描通過後直接 push，不需暫停詢問使用者） |
 | 統一 QA 指令 | `./scripts/qa.sh <URL>`（串接 vitest + smoke + E2E） |
 | 共用常數檔案 | `src/lib/constants.ts` |
 | 跨服務介面 | `scripts/` ↔ `src/app/api/` 共用 DB schema（特別是 `rewrite_tasks` 表） |
@@ -201,9 +205,30 @@ Vitest + jsdom 無法渲染 CSS，佈局問題只能靠視覺驗證。以下為�
 
 - Next.js App Router + TypeScript
 - Supabase (PostgreSQL) - Project Ref: `fmakjkvkmbltqgyndijb`
+- TanStack Query（server state 管理）
+- nuqs（URL state 管理）
 - Vitest + jsdom (測試)
 - Tailwind CSS + shadcn/ui
 - NextAuth.js (認證)
+
+### Server State 管理原則
+
+- **禁止**用 `useEffect + fetch + useState` 管理 server state，改用 TanStack Query 的 `useQuery`
+- 篩選/排序/分頁狀態用 `nuqs` URL state（`useQueryState`），不用 `useState`
+- 即時任務狀態用 `refetchInterval` conditional polling 或 Supabase Realtime
+- 新增 Client Component 需要 fetch 資料時，必須用 `useQuery`，不可自寫 useEffect
+- Mutation（POST/PUT/DELETE）用 `useMutation` + `invalidateQueries` 自動刷新
+
+## API 數值契約
+
+- ESPN API 百分比回傳為 **0-1 scale**（如 `winPercentage: 0.65`），前端顯示時才 ×100
+- parse 函式回傳百分比必須明確標註 scale（變數名含 `Pct` = 0-1，含 `Percent` = 0-100）
+- 關鍵數值欄位使用 `src/lib/espn/schemas.ts` 的 Zod schema 做 runtime 驗證
+
+## 路由 URL
+
+- 所有 `<Link href>` 和 URL 拼接**必須使用 `src/lib/routes.ts` 的 route helper**，禁止手動字串拼接
+- 外部分享 URL（SEO/RSS/社群）使用 `absolute*Url()` helper
 
 ## 共用常數
 
