@@ -53,10 +53,26 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const supabase = createServiceClient();
   const body = await request.json();
-  const { id, ...updateData } = body;
+  const { id } = body;
 
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  const allowedFields = [
+    "name",
+    "description",
+    "style_prompt",
+    "is_active",
+    "specialties",
+    "writer_type",
+    "max_articles",
+  ];
+  const updateData: Record<string, unknown> = {};
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) {
+      updateData[field] = body[field];
+    }
   }
 
   const { data, error } = await supabase

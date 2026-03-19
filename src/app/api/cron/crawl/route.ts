@@ -6,7 +6,8 @@ export const maxDuration = 60; // Vercel function timeout
 export async function GET(request: NextRequest) {
   // 驗證 cron secret
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

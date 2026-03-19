@@ -67,10 +67,18 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, ...updates } = body;
+    const { id } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
+
+    const allowedFields = ["sport_key", "league_key", "label", "espn_endpoint", "enabled", "sort_order"];
+    const updates: Record<string, unknown> = {};
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updates[field] = body[field];
+      }
     }
 
     const supabase = createServiceClient();
