@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CHANNEL_TYPE_LABELS } from "@/lib/constants";
+import { AutomationPanel } from "@/components/admin/AutomationPanel";
 
 interface Channel {
   id: number;
@@ -79,6 +80,9 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* 自動化設定 */}
+      <AutomationPanel />
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* 寫手列表 */}
