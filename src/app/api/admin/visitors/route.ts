@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { getPageName } from "@/lib/constants";
+import { auth } from "@/auth";
 
 /** Get the best unique identifier for a visitor (priority: member > visitor+ip > visitor > ip) */
 function getVisitorKey(v: { member_id: string | null; visitor_id: string | null; ip_hash: string | null; session_id: string }): string {
@@ -12,6 +13,11 @@ function getVisitorKey(v: { member_id: string | null; visitor_id: string | null;
 }
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const period = req.nextUrl.searchParams.get("period") || "7d";
   const days = period === "30d" ? 30 : period === "90d" ? 90 : 7;
 

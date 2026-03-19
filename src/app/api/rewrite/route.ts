@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { auth } from "@/auth";
 
 // POST: 建立新的改寫任務
 export async function POST() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createServiceClient();
 
   // 檢查是否有正在執行的任務
@@ -34,6 +40,11 @@ export async function POST() {
 
 // GET: 取得最後執行狀態 + 自上次完成以來的新增文章數
 export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createServiceClient();
 
   // 最後一筆已完成的任務

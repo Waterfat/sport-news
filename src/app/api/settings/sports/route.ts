@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { SPORTS, type SportKey } from "@/lib/sport-config";
+import { auth } from "@/auth";
 
 // GET: 回傳目前各球種的啟用狀態與爬蟲來源
 export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const supabase = createServiceClient();
     const { data, error } = await supabase
@@ -47,6 +53,11 @@ export async function GET() {
 
 // POST: 更新某球種的啟用狀態或爬蟲來源
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { sport_key, enabled, sources, title_prompt } = body as {

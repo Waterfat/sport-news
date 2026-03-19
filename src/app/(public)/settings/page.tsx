@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,20 +16,17 @@ interface FavoriteTeam {
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
-  const [favorites, setFavorites] = useState<FavoriteTeam[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (session?.user?.memberId) {
-      fetch("/api/member/favorites")
-        .then((r) => r.json())
-        .then((d) => setFavorites(d.favorites ?? []))
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, [session]);
+  const { data: favorites = [], isLoading: loading } = useQuery({
+    queryKey: ["member-favorites"],
+    queryFn: async () => {
+      const res = await fetch("/api/member/favorites");
+      const d = await res.json();
+      return (d.favorites ?? []) as FavoriteTeam[];
+    },
+    enabled: !!session?.user?.memberId,
+  });
 
   if (status === "loading") {
     return (
@@ -55,9 +52,7 @@ export default function SettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sport, teamId }),
     });
-    setFavorites((prev) =>
-      prev.filter((t) => !(t.teamId === teamId && t.sport === sport))
-    );
+    queryClient.invalidateQueries({ queryKey: ["member-favorites"] });
   }
 
   return (

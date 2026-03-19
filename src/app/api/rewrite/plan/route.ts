@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { auth } from "@/auth";
 
 // GET: 取得目前的規劃列表
 export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
@@ -50,6 +56,11 @@ export async function GET() {
 
 // POST: 產生規劃（呼叫 rewrite_tasks 觸發 listener）
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createServiceClient();
 
   let force = false;
@@ -105,6 +116,11 @@ export async function POST(request: NextRequest) {
 
 // DELETE: 刪除選中的規劃項目
 export async function DELETE(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createServiceClient();
   const body = await request.json();
   const { ids } = body as { ids: string[] };
