@@ -19,6 +19,12 @@ const navLinks = [
   { href: "/odds", label: "賠率" },
 ];
 
+// Scroll handler 常數
+const SCROLL_MIN_POSITION = 60; // 最小滾動位置才觸發隱藏（配合 logo h-12）
+const SCROLL_HIDE_DELTA = 10; // 向下滾動 delta 閾值
+const SCROLL_SHOW_DELTA = 30; // 向上滾動 delta 閾值（較高，避免慣性震盪誤觸發）
+const SCROLL_COOLDOWN_MS = 150; // 狀態切換最小間隔（ms）
+
 export function PublicHeader() {
   const pathname = usePathname();
   const router = useRouter();
@@ -30,6 +36,8 @@ export function PublicHeader() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
+  const lastToggleTime = useRef(0);
+  const logoHiddenRef = useRef(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -53,18 +61,40 @@ export function PublicHeader() {
     const container = document.getElementById("scroll-container");
     if (!container) return;
 
+    let rafId = 0;
+
     const onScroll = () => {
       if (ticking.current) return;
       ticking.current = true;
 
-      requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
+        if (!container.isConnected) {
+          ticking.current = false;
+          return;
+        }
+
         const currentY = container.scrollTop;
         const delta = currentY - lastScrollY.current;
+        const now = Date.now();
+        const cooldownOk = now - lastToggleTime.current > SCROLL_COOLDOWN_MS;
 
-        if (delta > 10 && currentY > 60) {
+        if (
+          delta > SCROLL_HIDE_DELTA &&
+          currentY > SCROLL_MIN_POSITION &&
+          cooldownOk &&
+          !logoHiddenRef.current
+        ) {
+          logoHiddenRef.current = true;
           setLogoHidden(true);
-        } else if (delta < -10) {
+          lastToggleTime.current = now;
+        } else if (
+          delta < -SCROLL_SHOW_DELTA &&
+          cooldownOk &&
+          logoHiddenRef.current
+        ) {
+          logoHiddenRef.current = false;
           setLogoHidden(false);
+          lastToggleTime.current = now;
         }
 
         lastScrollY.current = currentY;
@@ -73,7 +103,10 @@ export function PublicHeader() {
     };
 
     container.addEventListener("scroll", onScroll, { passive: true });
-    return () => container.removeEventListener("scroll", onScroll);
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(rafId);
+    };
   }, []);
 
   function isActive(link: { href: string; exact?: boolean }) {
@@ -83,10 +116,12 @@ export function PublicHeader() {
 
   return (
     <header className="flex-shrink-0 bg-background/90 backdrop-blur-sm border-b border-border pt-[env(safe-area-inset-top)]">
-      {/* Row 1: Logo + Theme Toggle + UserMenu */}
+      {/* Row 1: Logo + Theme Toggle + UserMenu — overflow-hidden + 高度過渡 + cooldown 防抖 */}
       <div
-        className={`overflow-hidden transition-all duration-200 ease-in-out ${
-          logoHidden ? "max-h-0 opacity-0" : "max-h-16 opacity-100"
+        className={`overflow-hidden transition-[height,opacity] duration-200 ease-in-out ${
+          logoHidden
+            ? "h-0 opacity-0 pointer-events-none"
+            : "h-12 sm:h-14 opacity-100"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
