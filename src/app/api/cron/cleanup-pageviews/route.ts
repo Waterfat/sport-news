@@ -5,8 +5,14 @@ import { createServiceClient } from "@/lib/supabase";
  * Cron job: 清除 90 天前的 page_views 資料
  * 建議每天跑一次
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const supabase = createServiceClient();
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 90);

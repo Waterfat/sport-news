@@ -30,7 +30,8 @@ export default async function SearchPage({
 
   if (query) {
     const supabase = createServiceClient();
-    const keyword = `%${query}%`;
+    const safeQuery = query.replace(/[%_,()[\].\\]/g, "\\$&");
+    const keyword = `%${safeQuery}%`;
 
     const { data } = await supabase
       .from("generated_articles")

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { PullToRefresh } from "@/components/public/PullToRefresh";
 import { PageTracker } from "@/components/public/PageTracker";
+import { TELEGRAM_CHANNEL_URL } from "@/lib/constants";
 
 const footerLinks = [
   { href: "/scores", label: "即時比分" },
@@ -44,7 +45,7 @@ export default function PublicLayout({
                 <span className="text-sm text-muted-foreground">即時體育新聞直送手機</span>
               </div>
               <Link
-                href="https://t.me/howger_sport_news"
+                href={TELEGRAM_CHANNEL_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand text-brand-foreground text-xs font-medium rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
