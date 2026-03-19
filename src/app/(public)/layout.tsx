@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { PullToRefresh } from "@/components/public/PullToRefresh";
 import { PageTracker } from "@/components/public/PageTracker";
@@ -28,7 +27,6 @@ export default function PublicLayout({
       <div id="scroll-container" className="flex-1 overflow-y-auto overscroll-contain">
         <PullToRefresh scrollContainerId="scroll-container" />
         <PageTracker />
-        <NuqsAdapter>
         {/* Main Content */}
         <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
           {children}
@@ -74,7 +72,6 @@ export default function PublicLayout({
             </div>
           </div>
         </footer>
-        </NuqsAdapter>
       </div>
     </div>
   );

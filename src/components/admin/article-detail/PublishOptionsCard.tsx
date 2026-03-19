@@ -74,7 +74,7 @@ export function PublishOptionsCard({
               value={scheduledDateTime}
               onChange={(e) => onScheduledDateTimeChange(e.target.value)}
               className="w-full sm:w-auto"
-              min={new Date().toISOString().slice(0, 16)}
+              min=""
             />
             <Button
               variant="outline"

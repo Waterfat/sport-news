@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { NuqsAdapter } from "nuqs/adapters/next/app";
 import AdminLayoutClient from "./AdminLayoutClient";
 
 export const metadata: Metadata = {
@@ -14,10 +13,8 @@ export const metadata: Metadata = {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <NuqsAdapter>
-      <AdminLayoutClient>
-        <Suspense>{children}</Suspense>
-      </AdminLayoutClient>
-    </NuqsAdapter>
+    <AdminLayoutClient>
+      <Suspense>{children}</Suspense>
+    </AdminLayoutClient>
   );
 }
