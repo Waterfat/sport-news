@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 import { SPORT_KEY_LABELS } from "@/lib/constants";
 
 interface ScoreboardConfig {
@@ -72,7 +73,7 @@ export default function AdminScoreboardPage() {
       queryClient.invalidateQueries({ queryKey: ["scoreboard-configs"] });
     },
     onError: () => {
-      alert("更新失敗");
+      toast.error("更新失敗");
     },
   });
 
@@ -95,7 +96,7 @@ export default function AdminScoreboardPage() {
       queryClient.invalidateQueries({ queryKey: ["scoreboard-configs"] });
     },
     onError: (err) => {
-      alert(err.message);
+      toast.error(err.message);
     },
   });
 
@@ -113,7 +114,7 @@ export default function AdminScoreboardPage() {
       queryClient.invalidateQueries({ queryKey: ["scoreboard-configs"] });
     },
     onError: () => {
-      alert("刪除失敗");
+      toast.error("刪除失敗");
     },
   });
 

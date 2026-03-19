@@ -269,6 +269,13 @@ export const ARTICLE_STATUS_VARIANT: Record<string, "default" | "secondary" | "d
   published: "default",
 };
 
+/** 聯賽選項（用於 Scores/Odds/Standings 等公開頁面的聯賽切換） */
+export const LEAGUE_OPTIONS = [
+  { value: "nba", label: "NBA" },
+  { value: "mlb", label: "MLB" },
+  { value: "nfl", label: "NFL" },
+] as const;
+
 export const PAGE_SIZE_OPTIONS = [20, 50, 100, 300];
 
 /** 排除非內容圖片（logo、tracking pixel、icon 等） */

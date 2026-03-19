@@ -2,6 +2,16 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { PersonaForm } from "@/components/admin/personas/PersonaForm";
 import { PersonaCard } from "@/components/admin/personas/PersonaCard";
@@ -10,6 +20,7 @@ import { emptyForm, type Persona, type PersonaFormData } from "@/components/admi
 export default function PersonasPage() {
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState<PersonaFormData>(emptyForm);
   const [teamInput, setTeamInput] = useState("");
@@ -107,8 +118,13 @@ export default function PersonasPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("確定要刪除此寫手？")) return;
-    deleteMutation.mutate(id);
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate(deleteTarget);
+    setDeleteTarget(null);
   };
 
   const handleToggleActive = async (p: Persona) => {
@@ -152,6 +168,22 @@ export default function PersonasPage() {
           />
         ))}
       </div>
+
+      {/* 刪除確認 Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>確認刪除</AlertDialogTitle>
+            <AlertDialogDescription>
+              確定要刪除此寫手？此操作無法復原。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>刪除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

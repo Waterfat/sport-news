@@ -174,7 +174,7 @@ describe("fetchWinProbability", () => {
       ],
     });
 
-    const result = await fetchWinProbability("basketball", "nba", "401234567");
+    const result = await fetchWinProbability("nba", "401234567");
     expect(result).toHaveLength(2);
     expect(result[0].homeWinPct).toBe(50);
     expect(result[0].playId).toBe("1");
@@ -186,21 +186,21 @@ describe("fetchWinProbability", () => {
   it("winprobability 為空陣列時回傳空陣列", async () => {
     mockEspnFetch.mockResolvedValueOnce({ winprobability: [] });
 
-    const result = await fetchWinProbability("basketball", "nba", "401234567");
+    const result = await fetchWinProbability("nba", "401234567");
     expect(result).toEqual([]);
   });
 
   it("缺少 winprobability 欄位時回傳空陣列", async () => {
     mockEspnFetch.mockResolvedValueOnce({});
 
-    const result = await fetchWinProbability("basketball", "nba", "401234567");
+    const result = await fetchWinProbability("nba", "401234567");
     expect(result).toEqual([]);
   });
 
   it("espnFetch 拋出例外時回傳空陣列", async () => {
     mockEspnFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    const result = await fetchWinProbability("basketball", "nba", "401234567");
+    const result = await fetchWinProbability("nba", "401234567");
     expect(result).toEqual([]);
   });
 });

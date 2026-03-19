@@ -333,7 +333,6 @@ function parseWinProbability(data: any): WinProbabilityPoint[] {
  * 取得勝率走勢
  */
 export async function fetchWinProbability(
-  sport: string,
   league: string,
   eventId: string
 ): Promise<WinProbabilityPoint[]> {
