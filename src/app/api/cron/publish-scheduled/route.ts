@@ -41,12 +41,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 統一發布邏輯
-    const results = [];
-    for (const article of articles) {
-      const result = await publishArticle(article.id);
-      results.push(result);
-    }
+    // 統一發布邏輯（並行處理）
+    const results = await Promise.all(
+      articles.map((article) => publishArticle(article.id))
+    );
 
     const published = results.filter((r) => r.success).length;
 

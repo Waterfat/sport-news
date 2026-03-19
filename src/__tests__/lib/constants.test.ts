@@ -15,6 +15,9 @@ import {
   formatDateFull,
   formatDateShort,
   parsePagination,
+  getPageName,
+  TEAM_NAME_ZH,
+  getTeamNameZh,
 } from "@/lib/constants";
 
 describe("CATEGORY_COLORS", () => {
@@ -412,5 +415,70 @@ describe("isValidImageUrl", () => {
   it("returns true for URLs that only partially resemble excluded patterns in unrelated segments", () => {
     // 'ecology' contains no excluded substrings, 'photography' does not contain 'logo' exactly
     expect(isValidImageUrl("https://example.com/category/sports-photo.jpg")).toBe(true);
+  });
+});
+
+describe("getPageName", () => {
+  it("returns 首頁 for exact match /", () => {
+    expect(getPageName("/")).toBe("首頁");
+  });
+
+  it("returns 即時比分 for exact match /scores", () => {
+    expect(getPageName("/scores")).toBe("即時比分");
+  });
+
+  it("returns 文章 for pattern match /news/some-slug", () => {
+    expect(getPageName("/news/some-slug")).toBe("文章");
+  });
+
+  it("returns 比賽詳情 for pattern match /game/nba/123", () => {
+    expect(getPageName("/game/nba/123")).toBe("比賽詳情");
+  });
+
+  it("returns 球隊頁 for pattern match /team/lakers", () => {
+    expect(getPageName("/team/lakers")).toBe("球隊頁");
+  });
+
+  it("returns 球員頁 for pattern match /player/lebron", () => {
+    expect(getPageName("/player/lebron")).toBe("球員頁");
+  });
+
+  it("returns original path for unknown routes", () => {
+    expect(getPageName("/unknown/route")).toBe("/unknown/route");
+    expect(getPageName("/foo")).toBe("/foo");
+  });
+});
+
+describe("TEAM_NAME_ZH", () => {
+  it("translates Philadelphia 76ers to 費城七六人", () => {
+    expect(TEAM_NAME_ZH["Philadelphia 76ers"]).toBe("費城七六人");
+  });
+
+  it("translates Los Angeles Lakers to 洛杉磯湖人", () => {
+    expect(TEAM_NAME_ZH["Los Angeles Lakers"]).toBe("洛杉磯湖人");
+  });
+
+  it("translates Boston Celtics to 波士頓塞爾提克", () => {
+    expect(TEAM_NAME_ZH["Boston Celtics"]).toBe("波士頓塞爾提克");
+  });
+
+  it("translates Los Angeles Dodgers to 洛杉磯道奇", () => {
+    expect(TEAM_NAME_ZH["Los Angeles Dodgers"]).toBe("洛杉磯道奇");
+  });
+
+  it("translates Liverpool to 利物浦", () => {
+    expect(TEAM_NAME_ZH["Liverpool"]).toBe("利物浦");
+  });
+});
+
+describe("getTeamNameZh", () => {
+  it("returns Chinese name for known teams", () => {
+    expect(getTeamNameZh("Golden State Warriors")).toBe("金州勇士");
+    expect(getTeamNameZh("New York Yankees")).toBe("紐約洋基");
+  });
+
+  it("returns original English name for unknown teams", () => {
+    expect(getTeamNameZh("Unknown Team FC")).toBe("Unknown Team FC");
+    expect(getTeamNameZh("Some Random Team")).toBe("Some Random Team");
   });
 });

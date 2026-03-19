@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { auth } from "@/auth";
 
 // POST: 將選中的規劃項目加入產出任務
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createServiceClient();
   const body = await request.json();
   const { ids } = body as { ids: string[] };

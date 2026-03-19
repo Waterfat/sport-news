@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase";
 import { publishArticle } from "@/lib/publish-article";
+import { auth } from "@/auth";
 
 // POST: 批次操作文章（發布、刪除）
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createServiceClient();
   const body = await request.json();
   const { ids, action } = body as { ids: string[]; action: string };
@@ -39,12 +45,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, deleted: ids.length });
   }
 
-  // publish: 統一發布邏輯
-  const results = [];
-  for (const id of ids) {
-    const result = await publishArticle(id);
-    results.push(result);
-  }
+  // publish: 統一發布邏輯（並行處理）
+  const results = await Promise.all(ids.map((id) => publishArticle(id)));
 
   const published = results.filter((r) => r.success).length;
 

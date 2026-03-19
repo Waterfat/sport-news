@@ -1,20 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function LikeButton({ articleId }: { articleId: string }) {
-  const [liked, setLiked] = useState(false);
-  const [count, setCount] = useState(0);
+  const [optimistic, setOptimistic] = useState<{
+    liked: boolean;
+    count: number;
+  } | null>(null);
 
-  useEffect(() => {
-    fetch(`/api/public/likes?article_id=${articleId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setCount(data.likes || data.count || 0);
-        setLiked(data.liked || false);
-      })
-      .catch((err) => console.error("Failed to fetch likes:", err));
-  }, [articleId]);
+  const { data } = useQuery({
+    queryKey: ["likes", articleId],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/likes?article_id=${articleId}`);
+      const d = await res.json();
+      return {
+        count: d.likes || d.count || 0,
+        liked: d.liked || false,
+      };
+    },
+  });
+
+  const liked = optimistic?.liked ?? data?.liked ?? false;
+  const count = optimistic?.count ?? data?.count ?? 0;
 
   const handleLike = async () => {
     try {
@@ -24,9 +32,8 @@ export default function LikeButton({ articleId }: { articleId: string }) {
         body: JSON.stringify({ article_id: articleId }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setLiked(data.liked);
-        setCount(data.count);
+        const d = await res.json();
+        setOptimistic({ liked: d.liked, count: d.count });
       }
     } catch {
       // ignore
