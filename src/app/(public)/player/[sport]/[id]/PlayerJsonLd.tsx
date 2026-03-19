@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface PlayerInfo {
   id: string;
@@ -14,14 +14,14 @@ interface PlayerInfo {
 }
 
 export function PlayerJsonLd({ sport, playerId }: { sport: string; playerId: string }) {
-  const [player, setPlayer] = useState<PlayerInfo | null>(null);
-
-  useEffect(() => {
-    fetch(`/api/public/player?sport=${sport}&id=${playerId}`)
-      .then((r) => r.json())
-      .then((d) => setPlayer(d.player ?? null))
-      .catch(() => {});
-  }, [sport, playerId]);
+  const { data: player } = useQuery({
+    queryKey: ["player-jsonld", sport, playerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/player?sport=${sport}&id=${playerId}`);
+      const d = await res.json();
+      return (d.player as PlayerInfo) ?? null;
+    },
+  });
 
   if (!player) return null;
 
@@ -39,6 +39,7 @@ export function PlayerJsonLd({ sport, playerId }: { sport: string; playerId: str
   return (
     <script
       type="application/ld+json"
+      // Safe: content is from our own ESPN API proxy, not user input
       dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
     />
   );

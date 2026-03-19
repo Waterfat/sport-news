@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { publishToChannel } from "@/lib/publishers";
+import { auth } from "@/auth";
 
 // POST: Manual publish trigger - publishes article to specified channels
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { article_id, channel_ids } = body as {

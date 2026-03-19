@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { parsePagination } from "@/lib/constants";
+import { auth } from "@/auth";
 
 // 取得 AI 改寫文章列表
 export async function GET(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createServiceClient();
   const searchParams = request.nextUrl.searchParams;
 

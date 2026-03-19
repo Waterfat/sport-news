@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { auth } from "@/auth";
 
 // GET: 取得所有爬蟲來源
 export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const supabase = createServiceClient();
     const { data, error } = await supabase
@@ -25,6 +31,11 @@ export async function GET() {
 
 // POST: 新增爬蟲來源
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { name, base_url } = body as { name: string; base_url: string };
@@ -58,6 +69,11 @@ export async function POST(request: Request) {
 
 // PUT: 更新爬蟲來源
 export async function PUT(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { id, name, base_url, is_active, crawl_images } = body as {
@@ -99,6 +115,11 @@ export async function PUT(request: Request) {
 
 // DELETE: 刪除爬蟲來源
 export async function DELETE(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

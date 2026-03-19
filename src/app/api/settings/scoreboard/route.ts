@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { auth } from "@/auth";
 
 // GET: 回傳所有 scoreboard 設定
 export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const supabase = createServiceClient();
     const { data, error } = await supabase
@@ -25,6 +31,11 @@ export async function GET() {
 
 // POST: 新增 scoreboard 設定
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { sport_key, league_key, label, espn_endpoint, enabled, sort_order } = body;
@@ -65,6 +76,11 @@ export async function POST(request: NextRequest) {
 
 // PUT: 更新 scoreboard 設定
 export async function PUT(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { id } = body;
@@ -104,6 +120,11 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: 刪除 scoreboard 設定
 export async function DELETE(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { id } = await request.json();
 

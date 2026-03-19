@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { auth } from "@/auth";
 
 // GET: Analytics data for admin dashboard
 export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const supabase = createServiceClient();
 
     // Run all queries concurrently
-    const [topArticlesResult, allArticlesResult, likesResult] = await Promise.all([
+    const [topArticlesResult, allArticlesResult, likesResult, avgLengthResult] = await Promise.all([
       // Top 10 articles by view count
       supabase
         .from("generated_articles")
@@ -19,7 +25,7 @@ export async function GET() {
       // All published articles for aggregation (views by day, by category)
       supabase
         .from("generated_articles")
-        .select("id, category, view_count, published_at, content, like_count")
+        .select("id, category, view_count, published_at, like_count")
         .eq("status", "published"),
 
       // Total likes count (fallback if like_count column exists)
@@ -27,6 +33,9 @@ export async function GET() {
         .from("generated_articles")
         .select("id, like_count")
         .eq("status", "published"),
+
+      // Average content length (DB-side computation, avoids loading full content)
+      supabase.rpc("get_avg_content_length"),
     ]);
 
     if (topArticlesResult.error) {
@@ -92,20 +101,17 @@ export async function GET() {
     const totalArticles = allArticles.length;
 
     // Quality stats
-    let avgLength = 0;
+    const avgLength: number = avgLengthResult.data ?? 0;
     let avgLikes = 0;
     const categoryCount: Record<string, number> = {};
 
     if (allArticles.length > 0) {
-      let totalLength = 0;
       let totalLikes = 0;
       for (const article of allArticles) {
-        totalLength += (article.content?.length ?? 0);
         totalLikes += (article.like_count ?? 0);
         const cat = article.category || "未分類";
         categoryCount[cat] = (categoryCount[cat] || 0) + 1;
       }
-      avgLength = Math.round(totalLength / allArticles.length);
       avgLikes = totalLikes / allArticles.length;
     }
 

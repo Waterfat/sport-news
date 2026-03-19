@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase";
 import { publishArticle } from "@/lib/publish-article";
+import { auth } from "@/auth";
 
 // 取得單篇改寫文章詳情
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   const supabase = createServiceClient();
 
@@ -40,6 +46,11 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   const supabase = createServiceClient();
   const body = await request.json();
