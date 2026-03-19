@@ -91,7 +91,7 @@ function ArticleActions({
                   type="datetime-local"
                   value={scheduleDateTime}
                   onChange={(e) => setScheduleDateTime(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min=""
                   className="text-sm"
                 />
                 <div className="flex gap-2">
