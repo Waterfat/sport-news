@@ -226,4 +226,82 @@ test.describe("比賽詳情頁", () => {
       await expect(ouLabel.first()).toBeVisible();
     }
   });
+
+  test("帶 query parameter 直接訪問不觸發 client-side exception（hydration 防護）", async ({
+    page,
+    request,
+  }) => {
+    const resp = await request.get("/api/public/scoreboard?league=nba");
+    const json = await resp.json();
+    const game = json.games?.[0];
+    if (!game) {
+      test.skip(true, "No NBA games available");
+      return;
+    }
+
+    // 監聯 console error — client-side exception 會出現在這裡
+    const consoleErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+
+    // 監聽 dialog（Next.js error boundary 可能觸發 alert）
+    const dialogMessages: string[] = [];
+    page.on("dialog", async (dialog) => {
+      dialogMessages.push(dialog.message());
+      await dialog.dismiss();
+    });
+
+    // 直接帶 query parameter 訪問（測試 NuqsAdapter 在首次載入時是否正常）
+    await page.goto(`/game/nba/${game.id}?tab=odds`);
+
+    // 頁面應正常載入，不出現 "application error"
+    const errorText = page.getByText("application error");
+    await expect(errorText).not.toBeVisible({ timeout: 10_000 });
+
+    // Tab 應正確顯示
+    await expect(page.getByRole("tab", { name: "賠率" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // 不應有未處理的 client-side exception
+    const criticalErrors = consoleErrors.filter(
+      (e) =>
+        e.includes("Hydration") ||
+        e.includes("useQueryState") ||
+        e.includes("NuqsAdapter") ||
+        e.includes("client-side exception")
+    );
+    expect(criticalErrors).toHaveLength(0);
+    expect(dialogMessages).toHaveLength(0);
+
+    // 硬刷新後也不應出錯
+    await page.reload();
+    await expect(page.getByRole("tab", { name: "賠率" })).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  test("賠率頁帶 query 直接訪問不觸發 hydration error", async ({ page }) => {
+    const consoleErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+
+    // 直接帶 league=mlb 訪問賠率頁（useQueryState 頁面）
+    await page.goto("/odds?league=mlb");
+
+    const errorText = page.getByText("application error");
+    await expect(errorText).not.toBeVisible({ timeout: 10_000 });
+
+    // MLB tab 應被選中
+    await expect(page.getByRole("tab", { name: "MLB" })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const criticalErrors = consoleErrors.filter(
+      (e) => e.includes("Hydration") || e.includes("NuqsAdapter")
+    );
+    expect(criticalErrors).toHaveLength(0);
+  });
 });
