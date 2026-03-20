@@ -3,6 +3,12 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase";
 import { publishArticle } from "@/lib/publish-article";
 import { auth } from "@/auth";
+import { z } from "zod";
+
+const BatchBodySchema = z.object({
+  ids: z.array(z.string().uuid()).min(1, "ids is required"),
+  action: z.enum(["publish", "delete"]),
+});
 
 // POST: 批次操作文章（發布、刪除）
 export async function POST(request: NextRequest) {
@@ -13,18 +19,16 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceClient();
   const body = await request.json();
-  const { ids, action } = body as { ids: string[]; action: string };
+  const parsed = BatchBodySchema.safeParse(body);
 
-  if (!ids || ids.length === 0) {
-    return NextResponse.json({ error: "ids is required" }, { status: 400 });
-  }
-
-  if (!["publish", "delete"].includes(action)) {
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "action must be publish or delete" },
+      { error: parsed.error.issues[0]?.message || "Invalid request body" },
       { status: 400 }
     );
   }
+
+  const { ids, action } = parsed.data;
 
   if (action === "delete") {
     const { error } = await supabase

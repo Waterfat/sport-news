@@ -3,6 +3,18 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase";
 import { publishArticle } from "@/lib/publish-article";
 import { auth } from "@/auth";
+import { z } from "zod";
+
+const PatchBodySchema = z.object({
+  title: z.string().min(1).optional(),
+  content: z.string().min(1).optional(),
+  images: z.array(z.string()).optional(),
+  status: z.string().optional(),
+  reviewer_note: z.string().optional(),
+  published_at: z.string().nullable().optional(),
+  scheduled_at: z.string().nullable().optional(),
+  publish_channel_ids: z.array(z.number().int()).nullable().optional(),
+}).passthrough();
 
 // 取得單篇改寫文章詳情
 export async function GET(
@@ -53,8 +65,17 @@ export async function PATCH(
 
   const { id } = await params;
   const supabase = createServiceClient();
-  const body = await request.json();
+  const rawBody = await request.json();
+  const parsed = PatchBodySchema.safeParse(rawBody);
 
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || "Invalid request body" },
+      { status: 400 }
+    );
+  }
+
+  const body = parsed.data;
   const isPublishing = body.status === "published";
 
   // 如果是發布動作，先儲存 publish_channel_ids，再走統一發布流程
