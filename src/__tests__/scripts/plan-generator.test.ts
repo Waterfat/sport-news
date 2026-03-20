@@ -111,6 +111,62 @@ describe("parseAIPlan — zod schema 驗證", () => {
   });
 });
 
+// 從 plan-generator 抽取的圖片過濾邏輯（不依賴 DB）
+function hasImagesForProposal(
+  sourceIndices: number[],
+  articles: Array<{ images?: string[] }>,
+): boolean {
+  return sourceIndices
+    .filter((i) => i >= 0 && i < articles.length)
+    .some((i) => (articles[i].images?.length ?? 0) > 0);
+}
+
+describe("圖片過濾邏輯 — 素材組合必須有圖才規劃", () => {
+  it("素材有圖片時回傳 true", () => {
+    const articles = [
+      { images: ["https://img.com/a.jpg"] },
+      { images: [] },
+    ];
+    expect(hasImagesForProposal([0, 1], articles)).toBe(true);
+  });
+
+  it("所有素材都沒圖時回傳 false", () => {
+    const articles = [
+      { images: [] },
+      { images: [] },
+    ];
+    expect(hasImagesForProposal([0, 1], articles)).toBe(false);
+  });
+
+  it("素材 images 為 undefined 時視為無圖", () => {
+    const articles = [
+      { images: undefined },
+      { images: undefined },
+    ];
+    expect(hasImagesForProposal([0, 1], articles)).toBe(false);
+  });
+
+  it("只要有一篇素材有圖就通過", () => {
+    const articles = [
+      { images: [] },
+      { images: undefined },
+      { images: ["https://img.com/only-one.jpg"] },
+    ];
+    expect(hasImagesForProposal([0, 1, 2], articles)).toBe(true);
+  });
+
+  it("source_indices 超出邊界時安全過濾", () => {
+    const articles = [{ images: [] }];
+    // source_indices [0, 5] 但 articles 只有 index 0
+    expect(hasImagesForProposal([0, 5], articles)).toBe(false);
+  });
+
+  it("空 source_indices 回傳 false", () => {
+    const articles = [{ images: ["https://img.com/a.jpg"] }];
+    expect(hasImagesForProposal([], articles)).toBe(false);
+  });
+});
+
 describe("is_processed 標記邏輯", () => {
   it("收集所有 allPlans 中的 raw_article_ids 並去重", () => {
     const allPlans = [

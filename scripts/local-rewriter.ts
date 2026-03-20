@@ -44,7 +44,7 @@ interface WriterPersona {
 
 interface RawArticle extends RawArticleBase {
   crawled_at: string;
-  images: string[];
+  images?: string[];
 }
 
 // 將文章按聯盟分組（給官方戰報用）
@@ -346,6 +346,13 @@ async function produceFromPlans(planIds: string[]) {
       const output = callClaude(prompt);
       const result = parseResult(output);
 
+      const collectedImages = collectImages(articles);
+      if (collectedImages.length === 0) {
+        console.log(`    跳過: 素材無任何圖片，不存入 DB`);
+        failed++;
+        continue;
+      }
+
       const { error: insertError } = await supabase
         .from("generated_articles")
         .insert({
@@ -354,7 +361,7 @@ async function produceFromPlans(planIds: string[]) {
           title: result.title,
           content: result.content,
           category: result.category || plan.league || articles[0].category || "綜合",
-          images: collectImages(articles),
+          images: collectedImages,
           status: "draft",
         });
 
@@ -510,6 +517,13 @@ async function main() {
           const output = callClaude(prompt);
           const result = parseResult(output);
 
+          const officialImages = collectImages(group);
+          if (officialImages.length === 0) {
+            console.log(`    跳過: 素材無任何圖片，不存入 DB`);
+            failed++;
+            continue;
+          }
+
           const { error: insertError } = await supabase
             .from("generated_articles")
             .insert({
@@ -518,7 +532,7 @@ async function main() {
               title: result.title,
               content: result.content,
               category: result.category || league,
-              images: collectImages(group),
+              images: officialImages,
               status: "draft",
             });
 
@@ -572,6 +586,13 @@ async function main() {
         const output = callClaude(prompt);
         const result = parseResult(output);
 
+        const columnistImages = collectImages(group);
+        if (columnistImages.length === 0) {
+          console.log(`    跳過: 素材無任何圖片，不存入 DB`);
+          failed++;
+          continue;
+        }
+
         const { error: insertError } = await supabase
           .from("generated_articles")
           .insert({
@@ -580,7 +601,7 @@ async function main() {
             title: result.title,
             content: result.content,
             category: result.category || group[0].category || "綜合",
-            images: collectImages(group),
+            images: columnistImages,
             status: "draft",
           });
 
