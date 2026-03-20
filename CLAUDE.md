@@ -54,11 +54,7 @@
 ## 強制開發流程
 
 - 每次 commit 前必須執行統一 QA：`./scripts/qa.sh`，未通過不得 commit
-- 新增/修改 `src/lib/*.ts` 或 `src/app/api/**/*.ts` → 必須同步新增/更新對應 unit test
-- `/review` 重構完 → 執行 `/write-tests` 補齊測試覆蓋
 - **部署後必須對正式環境執行統一 QA**：`./scripts/qa.sh https://howger-sport.com`
-- 新增 API 端點後 → 更新 `smoke-test.config.json` 對應的 protected_apis 或 public_apis
-- 新增/修改頁面後 → 更新對應的 `e2e/*.spec.ts` 測試
 
 ## E2E 測試
 
@@ -66,49 +62,6 @@
 - 測試目錄：`e2e/`
 - 執行：`./scripts/e2e-test.sh [BASE_URL]`
 - 後台測試需設定環境變數：`E2E_USERNAME` + `E2E_PASSWORD`（未設定時腳本會主動詢問，不得自動跳過）
-- 新增頁面/修改 UI 時必須同步更新 E2E 測試
-
-### E2E 測試三層覆蓋原則
-
-Scenario 測試（`e2e/scenarios/`）必須涵蓋以下三層，缺一不可：
-
-1. **UI 結構驗證**：頁面載入、元素可見、導航正確
-2. **互動流程驗證**：按鈕點擊、表單填寫、篩選切換、狀態變化
-3. **實際操作 + 後端回應驗證**：觸發真實 API 呼叫，驗證不出現 500 錯誤、schema 錯誤、error alert/toast
-
-第 3 層是最容易遺漏也最關鍵的一層。只驗證「按鈕存在」而不點擊執行，無法發現 DB schema 不同步、API 參數錯誤等後端問題。
-
-**實作方式**：
-- 監聽 `page.on("dialog")` 捕捉 alert 錯誤訊息
-- 使用 `page.waitForResponse()` 攔截 API 回應，斷言 HTTP status
-- 驗證操作後 UI 狀態正確變化（如 loading 狀態、成功提示）
-
-## CSS 佈局變更驗證 SOP
-
-Vitest + jsdom 無法渲染 CSS，佈局問題只能靠視覺驗證。以下為強制流程：
-
-### 觸發條件
-
-修改以下任一項時，必須執行視覺驗證：
-- `table-fixed` / 欄位寬度（`w-[Npx]`）
-- flex / grid 容器屬性（`flex-wrap`、`gap`、`grid-cols`）
-- `overflow`、`truncate`、`line-clamp` 等裁切行為
-- 響應式斷點（`hidden sm:block`、`sm:hidden`）
-
-### 驗證步驟
-
-1. **先算再寫**：設定固定寬度前，先估算內容所需最小寬度（元素數 × 單個寬度 + gap），留 15-20% buffer
-2. **PC 截圖**（1440×900）：確認所有欄位可見、按鈕不換行、文字不異常截斷
-3. **手機截圖**（430×932）：確認 card layout 或響應式切換正常
-4. **必須用 `browser_take_screenshot`**，不能只看 `browser_snapshot`（DOM 樹看不到換行、溢出）
-
-### 常見陷阱
-
-| 問題 | 原因 | 預防 |
-|------|------|------|
-| 按鈕換行 | `flex-wrap` + 容器寬度不足 | 計算最小寬度，移除不必要的 `flex-wrap` |
-| 欄位被推出畫面 | `table-fixed` 固定欄位寬度總和過大 | 加總所有固定寬度，確認 < 表格寬度 |
-| 文字截斷看不到 | `truncate` + 欄位太窄 | 用真實資料長度估算，不要用短字串測試 |
 
 ## 測試指令
 
@@ -117,13 +70,9 @@ Vitest + jsdom 無法渲染 CSS，佈局問題只能靠視覺驗證。以下為�
 - 測試檔案位置：`src/__tests__/`
 - 測試命名規則：`src/__tests__/lib/<module>.test.ts`、`src/__tests__/components/<Component>.test.tsx`
 
-## 資料庫變更規則
+## 資料庫（Supabase 特定）
 
-- **所有 DB schema 變更（CREATE/ALTER/DROP/INDEX）必須透過 migration 檔案**，不得直接在 SQL Editor 手動改
 - Migration 檔案位置：`supabase/migrations/`，編號遞增（如 `009_xxx.sql`）
-- 必須使用 `IF NOT EXISTS` / `IF EXISTS` 確保 idempotent（可重複執行）
-- 新增/修改 table、column、index、constraint 都算 schema 變更
-- Migration 建立後必須 commit 進 git，確保 schema 與程式碼版本一致
 - 套用 migration 方式：透過 Supabase Management API（`SUPABASE_ACCESS_TOKEN` 存於 `.env.local`）
   ```
   curl -X POST "https://api.supabase.com/v1/projects/{ref}/database/query" \
@@ -131,53 +80,13 @@ Vitest + jsdom 無法渲染 CSS，佈局問題只能靠視覺驗證。以下為�
     -H "Content-Type: application/json" \
     -d '{"query": "<SQL>"}'
   ```
-- **套用 migration 後必須重載 PostgREST schema cache**（否則 REST API 看不到新 column）：
+- **套用 migration 後必須重載 PostgREST schema cache**：
   ```
   curl -X POST "https://api.supabase.com/v1/projects/{ref}/database/query" \
     -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
     -H "Content-Type: application/json" \
     -d '{"query": "NOTIFY pgrst, '\''reload schema'\'';"}'
   ```
-- 套用 migration 後，需驗證應用層正常運作（跑 smoke test + E2E）
-
-## iOS / In-App Browser 相容性
-
-### 滾動穿透問題（Telegram、LINE 等 in-app browser）
-
-**症狀**：iOS in-app browser 中滑動頁面時，文章內容會從瀏覽器網址列上方的透明狀態列區域穿透出來。
-
-**根因**：in-app browser 的 WebView 會偷看 document 的滾動內容並顯示在透明的狀態列區域。`theme-color`、`safe-area-inset`、CSS 遮罩等方式對 Telegram WebView 均無效。
-
-**解法 — App Shell 模式**：讓 document 本身不滾動，改用內部容器滾動：
-```html
-<div class="h-[100dvh] flex flex-col overflow-hidden">
-  <header class="flex-shrink-0">...</header>
-  <div class="flex-1 overflow-y-auto overscroll-contain">
-    <main>...</main>
-    <footer>...</footer>
-  </div>
-</div>
-```
-- 外層 `overflow-hidden` → document 不滾動 → WebView 無內容可穿透
-- 內層 `overflow-y-auto` → 只有內部容器滾動
-- `overscroll-contain` → 防止滾動穿透到外層
-
-**注意**：此模式下不能使用 `sticky` header，header 直接是 flex 容器的固定區塊。
-
-### 手機版水平導覽列 Scrollbar
-
-**症狀**：手機版導覽列水平滾動時 scrollbar 壓在文字上。
-
-**解法**：使用 `scrollbar-hide` utility class 隱藏 scrollbar，加 `pb-1` 留出底部間距：
-```css
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-```
 
 ## 常駐服務管理
 
@@ -188,9 +97,7 @@ Vitest + jsdom 無法渲染 CSS，佈局問題只能靠視覺驗證。以下為�
 - 功能：透過 Supabase Realtime 監聯 `rewrite_tasks` 表，收到 pending 任務後執行規劃（plan-generator）或產出（local-rewriter）
 - **修改 `scripts/` 下任何檔案後，必須重啟 listener**：
   ```bash
-  # 找到並終止舊進程
   pkill -f "rewrite-listener"
-  # 啟動新進程
   nohup npx tsx scripts/rewrite-listener.ts > /tmp/rewrite-listener.log 2>&1 &
   ```
 - 檢查是否存活：`ps aux | grep rewrite-listener | grep -v grep`

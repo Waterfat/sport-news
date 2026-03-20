@@ -10,7 +10,7 @@ vi.mock("@/lib/publishers", () => ({
   publishToChannel: vi.fn(),
 }));
 
-import { publishArticle } from "@/lib/publish-article";
+import { publishArticle, deduplicateCoverImage } from "@/lib/publish-article";
 import { createServiceClient } from "@/lib/supabase";
 import { publishToChannel } from "@/lib/publishers";
 
@@ -410,6 +410,17 @@ describe("extractImageUrls (via publishArticle images field)", () => {
           };
         }
 
+        if (table === "generated_articles" && fromCallIndex === 2) {
+          // Cover image dedup query
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+
         if (table === "publish_channels") {
           return {
             select: vi.fn().mockReturnThis(),
@@ -541,5 +552,221 @@ describe("extractImageUrls (via publishArticle images field)", () => {
     expect(call.images).toContain("https://cdn.example.com/valid.jpg");
     expect(call.images).toContain("https://cdn.example.com/string.jpg");
     expect(call.images).toHaveLength(2);
+  });
+});
+
+describe("publishArticle - cover image dedup integration", () => {
+  it("substitutes cover image when duplicate is found and updates DB", async () => {
+    const article = {
+      id: "dedup-1",
+      title: "Dedup Article",
+      content: "Content",
+      slug: "dedup-article",
+      images: ["https://img.com/dup.jpg", "https://img.com/unique.jpg"],
+      publish_channel_ids: [],
+    };
+
+    const publishedArticles = [
+      { images: ["https://img.com/dup.jpg", "https://img.com/other.jpg"] },
+    ];
+
+    const updateMock = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+
+    let fromCallIndex = 0;
+    const supabase = {
+      from: vi.fn().mockImplementation((table: string) => {
+        fromCallIndex++;
+
+        if (table === "generated_articles" && fromCallIndex === 1) {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: article, error: null }),
+          };
+        }
+
+        if (table === "generated_articles" && fromCallIndex === 2) {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: publishedArticles, error: null }),
+          };
+        }
+
+        if (table === "generated_articles" && fromCallIndex === 3) {
+          return { update: updateMock };
+        }
+
+        if (table === "publish_channels") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        };
+      }),
+    };
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+
+    const result = await publishArticle("dedup-1");
+
+    expect(result.success).toBe(true);
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        images: expect.arrayContaining(["https://img.com/unique.jpg"]),
+      })
+    );
+    const updatedImages = updateMock.mock.calls[0][0].images;
+    expect(updatedImages[0]).toBe("https://img.com/unique.jpg");
+  });
+
+  it("keeps original cover when DB update fails and reports error", async () => {
+    const article = {
+      id: "dedup-fail",
+      title: "Dedup Fail Article",
+      content: "Content",
+      slug: "dedup-fail",
+      images: ["https://img.com/dup.jpg", "https://img.com/alt.jpg"],
+      publish_channel_ids: [],
+    };
+
+    const publishedArticles = [
+      { images: ["https://img.com/dup.jpg"] },
+    ];
+
+    let fromCallIndex = 0;
+    const supabase = {
+      from: vi.fn().mockImplementation((table: string) => {
+        fromCallIndex++;
+
+        if (table === "generated_articles" && fromCallIndex === 1) {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: article, error: null }),
+          };
+        }
+
+        if (table === "generated_articles" && fromCallIndex === 2) {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: publishedArticles, error: null }),
+          };
+        }
+
+        if (table === "generated_articles" && fromCallIndex === 3) {
+          return {
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: { message: "DB write failed" } }),
+            }),
+          };
+        }
+
+        if (table === "publish_channels") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        };
+      }),
+    };
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+
+    const result = await publishArticle("dedup-fail");
+
+    expect(result.errors.some((e) => e.includes("Cover image dedup update failed"))).toBe(true);
+  });
+});
+
+describe("deduplicateCoverImage", () => {
+  it("returns original array when cover is not duplicated", () => {
+    const images = ["https://img.com/a.jpg", "https://img.com/b.jpg"];
+    const existing = new Set(["https://img.com/other.jpg"]);
+    const result = deduplicateCoverImage(images, existing);
+    expect(result).toEqual(images);
+  });
+
+  it("swaps cover with first non-duplicate when cover is duplicated", () => {
+    const images = [
+      "https://img.com/dup.jpg",
+      "https://img.com/unique.jpg",
+      "https://img.com/c.jpg",
+    ];
+    const existing = new Set(["https://img.com/dup.jpg"]);
+    const result = deduplicateCoverImage(images, existing);
+    expect(result[0]).toBe("https://img.com/unique.jpg");
+    expect(result).toContain("https://img.com/dup.jpg");
+    expect(result).toHaveLength(3);
+  });
+
+  it("skips duplicates to find first available alternative", () => {
+    const images = [
+      "https://img.com/dup1.jpg",
+      "https://img.com/dup2.jpg",
+      "https://img.com/unique.jpg",
+    ];
+    const existing = new Set([
+      "https://img.com/dup1.jpg",
+      "https://img.com/dup2.jpg",
+    ]);
+    const result = deduplicateCoverImage(images, existing);
+    expect(result[0]).toBe("https://img.com/unique.jpg");
+  });
+
+  it("returns original array when all images are duplicated", () => {
+    const images = ["https://img.com/dup1.jpg", "https://img.com/dup2.jpg"];
+    const existing = new Set([
+      "https://img.com/dup1.jpg",
+      "https://img.com/dup2.jpg",
+    ]);
+    const result = deduplicateCoverImage(images, existing);
+    expect(result).toEqual(images);
+  });
+
+  it("returns original array when only one image exists", () => {
+    const images = ["https://img.com/only.jpg"];
+    const existing = new Set(["https://img.com/only.jpg"]);
+    const result = deduplicateCoverImage(images, existing);
+    expect(result).toEqual(images);
+  });
+
+  it("returns original array when images is empty", () => {
+    const result = deduplicateCoverImage([], new Set());
+    expect(result).toEqual([]);
+  });
+
+  it("returns original array when existing covers set is empty", () => {
+    const images = ["https://img.com/a.jpg", "https://img.com/b.jpg"];
+    const result = deduplicateCoverImage(images, new Set());
+    expect(result).toEqual(images);
+  });
+
+  it("does not mutate the original array", () => {
+    const images = [
+      "https://img.com/dup.jpg",
+      "https://img.com/unique.jpg",
+    ];
+    const original = [...images];
+    const existing = new Set(["https://img.com/dup.jpg"]);
+    deduplicateCoverImage(images, existing);
+    expect(images).toEqual(original);
   });
 });
