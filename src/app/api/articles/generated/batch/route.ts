@@ -45,8 +45,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, deleted: ids.length });
   }
 
-  // publish: 統一發布邏輯（並行處理）
-  const results = await Promise.all(ids.map((id) => publishArticle(id)));
+  // publish: 統一發布邏輯（串行處理，確保封面圖去重正確）
+  const results = [];
+  for (const id of ids) {
+    results.push(await publishArticle(id));
+  }
 
   const published = results.filter((r) => r.success).length;
 

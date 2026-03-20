@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase";
 import { publishToChannel } from "@/lib/publishers";
+import { ARTICLE_STATUS } from "@/lib/constants";
 
 interface PublishResult {
   success: boolean;
@@ -14,6 +15,7 @@ interface PublishResult {
  * 統一發布邏輯：更新 DB 狀態 + 發送到勾選的頻道
  * - 讀取文章的 publish_channel_ids
  * - 如果沒有指定頻道，預設發送到所有啟用的頻道
+ * - 發布前自動偵測重複封面圖並遞補
  */
 export async function publishArticle(articleId: string): Promise<PublishResult> {
   const supabase = createServiceClient();
@@ -35,6 +37,39 @@ export async function publishArticle(articleId: string): Promise<PublishResult> 
       channels_failed: 0,
       errors: [articleError?.message || "Article not found"],
     };
+  }
+
+  // 封面圖去重：查詢已發布文章的封面圖，重複時自動遞補
+  const articleImages = extractImageUrls(article.images);
+  if (articleImages.length > 0) {
+    const { data: publishedCovers } = await supabase
+      .from("generated_articles")
+      .select("images")
+      .eq("status", ARTICLE_STATUS.PUBLISHED)
+      .neq("id", articleId)
+      .order("published_at", { ascending: false })
+      .limit(500);
+
+    const existingCovers = new Set<string>();
+    for (const row of publishedCovers || []) {
+      const urls = extractImageUrls(row.images);
+      if (urls.length > 0) {
+        existingCovers.add(urls[0]);
+      }
+    }
+
+    const deduped = deduplicateCoverImage(articleImages, existingCovers);
+    if (deduped[0] !== articleImages[0]) {
+      const { error: dedupUpdateError } = await supabase
+        .from("generated_articles")
+        .update({ images: deduped })
+        .eq("id", articleId);
+      if (dedupUpdateError) {
+        errors.push(`Cover image dedup update failed: ${dedupUpdateError.message}`);
+      } else {
+        article.images = deduped;
+      }
+    }
   }
 
   // 決定要發到哪些頻道
@@ -83,7 +118,7 @@ export async function publishArticle(articleId: string): Promise<PublishResult> 
   const { error: updateError } = await supabase
     .from("generated_articles")
     .update({
-      status: "published",
+      status: ARTICLE_STATUS.PUBLISHED,
       published_at: new Date().toISOString(),
     })
     .eq("id", articleId);
@@ -100,6 +135,33 @@ export async function publishArticle(articleId: string): Promise<PublishResult> 
     channels_failed: results.length - successCount,
     errors,
   };
+}
+
+/**
+ * 封面圖去重：如果 images[0] 已被其他已發布文章使用，
+ * 找第一張不在 existingCovers 中的圖片移到首位。
+ * 若全部重複或只有一張圖，維持原樣。
+ */
+export function deduplicateCoverImage(
+  images: string[],
+  existingCovers: Set<string>
+): string[] {
+  if (images.length <= 1 || !existingCovers.has(images[0])) {
+    return images;
+  }
+
+  const altIndex = images.findIndex(
+    (url, i) => i > 0 && !existingCovers.has(url)
+  );
+
+  if (altIndex === -1) {
+    return images;
+  }
+
+  const result = [...images];
+  const [alt] = result.splice(altIndex, 1);
+  result.unshift(alt);
+  return result;
 }
 
 function extractImageUrls(images: unknown): string[] {
