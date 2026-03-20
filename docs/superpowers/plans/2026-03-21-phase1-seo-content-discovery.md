@@ -370,11 +370,14 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { sport, id } = await params;
 
-  // If id is a slug, resolve to actual ID for metadata
-  const resolvedId = getTeamIdBySlug(sport, id) ?? id;
+  // If id is a slug, return minimal metadata — the page will redirect to canonical URL
+  const resolvedId = getTeamIdBySlug(sport, id);
+  if (resolvedId) {
+    return { robots: { index: false } };
+  }
 
   const sportLabel = SPORT_KEY_LABELS[sport] || sport.toUpperCase();
-  const title = `${sportLabel} 球隊 #${resolvedId}`;
+  const title = `${sportLabel} 球隊 #${id}`;
   const ogUrl = `${SITE_URL}/api/og?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(sportLabel)}&type=team`;
 
   return {
@@ -444,7 +447,6 @@ import {
   absoluteNewsUrl,
   absoluteWriterUrl,
   absoluteTeamUrl,
-  absolutePlayerUrl,
 } from "@/lib/routes";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -547,9 +549,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
 - [ ] **Step 2: 更新 smoke-test.config.json**
 
-在 `pages_200` 加入：
+在 `custom_checks` 加入 slug redirect 驗證（不放 `pages_200`，因為 308 不是 200）：
 ```json
-"/team/nba/lakers"
+{
+  "label": "Team slug redirect /team/nba/lakers → 308",
+  "command": "STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-redirs 0 '{{BASE_URL}}/team/nba/lakers') && [ \"$STATUS\" = \"308\" ]"
+}
 ```
 
 - [ ] **Step 3: 本地驗證**
@@ -1060,4 +1065,9 @@ Expected: 通過所有檢查
 2. **NewsArticle schema 已完成**：`news/[slug]/page.tsx` 已使用 `"@type": "NewsArticle"`。
 3. **ESPN Team ID 必須從 API 驗證**：Task 3 Step 1 的 API 呼叫結果必須用於建立映射表，不可硬猜 ID。
 4. **文章分配調整**：Task 7 將首頁文章分配改為 hero(1) + subHeroes(2) + quickNews(10) + grid(20)，需確認 `HomeArticleSection` 接收的文章數量不影響版面。
-5. **Deferred items**：文章內文自動連結（spec 2.1 bullet 3）和分類頁側邊欄（spec 2.1 bullet 2）複雜度高，將獨立開 issue 在後續迭代實作。
+5. **Deferred items**（將獨立開 issue 在後續迭代實作）：
+   - 文章內文自動連結（spec 2.1 bullet 3）— 需要 react-markdown custom renderer + 名稱消歧義
+   - 分類頁側邊欄「本週熱門」「同隊新聞」（spec 2.1 bullet 2）— 需要分類頁佈局改動
+   - Player/Game 頁面加入 sitemap（spec 2.3）— 需要從 DB/API 動態取得大量 ID
+   - E2E 測試更新（CLAUDE.md 要求「新增/修改頁面 → 更新 E2E 測試」）— 建議在所有 Phase 1 功能上線後統一補寫 E2E 覆蓋
+6. **`SPORT_KEY_LABELS` key 不匹配**：既有 constants 使用 `basketball`/`baseball` 作 key，但 URL 用 `nba`/`mlb`。這是既有問題，不在此 plan 修正，但實作時注意 `sport.toUpperCase()` fallback 行為。
