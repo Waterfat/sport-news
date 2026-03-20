@@ -70,6 +70,7 @@ function isLikelyArticleUrl(url: string): boolean {
 function extractArticleLinks($: cheerio.CheerioAPI, baseUrl: string): string[] {
   const links = new Set<string>();
   const baseDomain = new URL(baseUrl).origin;
+  const basePath = new URL(baseUrl).pathname; // 例如 "/nba/news/"
 
   // 嘗試各種常見文章連結模式
   const selectors = [
@@ -117,7 +118,25 @@ function extractArticleLinks($: cheerio.CheerioAPI, baseUrl: string): string[] {
     });
   }
 
-  return Array.from(links).slice(0, 15);
+  // 優先排序：匹配 baseUrl 路徑前綴的連結排在前面
+  // 例如 baseUrl = /nba/news/ 時，/nba/news/xxx 優先於 /nfl/news/xxx
+  const allLinks = Array.from(links);
+  const prioritized = allLinks.filter((link) => {
+    try {
+      return new URL(link).pathname.startsWith(basePath);
+    } catch {
+      return false;
+    }
+  });
+  const others = allLinks.filter((link) => {
+    try {
+      return !new URL(link).pathname.startsWith(basePath);
+    } catch {
+      return true;
+    }
+  });
+
+  return [...prioritized, ...others].slice(0, 15);
 }
 
 // 通用：從文章頁面提取內容
