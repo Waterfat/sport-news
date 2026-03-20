@@ -387,10 +387,25 @@ async function produceFromPlans(planIds: string[]) {
     }
   }
 
-  // 刪除已產出的規劃項目
+  // 刪除已產出的規劃項目（含 retry）
   if (producedPlanIds.length > 0) {
-    await supabase.from("rewrite_plans").delete().in("id", producedPlanIds);
-    console.log(`\n已移除 ${producedPlanIds.length} 個已產出的規劃項目`);
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const { error: deleteError } = await supabase
+        .from("rewrite_plans")
+        .delete()
+        .in("id", producedPlanIds);
+
+      if (!deleteError) {
+        console.log(`\n已移除 ${producedPlanIds.length} 個已產出的規劃項目`);
+        break;
+      }
+
+      console.error(`刪除規劃項目失敗 (attempt ${attempt}):`, deleteError.message);
+      if (attempt < 2) {
+        console.log("等待 1 秒後重試...");
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
   }
 
   console.log(`\n=== 結果: 成功 ${success}, 失敗 ${failed} ===`);
