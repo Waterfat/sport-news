@@ -39,9 +39,21 @@ export async function publishArticle(articleId: string): Promise<PublishResult> 
     };
   }
 
-  // 封面圖去重：查詢已發布文章的封面圖，重複時自動遞補
+  // 發布前檢查：文章必須有圖片
   const articleImages = extractImageUrls(article.images);
-  if (articleImages.length > 0) {
+  if (articleImages.length === 0) {
+    return {
+      success: false,
+      article_id: articleId,
+      title: article.title,
+      channels_published: 0,
+      channels_failed: 0,
+      errors: ["無圖片，無法發布"],
+    };
+  }
+
+  // 封面圖去重：查詢已發布文章的封面圖，重複時自動遞補
+  {
     const { data: publishedCovers } = await supabase
       .from("generated_articles")
       .select("images")

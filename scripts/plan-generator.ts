@@ -26,7 +26,7 @@ const supabase = createClient(
 );
 
 interface WriterPersona { id: string; name: string; style_prompt: string; writer_type: string; specialties: Specialties; max_articles: number; }
-interface RawArticle extends RawArticleBase { crawled_at: string; }
+interface RawArticle extends RawArticleBase { crawled_at: string; images?: string[]; }
 
 const PlanProposalSchema = z.object({
   title: z.string().min(1).max(500),
@@ -241,6 +241,15 @@ ${articleList}
       const exclusiveRawIds = rawIds.filter((id) => !usedInThisRound.has(id));
       if (exclusiveRawIds.length === 0) {
         console.log(`  跳過「${proposal.title}」- 所有素材已被其他規劃引用`);
+        continue;
+      }
+
+      // 圖片檢查：素材組合必須有至少一張圖片，否則跳過規劃
+      const hasImages = proposal.source_indices
+        .filter((i) => i >= 0 && i < freshArticles.length)
+        .some((i) => (freshArticles[i].images?.length ?? 0) > 0);
+      if (!hasImages) {
+        console.log(`  跳過「${proposal.title}」- 素材組合無任何圖片`);
         continue;
       }
 
