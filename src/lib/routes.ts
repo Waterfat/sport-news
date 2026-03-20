@@ -42,3 +42,35 @@ export function absoluteCategoryUrl(baseUrl: string, slug: string) {
 export function absoluteWriterUrl(baseUrl: string, writerId: string) {
   return `${baseUrl}/writer/${writerId}`;
 }
+
+/** SEO 友善的球隊 slug URL（如 /team/nba/lakers），會被 redirect 到 canonical /team/nba/:id */
+export function teamSlugUrl(sport: string, slug: string) {
+  return `/team/${sport}/${slug}`;
+}
+
+/** 產生完整球隊 URL（含 domain），用於 sitemap/SEO */
+export function absoluteTeamUrl(
+  baseUrl: string,
+  sport: string,
+  teamId: string
+) {
+  return `${baseUrl.replace(/\/$/, "")}/team/${sport}/${teamId}`;
+}
+
+/** 產生完整球員 URL（含 domain），用於 sitemap/SEO */
+export function absolutePlayerUrl(
+  baseUrl: string,
+  sport: string,
+  playerId: string
+) {
+  return `${baseUrl.replace(/\/$/, "")}/player/${sport}/${playerId}`;
+}
+
+/** 產生完整比賽 URL（含 domain），用於 sitemap/SEO */
+export function absoluteGameUrl(
+  baseUrl: string,
+  sport: string,
+  gameId: string
+) {
+  return `${baseUrl.replace(/\/$/, "")}/game/${sport}/${gameId}`;
+}
