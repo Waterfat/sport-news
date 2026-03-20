@@ -167,6 +167,86 @@ describe("圖片過濾邏輯 — 素材組合必須有圖才規劃", () => {
   });
 });
 
+// 從 plan-generator 抽取的標題去重邏輯
+function extractKeyTerms(title: string): Set<string> {
+  const terms = new Set<string>();
+  const englishWords = title.match(/[A-Za-z]+/g) || [];
+  for (const w of englishWords) {
+    if (w.length >= 3) terms.add(w.toLowerCase());
+  }
+  const chinese = title.replace(/[A-Za-z0-9\s\p{P}]/gu, "");
+  for (let i = 0; i < chinese.length - 1; i++) {
+    terms.add(chinese.substring(i, i + 2));
+  }
+  return terms;
+}
+
+function isSimilarTitle(a: string, b: string, threshold = 0.5): boolean {
+  const ka = extractKeyTerms(a);
+  const kb = extractKeyTerms(b);
+  if (ka.size === 0 || kb.size === 0) return false;
+  const intersection = [...ka].filter((x) => kb.has(x)).length;
+  const overlap = intersection / Math.min(ka.size, kb.size);
+  return overlap >= threshold;
+}
+
+describe("extractKeyTerms — 關鍵詞提取", () => {
+  it("提取英文球員名", () => {
+    const terms = extractKeyTerms("LeBron James 率湖人大勝勇士");
+    expect(terms.has("lebron")).toBe(true);
+    expect(terms.has("james")).toBe(true);
+  });
+
+  it("提取中文 bigram", () => {
+    const terms = extractKeyTerms("湖人擊敗勇士");
+    expect(terms.has("湖人")).toBe(true);
+    expect(terms.has("勇士")).toBe(true);
+  });
+
+  it("忽略短英文詞（< 3 字元）", () => {
+    const terms = extractKeyTerms("AI vs ML comparison");
+    expect(terms.has("ai")).toBe(false);
+    expect(terms.has("vs")).toBe(false);
+    expect(terms.has("comparison")).toBe(true);
+  });
+
+  it("空字串回傳空 Set", () => {
+    expect(extractKeyTerms("").size).toBe(0);
+  });
+});
+
+describe("isSimilarTitle — 標題相似度", () => {
+  it("高度相似的同主題文章", () => {
+    expect(isSimilarTitle(
+      "LeBron James 率湖人大勝勇士",
+      "湖人擊敗勇士，LeBron James 砍下35分"
+    )).toBe(true);
+  });
+
+  it("不同主題的文章", () => {
+    expect(isSimilarTitle(
+      "LeBron James 率湖人大勝勇士",
+      "大谷翔平連續三場全壘打創紀錄"
+    )).toBe(false);
+  });
+
+  it("同聯盟但不同球隊的文章", () => {
+    expect(isSimilarTitle(
+      "Celtics 連勝五場 Tatum 表現亮眼",
+      "Nuggets 擊敗 Suns Jokic 大三元"
+    )).toBe(false);
+  });
+
+  it("空標題不相似", () => {
+    expect(isSimilarTitle("", "任何標題")).toBe(false);
+    expect(isSimilarTitle("任何標題", "")).toBe(false);
+  });
+
+  it("完全相同的標題", () => {
+    expect(isSimilarTitle("NBA 今日焦點", "NBA 今日焦點")).toBe(true);
+  });
+});
+
 describe("is_processed 標記邏輯", () => {
   it("收集所有 allPlans 中的 raw_article_ids 並去重", () => {
     const allPlans = [
