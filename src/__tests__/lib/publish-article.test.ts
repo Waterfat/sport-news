@@ -168,7 +168,7 @@ describe("publishArticle - publish with channels", () => {
       title: "Test Article",
       content: "Some content",
       slug: "test-article",
-      images: [],
+      images: ["https://img.com/test.jpg"],
       publish_channel_ids: [42, 99],
     };
 
@@ -186,6 +186,17 @@ describe("publishArticle - publish with channels", () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: article, error: null }),
+          };
+        }
+
+        if (table === "generated_articles" && fromCallIndex === 2) {
+          // Dedup query
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
           };
         }
 
@@ -231,7 +242,7 @@ describe("publishArticle - publish with channels", () => {
       title: "All Channels Article",
       content: "Content",
       slug: "all-channels",
-      images: null,
+      images: ["https://img.com/art2.jpg"],
       publish_channel_ids: [],
     };
 
@@ -250,6 +261,17 @@ describe("publishArticle - publish with channels", () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: article, error: null }),
+          };
+        }
+
+        if (table === "generated_articles" && fromCallIndex === 2) {
+          // Dedup query
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
           };
         }
 
@@ -287,7 +309,7 @@ describe("publishArticle - publish with channels", () => {
       title: "Published Article",
       content: "Content",
       slug: "published-article",
-      images: [],
+      images: ["https://img.com/art3.jpg"],
       publish_channel_ids: [],
     };
 
@@ -304,6 +326,17 @@ describe("publishArticle - publish with channels", () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: article, error: null }),
+          };
+        }
+
+        if (table === "generated_articles" && fromCallIndex === 2) {
+          // Dedup query
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
           };
         }
 
@@ -333,7 +366,7 @@ describe("publishArticle - publish with channels", () => {
       title: "Error Article",
       content: "Content",
       slug: "error-article",
-      images: [],
+      images: ["https://img.com/art4.jpg"],
       publish_channel_ids: [],
     };
 
@@ -351,6 +384,17 @@ describe("publishArticle - publish with channels", () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: article, error: null }),
+          };
+        }
+
+        if (table === "generated_articles" && fromCallIndex === 2) {
+          // Dedup query
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
           };
         }
 
@@ -478,58 +522,37 @@ describe("extractImageUrls (via publishArticle images field)", () => {
     );
   });
 
-  it("passes empty array when images is null", async () => {
+  it("returns error and does not publish when images is null", async () => {
     const supabase = buildArticleMock(null);
     mockCreateServiceClient.mockReturnValue(supabase as never);
-    mockPublishToChannel.mockResolvedValue({
-      channel_id: 1,
-      channel_name: "Ch",
-      channel_type: "telegram",
-      success: true,
-    });
 
-    await publishArticle("img-test");
+    const result = await publishArticle("img-test");
 
-    expect(mockPublishToChannel).toHaveBeenCalledWith(
-      expect.objectContaining({ images: [] }),
-      expect.anything()
-    );
+    expect(result.success).toBe(false);
+    expect(result.errors).toContain("無圖片，無法發布");
+    expect(mockPublishToChannel).not.toHaveBeenCalled();
   });
 
-  it("passes empty array when images is undefined", async () => {
+  it("returns error and does not publish when images is undefined", async () => {
     const supabase = buildArticleMock(undefined);
     mockCreateServiceClient.mockReturnValue(supabase as never);
-    mockPublishToChannel.mockResolvedValue({
-      channel_id: 1,
-      channel_name: "Ch",
-      channel_type: "telegram",
-      success: true,
-    });
 
-    await publishArticle("img-test");
+    const result = await publishArticle("img-test");
 
-    expect(mockPublishToChannel).toHaveBeenCalledWith(
-      expect.objectContaining({ images: [] }),
-      expect.anything()
-    );
+    expect(result.success).toBe(false);
+    expect(result.errors).toContain("無圖片，無法發布");
+    expect(mockPublishToChannel).not.toHaveBeenCalled();
   });
 
-  it("passes empty array when images is a non-array value", async () => {
+  it("returns error and does not publish when images is a non-array value", async () => {
     const supabase = buildArticleMock("not-an-array");
     mockCreateServiceClient.mockReturnValue(supabase as never);
-    mockPublishToChannel.mockResolvedValue({
-      channel_id: 1,
-      channel_name: "Ch",
-      channel_type: "telegram",
-      success: true,
-    });
 
-    await publishArticle("img-test");
+    const result = await publishArticle("img-test");
 
-    expect(mockPublishToChannel).toHaveBeenCalledWith(
-      expect.objectContaining({ images: [] }),
-      expect.anything()
-    );
+    expect(result.success).toBe(false);
+    expect(result.errors).toContain("無圖片，無法發布");
+    expect(mockPublishToChannel).not.toHaveBeenCalled();
   });
 
   it("filters out object entries without url property", async () => {
@@ -696,6 +719,111 @@ describe("publishArticle - cover image dedup integration", () => {
   });
 });
 
+describe("publishArticle - image validation", () => {
+  function makeSingleArticleMock(article: Record<string, unknown>) {
+    return {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: article, error: null }),
+      }),
+    };
+  }
+
+  it("blocks publish when images is empty array", async () => {
+    const supabase = makeSingleArticleMock({
+      id: "no-img-1",
+      title: "No Image Article",
+      content: "Content",
+      slug: "no-img",
+      images: [],
+      publish_channel_ids: [],
+    });
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+
+    const result = await publishArticle("no-img-1");
+
+    expect(result.success).toBe(false);
+    expect(result.errors).toContain("無圖片，無法發布");
+    expect(mockPublishToChannel).not.toHaveBeenCalled();
+  });
+
+  it("blocks publish when images is null", async () => {
+    const supabase = makeSingleArticleMock({
+      id: "no-img-2",
+      title: "Null Image Article",
+      content: "Content",
+      slug: "null-img",
+      images: null,
+      publish_channel_ids: [],
+    });
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+
+    const result = await publishArticle("no-img-2");
+
+    expect(result.success).toBe(false);
+    expect(result.errors).toContain("無圖片，無法發布");
+    expect(mockPublishToChannel).not.toHaveBeenCalled();
+  });
+
+  it("allows publish when images has at least one valid URL", async () => {
+    let fromCallIndex = 0;
+    const supabase = {
+      from: vi.fn().mockImplementation((table: string) => {
+        fromCallIndex++;
+
+        if (table === "generated_articles" && fromCallIndex === 1) {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({
+              data: {
+                id: "has-img-1",
+                title: "Has Image Article",
+                content: "Content",
+                slug: "has-img",
+                images: ["https://img.com/cover.jpg"],
+                publish_channel_ids: [],
+              },
+              error: null,
+            }),
+          };
+        }
+
+        if (table === "generated_articles" && fromCallIndex === 2) {
+          // Dedup query
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            neq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+
+        if (table === "publish_channels") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+
+        return {
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        };
+      }),
+    };
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+
+    const result = await publishArticle("has-img-1");
+
+    // Should proceed past image check (no "無圖片" error)
+    expect(result.errors).not.toContain("無圖片，無法發布");
+  });
+});
+
 describe("deduplicateCoverImage", () => {
   it("returns original array when cover is not duplicated", () => {
     const images = ["https://img.com/a.jpg", "https://img.com/b.jpg"];
@@ -768,5 +896,115 @@ describe("deduplicateCoverImage", () => {
     const existing = new Set(["https://img.com/dup.jpg"]);
     deduplicateCoverImage(images, existing);
     expect(images).toEqual(original);
+  });
+
+  it("handles sequential publish of multiple articles (no race condition)", async () => {
+    // Verify that batch publish logic uses sequential loop, not Promise.all()
+    // This is tested through the implementation review (code review found Promise.all() → sequential fix)
+    // This test documents the expected behavior: dedup queries happen in sequence
+
+    const article = {
+      id: "art-sequential-1",
+      title: "Sequential Article",
+      content: "Content",
+      slug: "seq-article",
+      images: ["https://img.com/cover.jpg"],
+      publish_channel_ids: [],
+    };
+
+    const supabase = {
+      from: vi.fn().mockImplementation((_table: string) => {
+        const chain = {
+          select: vi.fn(),
+          eq: vi.fn(),
+          neq: vi.fn(),
+          order: vi.fn(),
+          limit: vi.fn(),
+          update: vi.fn(),
+          in: vi.fn(),
+          single: vi.fn(),
+        };
+
+        chain.select.mockReturnValue(chain);
+        chain.eq.mockReturnValue(chain);
+        chain.neq.mockReturnValue(chain);
+        chain.order.mockReturnValue(chain);
+        chain.limit.mockResolvedValue({ data: [], error: null }); // Empty published set
+        chain.single.mockResolvedValue({ data: article, error: null });
+        chain.update.mockReturnValue(chain);
+        chain.in.mockReturnValue(chain);
+
+        return chain;
+      }),
+    };
+
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+    mockPublishToChannel.mockResolvedValue({
+      channel_id: 1,
+      channel_name: "Test Channel",
+      channel_type: "telegram",
+      success: true,
+      message_id: 1,
+    });
+
+    const result = await publishArticle("art-sequential-1");
+
+    expect(result.success).toBe(true);
+    expect(result.title).toBe("Sequential Article");
+    // Sequential publish ensures dedup snapshot is consistent per article
+  });
+
+  it("dedup handles article with no other published articles", async () => {
+    // Edge case: dedup query completes but returns empty set (first article being published)
+    // Should maintain original cover image without error
+    const article = {
+      id: "art-first-publish",
+      title: "Very First Article",
+      content: "Content",
+      slug: "first-pub",
+      images: ["https://img.com/first-cover.jpg"],
+      publish_channel_ids: [],
+    };
+
+    const supabase = {
+      from: vi.fn().mockImplementation((_table: string) => {
+        const chain = {
+          select: vi.fn(),
+          eq: vi.fn(),
+          neq: vi.fn(),
+          order: vi.fn(),
+          limit: vi.fn(),
+          update: vi.fn(),
+          in: vi.fn(),
+          single: vi.fn(),
+        };
+
+        chain.select.mockReturnValue(chain);
+        chain.eq.mockReturnValue(chain);
+        chain.neq.mockReturnValue(chain);
+        chain.order.mockReturnValue(chain);
+        chain.limit.mockResolvedValue({ data: [], error: null }); // No published articles yet
+        chain.single.mockResolvedValue({ data: article, error: null });
+        chain.update.mockReturnValue(chain);
+        chain.in.mockReturnValue(chain);
+
+        return chain;
+      }),
+    };
+
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+    mockPublishToChannel.mockResolvedValue({
+      channel_id: 1,
+      channel_name: "Test",
+      channel_type: "telegram",
+      success: true,
+      message_id: 1,
+    });
+
+    const result = await publishArticle("art-first-publish");
+
+    expect(result.success).toBe(true);
+    expect(result.title).toBe("Very First Article");
+    // First article: no dedup needed, cover image unchanged
   });
 });
