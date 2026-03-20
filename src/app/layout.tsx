@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "@/components/auth/SessionProvider";
@@ -70,6 +71,7 @@ export default function RootLayout({
           </ThemeProvider>
         </NuqsAdapter>
       </body>
+      <GoogleAnalytics gaId="G-09TF9265JG" />
     </html>
   );
 }
