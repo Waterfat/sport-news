@@ -86,7 +86,7 @@ export default function ArticlesPage() {
       invalidateArticles();
     },
     onProducePollComplete: () => {
-      planManager.fetchPlans();
+      planManager.cleanupProducedPlans();
       invalidateArticles();
     },
   });

@@ -7,12 +7,14 @@ import type { PlanItem, RawArticleInfo } from "@/components/admin/PlansTable";
 
 interface UsePlanManagerOptions {
   onProduceSuccess?: (ids: string[]) => void;
+  onProduceComplete?: () => void;
 }
 
 export function usePlanManager(options: UsePlanManagerOptions = {}) {
   const queryClient = useQueryClient();
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(null);
+  const [lastProducedIds, setLastProducedIds] = useState<string[]>([]);
 
   const { data: planData, isLoading: planLoading } = useQuery<{
     plans: PlanItem[];
@@ -34,6 +36,22 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
   const fetchPlans = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["rewrite-plans"] });
   }, [queryClient]);
+
+  // 產出完成後，明確呼叫 DELETE API 清除已產的 plans（防止 backend 刪除失敗）
+  const cleanupProducedPlans = useCallback(async () => {
+    if (lastProducedIds.length === 0) return;
+    try {
+      await fetch("/api/rewrite/plan", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: lastProducedIds }),
+      });
+    } catch {
+      // 清理失敗不阻塞流程
+    }
+    setLastProducedIds([]);
+    queryClient.invalidateQueries({ queryKey: ["rewrite-plans"] });
+  }, [lastProducedIds, queryClient]);
 
   const clearPlans = useCallback(() => {
     queryClient.setQueryData(["rewrite-plans"], {
@@ -65,6 +83,7 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
         };
       });
       setSelectedPlanIds(new Set());
+      setLastProducedIds(ids);
     },
     onError: (err) => {
       toast.error(err.message);
@@ -146,6 +165,7 @@ export function usePlanManager(options: UsePlanManagerOptions = {}) {
     pendingDeleteIds,
     fetchPlans,
     clearPlans,
+    cleanupProducedPlans,
     handlePlanProduce,
     handlePlanDelete,
     confirmPlanDelete,
