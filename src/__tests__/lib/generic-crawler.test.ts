@@ -84,6 +84,109 @@ describe("isLikelyArticleUrl", () => {
   });
 });
 
+describe("crawlGeneric - base path priority (CBS Sports scenario)", () => {
+  it("prioritizes links matching baseUrl path prefix over other /news/ links", async () => {
+    const { crawlGeneric } = await import("@/lib/crawlers/generic");
+
+    // Simulate CBS /nba/news/ page with 16 links:
+    // First 15 are non-NBA /news/ links (navigation, other sports)
+    // Last 1 is the real /nba/news/ article
+    const otherLinks = Array.from(
+      { length: 15 },
+      (_, i) => `<a href="/nfl/news/free-agency-update-${i}-story">NFL ${i}</a>`
+    ).join("\n");
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => `
+        <html><body>
+          ${otherLinks}
+          <a href="/nba/news/real-nba-article-slug">Real NBA Article</a>
+        </body></html>
+      `,
+    });
+
+    // Mock the real NBA article
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => `
+        <html><body>
+          <h1>Real NBA Article</h1>
+          <article>
+            <p>This is a long enough paragraph with more than twenty characters for the content check.</p>
+            <p>Second paragraph with enough content to pass validation checks in crawler module okay.</p>
+            <p>Third paragraph ensures total content exceeds one hundred characters requirement easily.</p>
+          </article>
+        </body></html>
+      `,
+    });
+
+    // Also mock NFL articles (they'll be at the end and crawled after NBA)
+    for (let i = 0; i < 14; i++) {
+      mockFetch.mockResolvedValueOnce({ ok: false });
+    }
+
+    const articles = await crawlGeneric(
+      "CBS Sports",
+      "https://www.cbssports.com/nba/news/"
+    );
+
+    // The real NBA article should be first (prioritized)
+    expect(articles.length).toBeGreaterThanOrEqual(1);
+    expect(articles[0].title).toBe("Real NBA Article");
+  });
+
+  it("does not change order when all links already match the base path", async () => {
+    const { crawlGeneric } = await import("@/lib/crawlers/generic");
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => `
+        <html><body>
+          <a href="/nba/news/first-article-slug">First</a>
+          <a href="/nba/news/second-article-slug">Second</a>
+        </body></html>
+      `,
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => `
+        <html><body>
+          <h1>First Article</h1>
+          <article>
+            <p>Content of first article that is long enough to pass the validation check here.</p>
+            <p>More content in second paragraph to ensure total length exceeds one hundred characters.</p>
+            <p>Third paragraph for good measure to make the content sufficient for crawling purposes.</p>
+          </article>
+        </body></html>
+      `,
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => `
+        <html><body>
+          <h1>Second Article</h1>
+          <article>
+            <p>Content of second article that is long enough to pass the validation check here.</p>
+            <p>More content in second paragraph to ensure total length exceeds one hundred characters.</p>
+            <p>Third paragraph for good measure to make the content sufficient for crawling purposes.</p>
+          </article>
+        </body></html>
+      `,
+    });
+
+    const articles = await crawlGeneric(
+      "NBA",
+      "https://www.nba.com/nba/news/"
+    );
+    expect(articles.length).toBe(2);
+    expect(articles[0].title).toBe("First Article");
+    expect(articles[1].title).toBe("Second Article");
+  });
+});
+
 describe("crawlGeneric - article image extraction", () => {
   it("extracts images from article page", async () => {
     const { crawlGeneric } = await import("@/lib/crawlers/generic");
