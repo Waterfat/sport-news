@@ -459,6 +459,7 @@ async function main() {
   const { data: rawArticles } = await supabase
     .from("raw_articles")
     .select("*")
+    .eq("is_processed", false)
     .gte("crawled_at", since.toISOString())
     .order("crawled_at", { ascending: false });
 
