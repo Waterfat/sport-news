@@ -16,7 +16,8 @@ import { resolve } from "path";
 config({ path: resolve(__dirname, "..", ".env.local") });
 
 import { createClient } from "@supabase/supabase-js";
-import { matchesSpecialties, Specialties, RawArticleBase } from "./shared-matching";
+import { z } from "zod";
+import { matchesSpecialties, Specialties, RawArticleBase, leagueKeywords } from "./shared-matching";
 import { callClaude } from "./shared-claude";
 
 const supabase = createClient(
@@ -27,12 +28,14 @@ const supabase = createClient(
 interface WriterPersona { id: string; name: string; style_prompt: string; writer_type: string; specialties: Specialties; max_articles: number; }
 interface RawArticle extends RawArticleBase { crawled_at: string; }
 
-interface PlanProposal {
-  title: string;
-  source_indices: number[];
-  league: string;
-  plan_type: "official" | "columnist";
-}
+const PlanProposalSchema = z.object({
+  title: z.string().min(1).max(500),
+  source_indices: z.array(z.number().int().nonnegative()).min(1),
+  league: z.string().nullable().optional(),
+  plan_type: z.enum(["official", "columnist"]).optional(),
+});
+
+type PlanProposal = z.infer<typeof PlanProposalSchema>;
 
 function parseAIPlan(output: string): PlanProposal[] {
   const cleaned = output.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -44,7 +47,12 @@ function parseAIPlan(output: string): PlanProposal[] {
   try {
     const parsed = JSON.parse(jsonMatch[0]);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((p: PlanProposal) => p.title && Array.isArray(p.source_indices));
+    const validated = z.array(PlanProposalSchema).safeParse(parsed);
+    if (!validated.success) {
+      console.error("Schema 驗證失敗:", validated.error.issues.slice(0, 5));
+      return [];
+    }
+    return validated.data;
   } catch (e) {
     console.error("JSON 解析失敗:", e);
     console.error("原始 AI 回傳（前 1000 字元）:", output.substring(0, 1000));
@@ -70,15 +78,17 @@ export async function generatePlans() {
 
   const { data: rawArticles } = await supabase
     .from("raw_articles").select("*")
+    .eq("is_processed", false)
     .gte("crawled_at", since.toISOString())
     .order("crawled_at", { ascending: false });
 
   if (!rawArticles?.length) { console.log("沒有近期文章"); return; }
 
-  // 過濾垃圾文章
+  // 過濾垃圾文章（聯盟列表統一使用 shared-matching 中的定義）
+  const categoryNames = Object.keys(leagueKeywords);
   const validArticles = rawArticles.filter((a) => {
     if (!a.title || a.title.trim().length < 10) return false;
-    const categoryNames = ["NBA", "MLB", "NFL", "NHL", "NCAAM", "NCAAW", "WNBA", "MLS", "Soccer", "Tennis", "Hockey", "College Sports"];
+    // 過濾掉只是聯盟名稱的垃圾標題（如 "NBA", "NFL" 等裸標題）
     if (categoryNames.some((c) => a.title.trim().toUpperCase() === c.toUpperCase())) return false;
     return true;
   });
@@ -131,6 +141,11 @@ export async function generatePlans() {
   const allPlans: { writer_persona_id: string; title: string; raw_article_ids: string[]; league: string | null; plan_type: string; }[] = [];
 
   for (const persona of personas as WriterPersona[]) {
+    // 驗證 specialties 欄位是否有效（Supabase JSONB 可能返回序列化字符串）
+    if (typeof persona.specialties !== 'object' || !persona.specialties) {
+      console.warn(`[${persona.name}] specialties 無效，跳過`);
+      continue;
+    }
     // 匹配專長
     const matched = validArticles.filter((a) => matchesSpecialties(a as RawArticle, persona.specialties));
     if (!matched.length) {
@@ -254,6 +269,18 @@ ${articleList}
       return;
     }
     console.log(`\n=== 已產生 ${allPlans.length} 個規劃項目 ===`);
+
+    // 標記所有已規劃的 raw_articles 為 is_processed=true，防止下次重複規劃
+    const usedIds = [...new Set(allPlans.flatMap((p) => p.raw_article_ids))];
+    const { error: updateError } = await supabase
+      .from("raw_articles")
+      .update({ is_processed: true })
+      .in("id", usedIds);
+    if (updateError) {
+      console.error("標記 is_processed 失敗:", updateError.message);
+    } else {
+      console.log(`已標記 ${usedIds.length} 篇原始文章為 is_processed=true`);
+    }
   } else {
     console.log("沒有產生任何規劃");
   }
