@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 import { createServiceClient } from "@/lib/supabase";
-import { SITE_URL } from "@/lib/constants";
-import { absoluteCategoryUrl, absoluteNewsUrl, absoluteWriterUrl } from "@/lib/routes";
+import { SITE_URL, TEAM_SLUG_MAP } from "@/lib/constants";
+import { absoluteCategoryUrl, absoluteNewsUrl, absoluteTeamUrl, absoluteWriterUrl } from "@/lib/routes";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createServiceClient();
@@ -82,6 +82,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.5,
       });
     }
+  }
+
+  // Team pages (canonical URL with ESPN ID, not slug)
+  for (const [key, teamId] of Object.entries(TEAM_SLUG_MAP)) {
+    const sport = key.split(":")[0]; // "nba" or "mlb"
+    entries.push({
+      url: absoluteTeamUrl(SITE_URL, sport, teamId),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.6,
+    });
   }
 
   return entries;
