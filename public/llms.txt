@@ -1,0 +1,30 @@
+# 超級運動資訊網 (Howger Sport)
+
+> 台灣繁體中文運動新聞平台，提供 NBA、MLB、足球即時報導與深度分析。
+
+## 網站內容
+
+- 即時運動新聞文章（AI 輔助生成 + 人工審核）
+- 即時比分（NBA、MLB、NFL）
+- 賠率分析
+- 聯盟排名
+- 球隊與球員資訊
+
+## 主要頁面
+
+- /: 首頁，最新新聞與即時比分
+- /category/nba: NBA 新聞
+- /category/mlb: MLB 新聞
+- /category/soccer: 足球新聞
+- /category/general: 綜合運動新聞
+- /scores: 即時比分
+- /standings/nba: NBA 排名
+- /odds: 賠率分析
+- /news/[slug]: 新聞文章
+- /team/[sport]/[id]: 球隊頁面
+- /player/[sport]/[id]: 球員頁面
+
+## 聯絡
+
+- 網站: https://howger-sport.com
+- Telegram: https://t.me/howger_sport_news

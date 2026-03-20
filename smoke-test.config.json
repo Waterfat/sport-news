@@ -30,7 +30,8 @@
     "/api/public/team?sport=nba&id=13",
     "/api/public/team?sport=nba&id=13&type=roster",
     "/robots.txt",
-    "/sitemap.xml"
+    "/sitemap.xml",
+    "/llms.txt"
   ],
 
   "db_checks": [
