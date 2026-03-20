@@ -18,7 +18,7 @@ export function callClaude(prompt: string, timeout = 180000): string {
   delete env.ANTHROPIC_API_KEY;
 
   const tmpStderr = join(tmpdir(), `claude-stderr-${Date.now()}.txt`);
-  spawnSync(
+  const result = spawnSync(
     "bash",
     [
       "-c",
@@ -31,6 +31,15 @@ export function callClaude(prompt: string, timeout = 180000): string {
       env,
     }
   );
+
+  // 檢查 subprocess 是否因 timeout 或 signal 被殺死
+  if (result.signal) {
+    console.error(`[callClaude] 子程序被 ${result.signal} 終止（可能超時 ${timeout}ms）`);
+    try { unlinkSync(tmpPrompt); } catch {}
+    try { unlinkSync(tmpOutput); } catch {}
+    try { unlinkSync(tmpStderr); } catch {}
+    throw new Error(`Claude CLI 子程序被 ${result.signal} 終止`);
+  }
 
   // Log stderr separately if present
   try {
