@@ -50,7 +50,7 @@
 - 分類頁側邊欄加「本週熱門」「同隊新聞」區塊
 - 文章底部加「延伸閱讀」（同分類 + 跨分類各 2-3 篇）
 - 文章內文自動連結到相關球隊頁 `/team/[sport]/[id]`、球員頁 `/player/[sport]/[id]`
-  - 名稱比對資料來源：使用 ESPN API 的球隊/球員名稱清單（中英文），存於 `src/lib/constants.ts`
+  - 名稱比對資料來源：使用 ESPN API 的球隊名稱清單（中英文），複用 `src/lib/constants.ts` 既有的 `TEAM_NAME_ZH`；球員名稱因數量龐大（數千筆），獨立存放於 `src/lib/player-names.ts`
   - 消歧義：優先匹配文章所屬分類的聯盟，同名時不加連結
   - 已有 markdown 連結的文字不重複處理
   - 處理在 react-markdown 的 custom renderer 層級進行，不修改原始 markdown
@@ -68,15 +68,15 @@
 
 - 在既有 `/team/[sport]/[id]` 路由基礎上，新增 slug 別名路由 `src/app/(public)/team/[sport]/[slug]/page.tsx`
   - 例如 `/team/nba/lakers` → 解析為 ESPN ID `1610612747`
-  - 建立 slug ↔ ESPN ID 映射表（存於 `src/lib/team-slugs.ts`）
+  - 建立 slug ↔ ESPN ID 映射表（存於 `src/lib/constants.ts`，與既有 `TEAM_NAME_ZH` 放一起）
   - slug 路由做 server-side redirect 到 canonical `/team/[sport]/[id]` URL
 - 球隊頁內容聚合：該隊所有相關新聞 + 即時戰績 + 近期賽程與賠率
 - 門檻：至少 3 篇相關文章才生成頁面，不足的加 `noindex`
-- 新增 route helper 到 `src/lib/routes.ts`（`teamSlugUrl()`、`absoluteTeamSlugUrl()`）
+- 新增 route helper 到 `src/lib/routes.ts`（`teamSlugUrl()`、`absoluteTeamSlugUrl()`、`absoluteTeamUrl()`）
 
 **影響範圍**：
 - 新增 `src/app/(public)/team/[sport]/[slug]/page.tsx`
-- 新增 `src/lib/team-slugs.ts`
+- 更新 `src/lib/constants.ts` — 新增 slug 映射表
 - 更新 `src/lib/routes.ts`
 - 更新 `src/app/sitemap.ts` — 加入球隊 slug 頁
 
