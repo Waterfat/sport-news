@@ -147,7 +147,7 @@ function collectImages(articles: RawArticle[]): string[] {
   return images;
 }
 
-function parseResult(output: string): { title: string; content: string; category?: string } {
+function parseResult(output: string): { title: string; content: string; category?: string; tags?: string[] } {
   if (!output.trim()) {
     throw new Error("Claude returned empty response");
   }
@@ -193,13 +193,14 @@ ${persona.style_prompt}
 7. 標題要有創意、吸引眼球${titleStyleHint ? `\n${titleStyleHint}` : ""}
 8. 球員、教練、球隊等名稱保留英文原文，不要翻譯成中文（例如用 LeBron James 而非乔布朗·詹姆斯）
 9. 只回覆 JSON，不要 markdown code block
+10. tags 欄位必須包含文章提及的聯盟、球隊、球員名（英文原文），用於分類和推薦
 
 分類：${category}
 素材數量：${articles.length} 篇
 
 ${sourceSummaries}
 
-請以純 JSON 格式回覆：{"title": "標題", "content": "文章內容", "category": "${category}"}`;
+請以純 JSON 格式回覆：{"title": "標題", "content": "文章內容", "category": "${category}", "tags": ["聯盟名", "球隊名", "球員名"]}`;
 }
 
 function buildOfficialRecapPrompt(
@@ -231,12 +232,13 @@ ${persona.style_prompt}
 8. 標題必須包含「${league}」關鍵字，風格要專業且吸引眼球${titleStyleHint ? `\n${titleStyleHint}` : ""}
 9. 球員、教練、球隊等名稱保留英文原文，不要翻譯成中文（例如用 LeBron James 而非乔布朗·詹姆斯）
 10. 只回覆 JSON，不要 markdown code block
+11. tags 欄位必須包含文章提及的聯盟、球隊、球員名（英文原文），用於分類和推薦
 
 素材數量：${articles.length} 篇
 
 ${sourceSummaries}
 
-請以純 JSON 格式回覆：{"title": "標題", "content": "文章內容", "category": "${league}"}`;
+請以純 JSON 格式回覆：{"title": "標題", "content": "文章內容", "category": "${league}", "tags": ["聯盟名", "球隊名", "球員名"]}`;
 }
 
 interface PlanItem {
@@ -362,6 +364,7 @@ async function produceFromPlans(planIds: string[]) {
           content: result.content,
           category: result.category || plan.league || articles[0].category || "綜合",
           images: collectedImages,
+          tags: Array.isArray(result.tags) ? result.tags : [],
           status: "draft",
         });
 
@@ -548,6 +551,7 @@ async function main() {
               content: result.content,
               category: result.category || league,
               images: officialImages,
+              tags: Array.isArray(result.tags) ? result.tags : [],
               status: "draft",
             });
 
@@ -617,6 +621,7 @@ async function main() {
             content: result.content,
             category: result.category || group[0].category || "綜合",
             images: columnistImages,
+            tags: Array.isArray(result.tags) ? result.tags : [],
             status: "draft",
           });
 
