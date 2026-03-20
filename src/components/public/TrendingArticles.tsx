@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { TrendingUp, Eye } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { newsUrl } from "@/lib/routes";
 
 interface TrendingArticle {
@@ -58,19 +58,11 @@ export function TrendingArticles() {
                 <h4 className="text-sm font-medium text-foreground line-clamp-2 group-hover:text-blue-600 transition-colors leading-snug">
                   {article.title}
                 </h4>
-                <div className="flex items-center gap-2 mt-1">
-                  {article.category && (
-                    <span className="text-xs text-muted-foreground">
-                      {article.category}
-                    </span>
-                  )}
-                  {article.view_count != null && article.view_count > 0 && (
-                    <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
-                      <Eye className="w-3 h-3" />
-                      {article.view_count}
-                    </span>
-                  )}
-                </div>
+                {article.category && (
+                  <span className="text-xs text-muted-foreground mt-1">
+                    {article.category}
+                  </span>
+                )}
               </div>
             </Link>
           ))}
