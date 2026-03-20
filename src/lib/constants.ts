@@ -368,3 +368,79 @@ export function parsePagination(searchParams: URLSearchParams, defaultLimit = 20
   const offset = (page - 1) * limit;
   return { page, limit, offset };
 }
+
+/**
+ * 球隊 slug → ESPN team ID 映射表
+ * 格式: "sport:slug" → "espn_id"
+ * 用於 SEO 友善的 URL（如 /team/nba/los-angeles-lakers）解析為 ESPN ID
+ * ID 來源：ESPN site API /apis/site/v2/sports/{sport}/{league}/teams
+ */
+export const TEAM_SLUG_MAP: Record<string, string> = {
+  // NBA — 30 teams (verified from ESPN API 2026-03-21)
+  "nba:atlanta-hawks": "1",
+  "nba:boston-celtics": "2",
+  "nba:brooklyn-nets": "17",
+  "nba:charlotte-hornets": "30",
+  "nba:chicago-bulls": "4",
+  "nba:cleveland-cavaliers": "5",
+  "nba:dallas-mavericks": "6",
+  "nba:denver-nuggets": "7",
+  "nba:detroit-pistons": "8",
+  "nba:golden-state-warriors": "9",
+  "nba:houston-rockets": "10",
+  "nba:indiana-pacers": "11",
+  "nba:la-clippers": "12",
+  "nba:los-angeles-lakers": "13",
+  "nba:memphis-grizzlies": "29",
+  "nba:miami-heat": "14",
+  "nba:milwaukee-bucks": "15",
+  "nba:minnesota-timberwolves": "16",
+  "nba:new-orleans-pelicans": "3",
+  "nba:new-york-knicks": "18",
+  "nba:oklahoma-city-thunder": "25",
+  "nba:orlando-magic": "19",
+  "nba:philadelphia-76ers": "20",
+  "nba:phoenix-suns": "21",
+  "nba:portland-trail-blazers": "22",
+  "nba:sacramento-kings": "23",
+  "nba:san-antonio-spurs": "24",
+  "nba:toronto-raptors": "28",
+  "nba:utah-jazz": "26",
+  "nba:washington-wizards": "27",
+  // MLB — 30 teams (verified from ESPN API 2026-03-21)
+  "mlb:arizona-diamondbacks": "29",
+  "mlb:athletics": "11",
+  "mlb:atlanta-braves": "15",
+  "mlb:baltimore-orioles": "1",
+  "mlb:boston-red-sox": "2",
+  "mlb:chicago-cubs": "16",
+  "mlb:chicago-white-sox": "4",
+  "mlb:cincinnati-reds": "17",
+  "mlb:cleveland-guardians": "5",
+  "mlb:colorado-rockies": "27",
+  "mlb:detroit-tigers": "6",
+  "mlb:houston-astros": "18",
+  "mlb:kansas-city-royals": "7",
+  "mlb:los-angeles-angels": "3",
+  "mlb:los-angeles-dodgers": "19",
+  "mlb:miami-marlins": "28",
+  "mlb:milwaukee-brewers": "8",
+  "mlb:minnesota-twins": "9",
+  "mlb:new-york-mets": "21",
+  "mlb:new-york-yankees": "10",
+  "mlb:philadelphia-phillies": "22",
+  "mlb:pittsburgh-pirates": "23",
+  "mlb:san-diego-padres": "25",
+  "mlb:san-francisco-giants": "26",
+  "mlb:seattle-mariners": "12",
+  "mlb:st-louis-cardinals": "24",
+  "mlb:tampa-bay-rays": "30",
+  "mlb:texas-rangers": "13",
+  "mlb:toronto-blue-jays": "14",
+  "mlb:washington-nationals": "20",
+};
+
+/** 根據 sport + slug 取得 ESPN team ID，找不到回傳 null */
+export function getTeamIdBySlug(sport: string, slug: string): string | null {
+  return TEAM_SLUG_MAP[`${sport}:${slug}`] ?? null;
+}
