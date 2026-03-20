@@ -21,6 +21,7 @@ config({ path: resolve(__dirname, "..", ".env.local") });
 import { createClient } from "@supabase/supabase-js";
 import { matchesSpecialties, Specialties, RawArticleBase } from "./shared-matching";
 import { callClaude } from "./shared-claude";
+import { isValidImageUrl } from "../src/lib/constants";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -138,7 +139,7 @@ function collectImages(articles: RawArticle[]): string[] {
   const images: string[] = [];
   for (const a of articles) {
     for (const url of a.images || []) {
-      if (url && !seen.has(url) && images.length < 5) {
+      if (url && isValidImageUrl(url) && !seen.has(url) && images.length < 5) {
         seen.add(url);
         images.push(url);
       }
@@ -458,6 +459,7 @@ async function main() {
   const { data: rawArticles } = await supabase
     .from("raw_articles")
     .select("*")
+    .eq("is_processed", false)
     .gte("crawled_at", since.toISOString())
     .order("crawled_at", { ascending: false });
 

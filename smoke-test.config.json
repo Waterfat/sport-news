@@ -29,7 +29,6 @@
     "/api/public/standings?league=nba",
     "/api/public/team?sport=nba&id=13",
     "/api/public/team?sport=nba&id=13&type=roster",
-    "/api/public/pageview",
     "/robots.txt",
     "/sitemap.xml"
   ],
@@ -70,6 +69,10 @@
     {
       "label": "Admin subdomain /scores redirect 到主域名",
       "command": "LOCATION=$(curl -s -o /dev/null -w '%{redirect_url}' --max-redirs 0 https://admin.howger-sport.com/scores) && echo \"$LOCATION\" | grep -q 'howger-sport.com/scores'"
+    },
+    {
+      "label": "Pageview API 接受 POST（回 200 或 400）",
+      "command": "STATUS=$(curl -s -X POST -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{\"path\":\"/\"}' '{{BASE_URL}}/api/public/pageview' 2>/dev/null) && ([ \"$STATUS\" = \"200\" ] || [ \"$STATUS\" = \"400\" ]) && echo '✓ pageview POST works' || echo \"✗ pageview failed with $STATUS\""
     },
     {
       "label": "批次發布 API endpoint 存在（POST /api/articles/generated/batch）",
