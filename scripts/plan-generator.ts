@@ -61,6 +61,34 @@ function parseAIPlan(output: string): PlanProposal[] {
   }
 }
 
+// --- 標題去重工具 ---
+
+/** 從標題中提取關鍵詞（英文人名/隊名 + 中文 bigram） */
+export function extractKeyTerms(title: string): Set<string> {
+  const terms = new Set<string>();
+  // 英文單詞（球員名、隊名等，≥3 字元才有意義）
+  const englishWords = title.match(/[A-Za-z]+/g) || [];
+  for (const w of englishWords) {
+    if (w.length >= 3) terms.add(w.toLowerCase());
+  }
+  // 中文 bigram
+  const chinese = title.replace(/[A-Za-z0-9\s\p{P}]/gu, "");
+  for (let i = 0; i < chinese.length - 1; i++) {
+    terms.add(chinese.substring(i, i + 2));
+  }
+  return terms;
+}
+
+/** 判斷兩個標題是否相似（overlap coefficient ≥ threshold） */
+export function isSimilarTitle(a: string, b: string, threshold = 0.5): boolean {
+  const ka = extractKeyTerms(a);
+  const kb = extractKeyTerms(b);
+  if (ka.size === 0 || kb.size === 0) return false;
+  const intersection = [...ka].filter((x) => kb.has(x)).length;
+  const overlap = intersection / Math.min(ka.size, kb.size);
+  return overlap >= threshold;
+}
+
 // --- Main ---
 export async function generatePlans() {
   console.log(`\n[${new Date().toLocaleString("zh-TW")}] === 開始產生規劃 ===`);
@@ -111,19 +139,19 @@ export async function generatePlans() {
     }
   }
 
-  // 取得近 7 天已發布/已審核的文章標題（供 AI 判斷主題是否已報導過）
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const { data: recentPublished } = await supabase
+  // 取得近 14 天已發布或待審的文章標題（供去重比對）
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+  const { data: recentArticles } = await supabase
     .from("generated_articles")
     .select("title")
-    .in("status", ["published"])
-    .gte("created_at", sevenDaysAgo.toISOString())
+    .in("status", ["published", "draft"])
+    .gte("created_at", fourteenDaysAgo.toISOString())
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
-  const publishedTitles = (recentPublished || []).map((a) => a.title);
-  console.log(`近 7 天已發布/審核文章: ${publishedTitles.length} 篇`);
+  const publishedTitles = (recentArticles || []).map((a) => a.title);
+  console.log(`近 14 天已有文章: ${publishedTitles.length} 篇（含 draft）`);
 
   // 讀取各球種的標題風格提詞
   const { data: sportSettings } = await supabase
@@ -250,6 +278,20 @@ ${articleList}
         .some((i) => (freshArticles[i].images?.length ?? 0) > 0);
       if (!hasImages) {
         console.log(`  跳過「${proposal.title}」- 素材組合無任何圖片`);
+        continue;
+      }
+
+      // 標題去重：與歷史文章比對
+      const similarToPublished = publishedTitles.find((t) => isSimilarTitle(proposal.title, t));
+      if (similarToPublished) {
+        console.log(`  跳過「${proposal.title}」- 與已有文章相似：「${similarToPublished}」`);
+        continue;
+      }
+
+      // 標題去重：與同批次已通過的規劃比對
+      const similarInBatch = allPlans.find((p) => isSimilarTitle(proposal.title, p.title));
+      if (similarInBatch) {
+        console.log(`  跳過「${proposal.title}」- 與同批規劃相似：「${similarInBatch.title}」`);
         continue;
       }
 
