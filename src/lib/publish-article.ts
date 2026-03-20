@@ -187,5 +187,33 @@ function extractImageUrls(images: unknown): string[] {
       }
       return undefined;
     })
-    .filter((url): url is string => typeof url === "string" && url.startsWith("http"));
+    .filter((url): url is string => typeof url === "string" && url.startsWith("http") && isSafeImageUrl(url));
+}
+
+/** 排除指向內部網路的 URL（防 SSRF） */
+function isSafeImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+    // 排除 localhost、RFC 1918、link-local
+    if (
+      hostname === "localhost" ||
+      hostname.startsWith("127.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("169.254.") ||
+      hostname === "0.0.0.0" ||
+      hostname.endsWith(".local") ||
+      hostname.startsWith("172.") && (() => {
+        const second = parseInt(hostname.split(".")[1], 10);
+        return second >= 16 && second <= 31;
+      })()
+    ) {
+      return false;
+    }
+    // 只允許 https（生產環境圖片都應走 https）
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
