@@ -127,7 +127,9 @@ function RelatedByTeam({ category }: { category: string }) {
     ? articles.filter((a) => favoriteNames.some((name) => a.title.includes(name))).slice(0, 5)
     : [];
 
-  if (!session?.user || related.length === 0) return null;
+  // Don't render if not logged in, or if not loading and no related articles found
+  if (!session?.user) return null;
+  if (!isLoading && related.length === 0) return null;
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
