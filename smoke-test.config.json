@@ -19,7 +19,8 @@
     "/api/articles/generated?page=1&limit=1",
     "/api/articles/raw?page=1&limit=1",
     "/api/admin/visitors?period=7d",
-    "/api/settings/automation"
+    "/api/settings/automation",
+    "/api/dashboard/crawler-status"
   ],
 
   "public_apis": [
