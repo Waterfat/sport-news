@@ -26,6 +26,34 @@ interface Stats {
   channels: Channel[];
 }
 
+interface CrawlerStatus {
+  source: string;
+  count: number;
+  lastCrawled: string;
+}
+
+function getRelativeTime(dateStr: string): string {
+  const now = Date.now();
+  const diff = now - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return "剛剛";
+  if (minutes < 60) return `${minutes} 分鐘前`;
+  if (hours < 24) return `${hours} 小時前`;
+  return `${days} 天前`;
+}
+
+function getStatusIndicator(dateStr: string): { color: string; label: string } {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const hours = diff / 3600000;
+
+  if (hours < 24) return { color: "bg-green-500", label: "正常" };
+  if (hours < 48) return { color: "bg-yellow-500", label: "注意" };
+  return { color: "bg-red-500", label: "異常" };
+}
+
 export default function AdminDashboard() {
   const { data: stats, isLoading, error } = useQuery<Stats>({
     queryKey: ["dashboard-stats"],
@@ -34,6 +62,17 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error("fetch failed");
       return res.json();
     },
+  });
+
+  const { data: crawlerStatus } = useQuery<CrawlerStatus[]>({
+    queryKey: ["crawler-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/crawler-status");
+      if (!res.ok) throw new Error("fetch failed");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   if (isLoading) {
@@ -80,6 +119,54 @@ export default function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* 爬蟲狀態 */}
+      {crawlerStatus && crawlerStatus.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span>🕷️</span>
+              爬蟲狀態
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-gray-500">
+                    <th className="pb-2 font-medium">來源</th>
+                    <th className="pb-2 font-medium text-right">文章數</th>
+                    <th className="pb-2 font-medium text-right">最後爬取</th>
+                    <th className="pb-2 font-medium text-center w-10">狀態</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {crawlerStatus.map((crawler) => {
+                    const status = getStatusIndicator(crawler.lastCrawled);
+                    return (
+                      <tr key={crawler.source} className="border-b last:border-0">
+                        <td className="py-2.5 font-medium">{crawler.source}</td>
+                        <td className="py-2.5 text-right tabular-nums">
+                          {crawler.count.toLocaleString()}
+                        </td>
+                        <td className="py-2.5 text-right text-gray-500">
+                          {getRelativeTime(crawler.lastCrawled)}
+                        </td>
+                        <td className="py-2.5 text-center">
+                          <span
+                            className={`inline-block w-2.5 h-2.5 rounded-full ${status.color}`}
+                            title={status.label}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 自動化設定 */}
       <AutomationPanel />
