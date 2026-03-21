@@ -96,29 +96,53 @@ async function crawlArticle(
   const title = $("h1").first().text().trim();
   if (!title) return null;
 
-  // 取得文章內容
+  // 取得文章內容（放寬容器選擇器，ESPN 不一定使用 <article>）
   const paragraphs: string[] = [];
-  $("article p, .article-body p").each((_, el) => {
+  const seenTexts = new Set<string>();
+  $("article p, .article-body p, .story-body p, .story p, main p").each((_, el) => {
     const text = $(el).text().trim();
-    if (text) paragraphs.push(text);
+    if (text && !seenTexts.has(text)) {
+      seenTexts.add(text);
+      paragraphs.push(text);
+    }
   });
 
   const content = paragraphs.join("\n\n");
   if (!content || content.length < 100) return null;
 
-  // 取得圖片（排除記者大頭照）
-  const authorExclude = /author|byline|headshot|writer|staff|contributor|avatar/i;
+  // 取得圖片（排除記者大頭照，放寬容器選擇器）
+  const authorExclude = /author|byline|headshot|writer|staff|contributor|columnist|avatar|profile/i;
   const images: string[] = [];
-  $("article img, .article-body img, picture img").each((_, el) => {
+  $("article img, .article-body img, .story-body img, .story img, main img, picture img").each((_, el) => {
     const imgClass = $(el).attr("class") || "";
     const parentClass = $(el).parent().attr("class") || "";
-    if (authorExclude.test(imgClass + " " + parentClass)) return;
+    const grandparentClass = $(el).parent().parent().attr("class") || "";
+    if (authorExclude.test(imgClass + " " + parentClass + " " + grandparentClass)) return;
 
-    const src = $(el).attr("src") || $(el).attr("data-default-src");
+    // 優先讀 src / data-default-src，若無則檢查 <picture><source srcset>
+    let src = $(el).attr("src") || $(el).attr("data-default-src");
+    if (!src) {
+      const pictureParent = $(el).closest("picture");
+      if (pictureParent.length) {
+        const srcset = pictureParent.find("source").first().attr("srcset");
+        if (srcset) {
+          // srcset 格式："url1 width1, url2 width2, ..."，取第一個 URL
+          src = srcset.split(",")[0].trim().split(/\s+/)[0];
+        }
+      }
+    }
     if (src && isValidImageUrl(src)) {
       images.push(src);
     }
   });
+
+  // 備用：og:image（當無法從內文提取圖片時）
+  if (images.length === 0) {
+    const ogImage = $('meta[property="og:image"]').attr("content");
+    if (ogImage && ogImage.startsWith("http")) {
+      images.push(ogImage);
+    }
+  }
 
   return {
     source: "ESPN",
