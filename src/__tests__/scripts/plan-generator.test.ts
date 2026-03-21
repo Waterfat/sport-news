@@ -15,13 +15,40 @@ const PlanProposalSchema = z.object({
 
 type PlanProposal = z.infer<typeof PlanProposalSchema>;
 
-// 複製 parseAIPlan 函式（獨立於 DB 依賴）
+// 複製 extractJsonArray + parseAIPlan 函式（獨立於 DB 依賴，需與 scripts/plan-generator.ts 同步）
+function extractJsonArray(text: string): string | null {
+  const start = text.indexOf("[");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let stringChar: '"' | "'" | null = null;
+  let escape = false;
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+
+    if (escape) { escape = false; continue; }
+    if (ch === "\\" && inString) { escape = true; continue; }
+    if ((ch === '"' || ch === "'") && !inString) { inString = true; stringChar = ch; continue; }
+    if (ch === stringChar) { inString = false; stringChar = null; continue; }
+    if (inString) continue;
+
+    if (ch === "[") depth++;
+    else if (ch === "]") {
+      depth--;
+      if (depth === 0) return text.substring(start, i + 1);
+    }
+  }
+  return null;
+}
+
 function parseAIPlan(output: string): PlanProposal[] {
   const cleaned = output.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) return [];
+  const jsonStr = extractJsonArray(cleaned);
+  if (!jsonStr) return [];
   try {
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonStr);
     if (!Array.isArray(parsed)) return [];
     const validated = z.array(PlanProposalSchema).safeParse(parsed);
     if (!validated.success) return [];
@@ -108,6 +135,88 @@ describe("parseAIPlan — zod schema 驗證", () => {
     ]`;
     // zod array 驗證失敗會拒絕整個陣列
     expect(parseAIPlan(input)).toEqual([]);
+  });
+
+  it("JSON 後帶有含方括號的中文備註（#128 bug 場景）", () => {
+    const input = `\`\`\`json
+[
+  {
+    "title": "富邦勇士教練大地震：吳永仁辭總教練",
+    "source_indices": [0],
+    "league": "PLG",
+    "plan_type": "official"
+  }
+]
+\`\`\`
+
+**備註**：本批 10 篇素材中，可用內容極度有限：
+- **[1][2][3][4][5][6]**：博彩/運動博弈促銷廣告，跳過
+- **[7]**：大學籃球投注指南，跳過
+- **[8][9]**：Fantasy Basketball 選人攻略，跳過`;
+    const result = parseAIPlan(input);
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("富邦勇士教練大地震：吳永仁辭總教練");
+    expect(result[0].source_indices).toEqual([0]);
+  });
+
+  it("JSON 後帶有純文字備註（無方括號）", () => {
+    const input = `[{"title": "測試", "source_indices": [0], "league": "NBA"}]
+
+這是一段備註文字，說明為什麼只規劃了一篇文章。`;
+    const result = parseAIPlan(input);
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("測試");
+  });
+
+  it("JSON 被 code fence 包裹且後面有含方括號的備註", () => {
+    const input = `\`\`\`json
+[{"title": "NBA 今日焦點", "source_indices": [0, 1], "league": "NBA", "plan_type": "official"}]
+\`\`\`
+
+說明：
+- [0] ESPN 報導 → 主要來源
+- [1] CBS Sports → 補充數據
+- [2][3][4] 博彩廣告 → 跳過`;
+    const result = parseAIPlan(input);
+    expect(result).toHaveLength(1);
+    expect(result[0].source_indices).toEqual([0, 1]);
+  });
+});
+
+describe("extractJsonArray — 括號計數器", () => {
+  it("正確提取巢狀陣列", () => {
+    const text = `[{"a": [1, 2]}, {"b": [3]}] extra text`;
+    expect(extractJsonArray(text)).toBe('[{"a": [1, 2]}, {"b": [3]}]');
+  });
+
+  it("忽略字串內的方括號", () => {
+    const text = `[{"title": "test [0] content", "arr": [1]}]`;
+    expect(extractJsonArray(text)).toBe(text);
+  });
+
+  it("處理跳脫字元", () => {
+    const text = `[{"val": "escaped \\"quote\\" [inside]", "n": [0]}]`;
+    const result = extractJsonArray(text);
+    expect(result).not.toBeNull();
+    expect(JSON.parse(result!)).toBeTruthy();
+  });
+
+  it("沒有陣列時回傳 null", () => {
+    expect(extractJsonArray("no array here")).toBeNull();
+  });
+
+  it("未閉合的陣列回傳 null", () => {
+    expect(extractJsonArray("[1, 2, 3")).toBeNull();
+  });
+
+  it("字串內的單引號不被計入括號深度", () => {
+    const text = `[{"title": "test 'with [single quote]'", "arr": [1]}]`;
+    expect(extractJsonArray(text)).toBe(text);
+  });
+
+  it("非標準 JSON 單引號字串（AI 偶爾產出）", () => {
+    const text = `[{'title': 'NBA', 'indices': [0]}]`;
+    expect(extractJsonArray(text)).toBe(text);
   });
 });
 
@@ -244,6 +353,12 @@ describe("isSimilarTitle — 標題相似度", () => {
 
   it("完全相同的標題", () => {
     expect(isSimilarTitle("NBA 今日焦點", "NBA 今日焦點")).toBe(true);
+  });
+
+  it("純英文縮寫標題（長度 < 3）— 提取的 key terms 為空，回傳 false（已知邊界行為）", () => {
+    // extractKeyTerms("AI vs ML") 因為都是短詞 < 3，回傳空 Set
+    // isSimilarTitle 因此回傳 false（保守策略，避免誤判）
+    expect(isSimilarTitle("AI vs ML", "AI vs ML")).toBe(false);
   });
 });
 
