@@ -195,3 +195,26 @@
 
 - [x] Git-Ops 建立 branch feat/132-homepage-ui-redesign
 - [ ] FE 實作中...
+
+## Issue #127: fix: NEXT_PUBLIC_SITE_URL 環境變數仍指向 sportnews-ashen.vercel.app
+
+### 分級：S（純環境變數修改，無程式碼變更）
+
+### Phase 0: 評估 — 2026-03-21
+- [x] S 級別，純 Vercel 環境變數修復
+- [x] Phase 1-2 跳過（S 級別 + 無程式碼變更）
+
+### Phase 3: 工程（OPS）— 2026-03-21
+- [x] OPS 確認問題：robots.txt sitemap 指向 sportnews-ashen.vercel.app
+- [x] vercel env rm NEXT_PUBLIC_SITE_URL production
+- [x] printf 'https://howger-sport.com' | vercel env add NEXT_PUBLIC_SITE_URL production
+- [x] vercel redeploy 觸發重新部署
+
+### Phase 4: QA — 2026-03-21
+- [x] 部署後 QA 通過（391 unit + 54 E2E + smoke）
+- [x] robots.txt: Sitemap: https://howger-sport.com/sitemap.xml ✓
+- [x] sitemap.xml: 所有 URL 使用正確域名 ✓
+
+### Phase 5: 交付 — 2026-03-21
+- [x] Issue #127 closed
+- [x] Evolve: S 級別無新發現，跳過（無程式碼變更，無逃逸鏈可分析）
