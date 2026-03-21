@@ -318,12 +318,12 @@ export default function AnalyticsClient() {
                     </button>
                     {expandedSession === s.sessionId && (
                       <div className="pl-8 pb-2 space-y-0.5">
-                        {s.pages.map((p, i) => (
+                        {(s.pages ?? []).map((p, i) => (
                           <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
                             <span className="text-gray-300">
                               {new Date(p.time).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                             </span>
-                            {i < s.pages.length - 1 && <ArrowRight className="w-3 h-3 text-gray-300" />}
+                            {i < (s.pages ?? []).length - 1 && <ArrowRight className="w-3 h-3 text-gray-300" />}
                             <span className="text-gray-600">{p.name}</span>
                           </div>
                         ))}

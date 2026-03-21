@@ -150,7 +150,7 @@ function parseBoxScore(data: SummaryResponse): BoxScore | null {
   const teams: BoxScoreTeam[] = (data.boxscore.teams ?? []).map((t) => ({
     teamName: getTeamNameZh(t.team.displayName),
     logo: t.team.logo ?? t.team.logos?.[0]?.href ?? "",
-    stats: t.statistics.map((s) => ({
+    stats: (t.statistics ?? []).map((s) => ({
       label: s.name,
       value: s.displayValue,
     })),
