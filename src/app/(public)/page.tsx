@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { createServiceClient } from "@/lib/supabase";
 import { HeroSection } from "@/components/public/HeroSection";
 import { LiveScoreTicker } from "@/components/public/LiveScoreTicker";
+import { QuickNews } from "@/components/public/QuickNews";
 import { HomeArticleSection } from "@/components/public/HomeArticleSection";
 import { QuickStandings } from "@/components/public/QuickStandings";
 import { QuickOdds } from "@/components/public/QuickOdds";
@@ -57,7 +58,8 @@ export default async function HomePage() {
   const allArticles = (articlesResult.data || []) as unknown as ArticleWithWriter[];
   const hero = allArticles[0] || null;
   const subHeroes = allArticles.slice(1, 3);
-  const gridArticles = allArticles.slice(3, 33);
+  const quickNewsArticles = allArticles.slice(3, 13);
+  const gridArticles = allArticles.slice(13, 33);
 
   return (
     <div>
@@ -77,6 +79,16 @@ export default async function HomePage() {
           }))}
         />
       )}
+
+      {/* Quick News */}
+      <QuickNews
+        articles={quickNewsArticles.map((a) => ({
+          id: a.id,
+          title: a.title,
+          slug: a.slug,
+          published_at: a.published_at,
+        }))}
+      />
 
       {/* Main content + Sidebar */}
       <div className="flex flex-col lg:flex-row gap-6">
