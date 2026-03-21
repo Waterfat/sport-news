@@ -158,20 +158,56 @@ function collectImages(articles: RawArticle[]): string[] {
   return images;
 }
 
-function parseResult(output: string): { title: string; content: string; category?: string; tags?: string[] } {
+interface CitedSource {
+  type: string;
+  url: string;
+  title: string;
+  snippet: string;
+}
+
+function extractFirstJson(text: string): string | null {
+  const start = text.indexOf('{');
+  if (start === -1) return null;
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    else if (text[i] === '}') depth--;
+    if (depth === 0) return text.substring(start, i + 1);
+  }
+  return null;
+}
+
+function parseResult(output: string): { title: string; content: string; category?: string; tags?: string[]; writing_strategy?: string; cited_sources?: CitedSource[] } {
   if (!output.trim()) {
     throw new Error("Claude returned empty response");
   }
   const cleaned = output.replace(/```json\n?/g, "").replace(/```\n?/g, "");
-  const jsonMatch = cleaned.match(/\{[\s\S]*"title"[\s\S]*"content"[\s\S]*\}/);
-  if (!jsonMatch) {
+  const jsonStr = extractFirstJson(cleaned);
+  if (!jsonStr || !jsonStr.includes('"title"') || !jsonStr.includes('"content"')) {
     throw new Error(`Response is not valid JSON: ${output.substring(0, 300)}`);
   }
-  return JSON.parse(jsonMatch[0]);
+  return JSON.parse(jsonStr);
 }
 
 // extractTagsFromContent 從 shared-tags.ts 匯入
 import { extractTagsFromContent } from "./shared-tags";
+
+/** 從原始素材自動產生 cited_sources（AI 沒回傳時的 fallback） */
+function buildCitedSourcesFromRaw(articles: RawArticle[]): CitedSource[] {
+  return articles.map((a) => ({
+    type: "raw_article",
+    url: (a as unknown as Record<string, unknown>).url as string || "",
+    title: a.title,
+    snippet: a.content.substring(0, 200),
+  }));
+}
+
+/** 判斷 writing_strategy 的 fallback（根據素材數量） */
+function inferWritingStrategy(articles: RawArticle[]): string {
+  if (articles.length >= 3) return "multi_source";
+  if (articles.length === 1) return "enriched";
+  return "multi_source";
+}
 
 function buildColumnistPrompt(
   articles: RawArticle[],
@@ -208,13 +244,18 @@ ${persona.style_prompt}
 8. 球員、教練、球隊等名稱保留英文原文，不要翻譯成中文（例如用 LeBron James 而非乔布朗·詹姆斯）
 9. 只回覆 JSON，不要 markdown code block
 10. tags 欄位必須包含文章提及的聯盟、球隊、球員名（英文原文），用於分類和推薦
+11. writing_strategy 欄位：根據素材狀態判斷策略
+   - "multi_source"：綜合多個不同來源的素材
+   - "enriched"：以單一素材為主但加入自己的分析和觀點
+   - "popular_digest"：熱門話題的綜合整理
+12. cited_sources 欄位：列出所有引用的素材來源，格式為陣列，每項包含 type、url、title、snippet
 
 分類：${category}
 素材數量：${articles.length} 篇
 
 ${sourceSummaries}
 
-請以純 JSON 格式回覆：{"title": "標題", "content": "文章內容", "category": "${category}", "tags": ["聯盟名", "球隊名", "球員名"]}`;
+請以純 JSON 格式回覆：{"title": "標題", "content": "文章內容", "category": "${category}", "tags": ["聯盟名", "球隊名", "球員名"], "writing_strategy": "multi_source|enriched|popular_digest", "cited_sources": [{"type": "raw_article", "url": "來源URL", "title": "來源標題", "snippet": "引用片段"}]}`;
 }
 
 function buildOfficialRecapPrompt(
@@ -247,12 +288,17 @@ ${persona.style_prompt}
 9. 球員、教練、球隊等名稱保留英文原文，不要翻譯成中文（例如用 LeBron James 而非乔布朗·詹姆斯）
 10. 只回覆 JSON，不要 markdown code block
 11. tags 欄位必須包含文章提及的聯盟、球隊、球員名（英文原文），用於分類和推薦
+12. writing_strategy 欄位：根據素材狀態判斷策略
+   - "multi_source"：綜合多個不同來源的素材
+   - "enriched"：以單一素材為主但加入自己的分析和觀點
+   - "popular_digest"：熱門話題的綜合整理
+13. cited_sources 欄位：列出所有引用的素材來源，格式為陣列，每項包含 type、url、title、snippet
 
 素材數量：${articles.length} 篇
 
 ${sourceSummaries}
 
-請以純 JSON 格式回覆：{"title": "標題", "content": "文章內容", "category": "${league}", "tags": ["聯盟名", "球隊名", "球員名"]}`;
+請以純 JSON 格式回覆：{"title": "標題", "content": "文章內容", "category": "${league}", "tags": ["聯盟名", "球隊名", "球員名"], "writing_strategy": "multi_source|enriched|popular_digest", "cited_sources": [{"type": "raw_article", "url": "來源URL", "title": "來源標題", "snippet": "引用片段"}]}`;
 }
 
 interface PlanItem {
@@ -373,6 +419,12 @@ async function produceFromPlans(planIds: string[]) {
       const aiTags = Array.isArray(result.tags) ? result.tags : [];
       const finalTags = aiTags.length > 0 ? aiTags : extractTagsFromContent(result.title, result.content);
 
+      // writing_strategy 和 cited_sources fallback
+      const writingStrategy = result.writing_strategy || inferWritingStrategy(articles);
+      const citedSources = Array.isArray(result.cited_sources) && result.cited_sources.length > 0
+        ? result.cited_sources
+        : buildCitedSourcesFromRaw(articles);
+
       const { error: insertError } = await supabase
         .from("generated_articles")
         .insert({
@@ -384,6 +436,9 @@ async function produceFromPlans(planIds: string[]) {
           images: collectedImages,
           tags: finalTags,
           status: "draft",
+          review_status: "pending",
+          writing_strategy: writingStrategy,
+          cited_sources: citedSources,
         });
 
       if (insertError) {
@@ -564,6 +619,11 @@ async function main() {
           const aiTagsOfficial = Array.isArray(result.tags) ? result.tags : [];
           const finalTagsOfficial = aiTagsOfficial.length > 0 ? aiTagsOfficial : extractTagsFromContent(result.title, result.content);
 
+          const writingStrategyOfficial = result.writing_strategy || inferWritingStrategy(group);
+          const citedSourcesOfficial = Array.isArray(result.cited_sources) && result.cited_sources.length > 0
+            ? result.cited_sources
+            : buildCitedSourcesFromRaw(group);
+
           const { error: insertError } = await supabase
             .from("generated_articles")
             .insert({
@@ -575,6 +635,9 @@ async function main() {
               images: officialImages,
               tags: finalTagsOfficial,
               status: "draft",
+              review_status: "pending",
+              writing_strategy: writingStrategyOfficial,
+              cited_sources: citedSourcesOfficial,
             });
 
           if (insertError) {
@@ -637,6 +700,11 @@ async function main() {
         const aiTagsCol = Array.isArray(result.tags) ? result.tags : [];
         const finalTagsCol = aiTagsCol.length > 0 ? aiTagsCol : extractTagsFromContent(result.title, result.content);
 
+        const writingStrategyCol = result.writing_strategy || inferWritingStrategy(group);
+        const citedSourcesCol = Array.isArray(result.cited_sources) && result.cited_sources.length > 0
+          ? result.cited_sources
+          : buildCitedSourcesFromRaw(group);
+
         const { error: insertError } = await supabase
           .from("generated_articles")
           .insert({
@@ -648,6 +716,9 @@ async function main() {
             images: columnistImages,
             tags: finalTagsCol,
             status: "draft",
+            review_status: "pending",
+            writing_strategy: writingStrategyCol,
+            cited_sources: citedSourcesCol,
           });
 
         if (insertError) {

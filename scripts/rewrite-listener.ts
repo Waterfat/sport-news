@@ -28,14 +28,19 @@ if (!SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const REWRITER_SCRIPT = resolve(__dirname, "local-rewriter.ts");
 const PLAN_GENERATOR_SCRIPT = resolve(__dirname, "plan-generator.ts");
+const EDITOR_IN_CHIEF_SCRIPT = resolve(__dirname, "editor-in-chief.ts");
 
 let isRunning = false;
 
-// 解析任務的模式：plan（產生規劃）或 produce（根據規劃產出文章）
-function parseTaskMode(metadata: Record<string, unknown> | null): { mode: string; planIds?: string[] } {
+// 解析任務的模式：plan（產生規劃）、produce（根據規劃產出文章）、review（總編輯審稿）
+function parseTaskMode(metadata: Record<string, unknown> | null): { mode: string; planIds?: string[]; articleIds?: string[] } {
   if (!metadata) return { mode: "plan" };
   if (metadata.mode === "produce" && Array.isArray(metadata.plan_ids)) {
     return { mode: "produce", planIds: metadata.plan_ids as string[] };
+  }
+  if (metadata.mode === "review") {
+    const articleIds = Array.isArray(metadata.article_ids) ? metadata.article_ids as string[] : undefined;
+    return { mode: "review", articleIds };
   }
   return { mode: "plan" };
 }
@@ -55,7 +60,7 @@ async function executeTask(taskId: string) {
     .eq("id", taskId)
     .single();
 
-  const { mode, planIds } = parseTaskMode(task?.metadata);
+  const { mode, planIds, articleIds } = parseTaskMode(task?.metadata);
   console.log(`[${ts()}] 開始執行任務: ${taskId} (模式: ${mode})`);
 
   // 更新狀態為 running
@@ -75,11 +80,20 @@ async function executeTask(taskId: string) {
     .limit(1);
   const beforeTimestamp = latestBefore?.[0]?.created_at || new Date().toISOString();
 
+  // 提升至 try 外，讓 finally 後的邏輯可以存取
+  let generated = 0;
+
   try {
     let script: string;
     let args: string[];
 
-    if (mode === "produce" && planIds) {
+    if (mode === "review") {
+      // 審稿模式：執行 editor-in-chief
+      script = EDITOR_IN_CHIEF_SCRIPT;
+      args = articleIds
+        ? ["npx", "tsx", script, "--article-ids", articleIds.join(",")]
+        : ["npx", "tsx", script];
+    } else if (mode === "produce" && planIds) {
       // 產出模式：執行 local-rewriter 並傳入 plan ids
       script = REWRITER_SCRIPT;
       args = ["npx", "tsx", script, "--plan-ids", planIds.join(",")];
@@ -107,7 +121,7 @@ async function executeTask(taskId: string) {
       .select("*", { count: "exact", head: true })
       .gt("created_at", beforeTimestamp);
 
-    const generated = articlesGenerated || 0;
+    generated = articlesGenerated || 0;
 
     if (result.status === 0) {
       await supabase
@@ -122,6 +136,7 @@ async function executeTask(taskId: string) {
       console.log(
         `[${ts()}] 任務完成 (${mode})，產出 ${generated} 篇文章`
       );
+
     } else {
       const errorMsg = result.stderr?.substring(0, 500) || "Process exited with non-zero code";
       await supabase
@@ -150,6 +165,22 @@ async function executeTask(taskId: string) {
     console.error(`[${ts()}] 任務異常: ${errorMsg}`);
   } finally {
     isRunning = false;
+  }
+
+  // produce 完成後自動觸發審稿
+  // 必須在 finally（isRunning = false）之後才 insert，
+  // 否則 Realtime callback 收到新任務時 isRunning 仍為 true 而被跳過
+  if (mode === "produce" && generated > 0) {
+    console.log(`[${ts()}] 產出完成，自動觸發總編輯審稿...`);
+    const { error: reviewTaskError } = await supabase
+      .from("rewrite_tasks")
+      .insert({
+        status: "pending",
+        metadata: { mode: "review" },
+      });
+    if (reviewTaskError) {
+      console.error(`[${ts()}] 建立審稿任務失敗: ${reviewTaskError.message}`);
+    }
   }
 }
 
