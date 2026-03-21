@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { TrendingUp, Star } from "lucide-react";
+import { SubmissionCTA } from "@/components/public/SubmissionCTA";
 import { newsUrl } from "@/lib/routes";
 import { formatRelativeTime } from "@/lib/constants";
 
@@ -176,6 +177,7 @@ export function CategorySidebar({ category }: { category: string }) {
     <div className="space-y-6">
       <WeeklyTrending category={category} />
       <RelatedByTeam category={category} />
+      <SubmissionCTA />
     </div>
   );
 }

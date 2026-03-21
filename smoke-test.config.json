@@ -82,6 +82,10 @@
       "command": "STATUS=$(curl -s -X POST -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{\"ids\":[],\"action\":\"publish\"}' '{{BASE_URL}}/api/articles/generated/batch' 2>/dev/null) && ([ \"$STATUS\" = \"401\" ] || [ \"$STATUS\" = \"200\" ]) && echo '✓ endpoint exists (auth required or success)' || echo \"✗ endpoint failed with $STATUS\""
     },
     {
+      "label": "投稿申請 API POST endpoint 存在（驗證錯誤回 400）",
+      "command": "STATUS=$(curl -s -X POST -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{}' '{{BASE_URL}}/api/public/submissions' 2>/dev/null) && [ \"$STATUS\" = \"400\" ] && echo '✓ submissions POST works' || echo \"✗ submissions failed with $STATUS\""
+    },
+    {
       "label": "球隊 slug URL 308 redirect 到 canonical ID URL",
       "command": "STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-redirs 0 '{{BASE_URL}}/team/nba/los-angeles-lakers') && LOCATION=$(curl -s -o /dev/null -w '%{redirect_url}' --max-redirs 0 '{{BASE_URL}}/team/nba/los-angeles-lakers') && [ \"$STATUS\" = \"308\" ] && echo \"$LOCATION\" | grep -q '/team/nba/13'"
     }
