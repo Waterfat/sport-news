@@ -12,6 +12,7 @@ import { extractHeadings } from "@/lib/markdown-utils";
 import { TableOfContents } from "@/components/public/TableOfContents";
 import { ShareButtons } from "@/components/public/ShareButtons";
 import { ReactionButtons } from "@/components/public/ReactionButtons";
+import { ExtendedReading } from "@/components/public/ExtendedReading";
 
 export const revalidate = 60;
 
@@ -122,6 +123,16 @@ export default async function ArticlePage({
     .neq("id", article.id)
     .order("published_at", { ascending: false })
     .limit(4);
+
+  // Fetch cross-category articles for extended reading
+  const { data: crossCategoryArticles } = await supabase
+    .from("generated_articles")
+    .select("id, title, slug, category, published_at")
+    .eq("status", "published")
+    .neq("category", article.category)
+    .neq("id", article.id)
+    .order("published_at", { ascending: false })
+    .limit(3);
 
   const colorClass =
     CATEGORY_COLORS[article.category ?? ""] ?? "bg-muted text-muted-foreground border border-border rounded-lg";
@@ -315,6 +326,24 @@ export default async function ArticlePage({
           </div>
         </section>
       )}
+
+      {/* Extended Reading — same category + cross category */}
+      <ExtendedReading
+        sameCategory={(relatedArticles ?? []).slice(0, 3).map((a) => ({
+          id: a.id,
+          title: a.title,
+          slug: a.slug ?? null,
+          category: a.category ?? null,
+          published_at: a.published_at ?? null,
+        }))}
+        crossCategory={(crossCategoryArticles ?? []).map((a) => ({
+          id: a.id,
+          title: a.title,
+          slug: a.slug ?? null,
+          category: a.category ?? null,
+          published_at: a.published_at ?? null,
+        }))}
+      />
     </article>
   );
 }
