@@ -3,6 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
+import { autoLinkChildren } from "@/lib/auto-link";
 
 function getYouTubeId(url: string): string | null {
   const match = url.match(
@@ -15,7 +16,10 @@ function isTwitterUrl(url: string): boolean {
   return /^https?:\/\/(twitter\.com|x\.com)\//.test(url);
 }
 
-const markdownComponents: Components = {
+function buildComponents(category: string | null): Components {
+  const link = (children: React.ReactNode) => autoLinkChildren(children, category);
+
+  return {
   h1: ({ children }) => (
     <h1
       id={String(children).toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "")}
@@ -46,7 +50,7 @@ const markdownComponents: Components = {
     </h4>
   ),
   p: ({ children }) => (
-    <p className="text-foreground/90 leading-relaxed mb-4">{children}</p>
+    <p className="text-foreground/90 leading-relaxed mb-4">{link(children)}</p>
   ),
   a: ({ href, children }) => {
     if (href) {
@@ -121,7 +125,7 @@ const markdownComponents: Components = {
       {children}
     </ol>
   ),
-  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  li: ({ children }) => <li className="leading-relaxed">{link(children)}</li>,
   table: ({ children }) => (
     <div className="overflow-x-auto my-6">
       <table className="w-full text-sm border-collapse border border-border">
@@ -164,14 +168,16 @@ const markdownComponents: Components = {
   ),
   hr: () => <hr className="border-border my-8" />,
   strong: ({ children }) => (
-    <strong className="font-semibold text-foreground">{children}</strong>
+    <strong className="font-semibold text-foreground">{link(children)}</strong>
   ),
-};
+  };
+}
 
-export function ArticleContent({ content }: { content: string }) {
+export function ArticleContent({ content, category }: { content: string; category?: string | null }) {
+  const components = buildComponents(category ?? null);
   return (
     <div className="prose prose-lg max-w-none mb-12">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {content}
       </ReactMarkdown>
     </div>
