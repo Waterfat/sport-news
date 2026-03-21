@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { Game } from "@/lib/scoreboard";
 import { gameUrl } from "@/lib/routes";
+import { SCOREBOARD_POLLING_MS } from "@/lib/constants";
 
 export function QuickOdds() {
   const { data: games = [], isLoading } = useQuery({
@@ -16,6 +17,8 @@ export function QuickOdds() {
       const upcoming = allGames.filter((g) => g.status !== "final");
       return upcoming.length > 0 ? upcoming.slice(0, 3) : allGames.slice(0, 3);
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: SCOREBOARD_POLLING_MS,
   });
 
   return (
