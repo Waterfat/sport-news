@@ -16,15 +16,15 @@ export function HomeCategoryFilter({
   onChange: (category: string) => void;
 }) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+    <div className="flex overflow-x-auto scrollbar-hide translate-y-px">
       {CATEGORIES.map((cat) => (
         <button
           key={cat.key}
           onClick={() => onChange(cat.key)}
-          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors duration-150 ${
+          className={`flex-shrink-0 px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-all duration-150 ${
             active === cat.key
-              ? "bg-brand text-brand-foreground"
-              : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
+              ? "text-foreground border-blue-500 font-bold"
+              : "text-muted-foreground border-transparent hover:text-foreground"
           }`}
         >
           {cat.label}

@@ -21,7 +21,7 @@ export function QuickOdds() {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-card-foreground">今日賽事</h3>
+        <h3 className="font-serif text-sm font-bold text-card-foreground">今日賽事</h3>
         <Link href="/odds" className="text-xs text-brand hover:underline">
           查看更多賠率
         </Link>

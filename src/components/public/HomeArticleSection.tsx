@@ -40,21 +40,20 @@ export function HomeArticleSection({
 
   function handleCategoryChange(cat: string) {
     setTransitioning(true);
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setActiveCategory(cat);
       setTransitioning(false);
     }, 150);
+    return () => clearTimeout(timeoutId);
   }
 
   return (
     <section className="mb-10">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-foreground border-l-4 border-brand pl-3">
+      <div className="flex flex-wrap items-center gap-x-5 border-b border-border mb-6">
+        <h2 className="font-serif text-[18px] font-bold text-foreground border-l-4 border-brand pl-3 py-3.5 flex-shrink-0">
           最新報導
         </h2>
-      </div>
-
-      <div className="mb-5">
+        <div className="hidden sm:block w-px h-5 bg-border flex-shrink-0" />
         <HomeCategoryFilter active={activeCategory} onChange={handleCategoryChange} />
       </div>
 

@@ -24,7 +24,7 @@ export function ExtendedReading({
 
   return (
     <section className="mt-8">
-      <h2 className="text-xl font-bold text-foreground mb-5 border-l-4 border-emerald-600 pl-3">
+      <h2 className="font-serif text-xl font-bold text-foreground mb-5 border-l-4 border-emerald-600 pl-3">
         延伸閱讀
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

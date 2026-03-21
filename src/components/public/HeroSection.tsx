@@ -45,7 +45,7 @@ export function HeroSection({
                   {hero.category}
                 </span>
               )}
-              <h1 className="text-3xl lg:text-4xl font-bold leading-tight mb-2 group-hover:text-blue-300 transition-colors">
+              <h1 className="font-serif text-3xl lg:text-4xl font-bold leading-tight mb-2 group-hover:text-blue-300 transition-colors">
                 {hero.title}
               </h1>
               <p className="text-gray-300 text-sm line-clamp-2 max-w-2xl mb-3">
@@ -79,7 +79,7 @@ export function HeroSection({
                         {article.category}
                       </span>
                     )}
-                    <h3 className="text-sm font-bold leading-snug line-clamp-2 group-hover:text-blue-300 transition-colors">
+                    <h3 className="font-serif text-sm font-bold leading-snug line-clamp-2 group-hover:text-blue-300 transition-colors">
                       {article.title}
                     </h3>
                     <span className="text-[10px] text-gray-400 mt-1 block">
@@ -109,7 +109,7 @@ export function HeroSection({
                   {hero.category}
                 </span>
               )}
-              <h1 className="text-xl font-bold leading-tight mb-1.5 group-hover:text-blue-300 transition-colors">
+              <h1 className="font-serif text-xl font-bold leading-tight mb-1.5 group-hover:text-blue-300 transition-colors">
                 {hero.title}
               </h1>
               <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -139,7 +139,7 @@ export function HeroSection({
                         {article.category}
                       </span>
                     )}
-                    <h3 className="text-xs font-bold leading-snug line-clamp-2 group-hover:text-blue-300 transition-colors">
+                    <h3 className="font-serif text-xs font-bold leading-snug line-clamp-2 group-hover:text-blue-300 transition-colors">
                       {article.title}
                     </h3>
                   </div>
