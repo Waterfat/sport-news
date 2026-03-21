@@ -7,16 +7,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { Moon, Sun, Search, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { UserMenu } from "@/components/auth/UserMenu";
+import { scoresUrl, categoryUrl, standingsUrl, oddsUrl } from "@/lib/routes";
 
 const navLinks = [
   { href: "/", label: "首頁", exact: true },
-  { href: "/scores", label: "即時比分" },
-  { href: "/category/nba", label: "NBA" },
-  { href: "/category/mlb", label: "MLB" },
-  { href: "/category/soccer", label: "足球" },
-  { href: "/category/general", label: "綜合" },
-  { href: "/standings/nba", label: "排名" },
-  { href: "/odds", label: "賠率" },
+  { href: scoresUrl(), label: "即時比分" },
+  { href: categoryUrl("nba"), label: "NBA" },
+  { href: categoryUrl("mlb"), label: "MLB" },
+  { href: categoryUrl("soccer"), label: "足球" },
+  { href: categoryUrl("general"), label: "綜合" },
+  { href: standingsUrl("nba"), label: "排名" },
+  { href: oddsUrl(), label: "賠率" },
 ];
 
 // Scroll handler 常數
@@ -115,7 +116,7 @@ export function PublicHeader() {
   }
 
   return (
-    <header className="flex-shrink-0 bg-background/90 backdrop-blur-sm border-b border-border pt-[env(safe-area-inset-top)]">
+    <header className="flex-shrink-0 bg-[#0f172a] pt-[env(safe-area-inset-top)]">
       {/* Row 1: Logo + Theme Toggle + UserMenu — overflow-hidden + 高度過渡 + cooldown 防抖 */}
       <div
         className={`overflow-hidden transition-[height,opacity] duration-200 ease-in-out ${
@@ -132,14 +133,14 @@ export function PublicHeader() {
                 alt="超級運動資訊網"
                 width={280}
                 height={50}
-                className="h-7 sm:h-9 w-auto"
+                className="h-7 sm:h-9 w-auto brightness-0 invert"
                 priority
               />
             </Link>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
                 aria-label="搜尋"
               >
                 {searchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
@@ -147,13 +148,15 @@ export function PublicHeader() {
               {mounted && (
                 <button
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
                   aria-label="切換深色模式"
                 >
                   {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
               )}
-              <UserMenu />
+              <div className="[&_button]:text-white/80 [&_button:hover]:text-white [&_button:hover]:bg-white/10">
+                <UserMenu />
+              </div>
             </div>
           </div>
         </div>
@@ -161,17 +164,17 @@ export function PublicHeader() {
 
       {/* Search bar */}
       {searchOpen && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 border-t border-white/10">
           <form onSubmit={handleSearchSubmit}>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜尋文章..."
-                className="w-full pl-9 pr-4 py-2 bg-muted border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full pl-9 pr-4 py-2 bg-white/10 border border-white/15 rounded-lg text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
               />
             </div>
           </form>
@@ -179,28 +182,30 @@ export function PublicHeader() {
       )}
 
       {/* Row 2: Nav tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="relative">
-          <nav className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-0.5">
-            {navLinks.map((link) => {
-              const active = isActive(link);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`min-h-[44px] flex items-center px-3.5 py-2.5 text-sm font-medium rounded-md active:scale-[0.97] transition-all duration-150 whitespace-nowrap ${
-                    active
-                      ? "text-brand bg-brand-muted font-semibold"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-          {/* Mobile 右側漸層提示可滾動 */}
-          <div className="absolute top-0 right-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none sm:hidden" />
+      <div className="border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="relative">
+            <nav className="flex items-center gap-0 overflow-x-auto scrollbar-hide">
+              {navLinks.map((link) => {
+                const active = isActive(link);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`min-h-[44px] flex items-center px-4 py-2.5 text-sm font-medium border-b-2 active:scale-[0.97] transition-all duration-150 whitespace-nowrap ${
+                      active
+                        ? "text-white border-blue-400 font-bold"
+                        : "text-white/55 border-transparent hover:text-white/90"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+            {/* Mobile 右側漸層 */}
+            <div className="absolute top-0 right-0 bottom-0 w-6 bg-gradient-to-l from-[#0f172a] to-transparent pointer-events-none sm:hidden" />
+          </div>
         </div>
       </div>
     </header>

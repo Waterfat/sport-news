@@ -26,6 +26,14 @@ export function standingsUrl(sport: string) {
   return `/standings/${sport}`;
 }
 
+export function scoresUrl() {
+  return `/scores`;
+}
+
+export function oddsUrl() {
+  return `/odds`;
+}
+
 export function writerUrl(writerId: string) {
   return `/writer/${writerId}`;
 }

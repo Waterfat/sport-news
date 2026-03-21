@@ -53,10 +53,10 @@ describe("QuickNews", () => {
     expect(link).toHaveAttribute("href", "/news/3");
   });
 
-  it("renders correct number of list items", () => {
+  it("renders correct number of article cards", () => {
     render(<QuickNews articles={mockArticles} />);
-    const listItems = screen.getAllByRole("listitem");
-    expect(listItems).toHaveLength(3);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(3);
   });
 
   it("displays relative time for each article", () => {
@@ -73,10 +73,9 @@ describe("QuickNews", () => {
     expect(screen.getByText("剛剛")).toBeInTheDocument();
   });
 
-  it("renders as a list with proper semantic structure", () => {
+  it("renders as a card grid with article elements", () => {
     render(<QuickNews articles={mockArticles} />);
-    const list = screen.getByRole("list");
-    expect(list).toBeInTheDocument();
-    expect(list.querySelectorAll("li")).toHaveLength(3);
+    const articles = document.querySelectorAll("article");
+    expect(articles).toHaveLength(3);
   });
 });

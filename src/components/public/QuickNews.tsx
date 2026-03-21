@@ -11,31 +11,35 @@ export interface QuickNewsArticle {
 }
 
 export function QuickNews({ articles }: { articles: QuickNewsArticle[] }) {
-  if (articles.length === 0) return null;
+  const displayArticles = articles.slice(0, 5);
+  if (displayArticles.length === 0) return null;
 
   return (
-    <section className="mb-8">
-      <div className="flex items-center gap-2 mb-3">
-        <Zap className="h-5 w-5 text-brand fill-brand" />
-        <h2 className="text-lg font-bold text-foreground">快訊</h2>
+    <section className="mb-9">
+      <div className="flex items-center gap-2 mb-3.5">
+        <Zap className="h-4 w-4 text-brand fill-brand" />
+        <h2 className="font-serif text-[18px] font-bold text-foreground border-l-4 border-brand pl-3">
+          快訊
+        </h2>
       </div>
-      <ul className="divide-y divide-border rounded-lg border bg-card">
-        {articles.map((article) => (
-          <li key={article.id}>
-            <Link
-              href={newsUrl(article.slug || article.id)}
-              className="flex items-baseline justify-between gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors"
-            >
-              <span className="text-sm font-medium text-foreground line-clamp-1 min-w-0">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        {displayArticles.map((article) => (
+          <Link
+            key={article.id}
+            href={newsUrl(article.slug || article.id)}
+            className="group"
+          >
+            <article className="bg-card border border-border rounded-xl p-3.5 hover:border-brand/50 hover:shadow-sm hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 min-h-[100px] flex flex-col justify-between">
+              <p className="text-[13px] font-semibold text-foreground line-clamp-3 leading-snug group-hover:text-brand transition-colors">
                 {article.title}
-              </span>
-              <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+              </p>
+              <span className="text-[11px] text-muted-foreground mt-2 block">
                 {formatRelativeTime(article.published_at)}
               </span>
-            </Link>
-          </li>
+            </article>
+          </Link>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }

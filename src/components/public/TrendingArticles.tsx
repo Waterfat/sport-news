@@ -23,43 +23,58 @@ export function TrendingArticles() {
       const d = await res.json();
       return (d.articles ?? []) as TrendingArticle[];
     },
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  return (
-    <div className="bg-card border border-border rounded-xl p-5">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground mb-4">
-        <TrendingUp className="w-4 h-4 text-red-500" />
-        熱門文章
-      </h3>
+  const rankClass = (idx: number) => {
+    if (idx === 0) return "text-amber-500";
+    if (idx === 1) return "text-slate-400";
+    if (idx === 2) return "text-amber-700";
+    return "text-muted-foreground/40";
+  };
 
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+      {/* Widget header */}
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
+        <h3 className="font-serif text-[15px] font-bold text-foreground flex items-center gap-1.5">
+          <TrendingUp className="w-4 h-4 text-red-500" />
+          熱門文章
+        </h3>
+      </div>
+
+      {/* Widget body */}
       {isLoading ? (
-        <div className="space-y-3">
+        <div className="p-4 space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="h-3.5 bg-muted rounded w-full mb-1.5" />
-              <div className="h-3 bg-muted rounded w-1/3" />
+            <div key={i} className="animate-pulse flex gap-3">
+              <div className="w-6 h-6 bg-muted rounded" />
+              <div className="flex-1">
+                <div className="h-3.5 bg-muted rounded w-full mb-1.5" />
+                <div className="h-3 bg-muted rounded w-1/3" />
+              </div>
             </div>
           ))}
         </div>
       ) : articles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">暫無資料</p>
+        <p className="text-sm text-muted-foreground p-4">暫無資料</p>
       ) : (
-        <div className="space-y-3">
+        <div>
           {articles.map((article, idx) => (
             <Link
               key={article.id}
               href={newsUrl(article.slug || article.id)}
-              className="group flex items-start gap-3 hover:bg-muted/50 -mx-2 px-2 py-1.5 rounded-lg transition-colors"
+              className="group flex gap-3 px-4 py-3 border-b border-border last:border-0 hover:bg-muted/50 transition-colors"
             >
-              <span className="text-xs font-bold text-muted-foreground/60 mt-0.5 w-5 text-center flex-shrink-0">
+              <span className={`font-serif text-[22px] font-black leading-none min-w-[26px] ${rankClass(idx)}`}>
                 {idx + 1}
               </span>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-medium text-foreground line-clamp-2 group-hover:text-blue-600 transition-colors leading-snug">
+                <h4 className="text-[13px] font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
                   {article.title}
                 </h4>
                 {article.category && (
-                  <span className="text-xs text-muted-foreground mt-1">
+                  <span className="text-[11px] text-muted-foreground mt-1 block">
                     {article.category}
                   </span>
                 )}

@@ -170,3 +170,28 @@
 ### Phase 4: QA — 2026-03-21
 
 - [x] QA 通過（363 unit + smoke + 54 E2E）— 3/3
+
+---
+
+## Issue #132: 首頁 UI/UX 質感升級改版
+
+### Phase 0: 評估 — 2026-03-21
+
+- 分級：**L**（多個前端元件重構，無 DB/API 變更）
+- 風險：依賴中風險（Header/Footer 全站共用）、其餘低風險
+- Phase 簡化：Phase 1 快速確認（Mockup V5 已確認）、Phase 2 跳過 DBA/SD API/UI/UX（無 DB/API、Mockup 已有）
+- 無 SEO 信號（非新增頁面，純視覺調整）
+
+### Phase 1: 分析 — 2026-03-21
+
+- [x] SA 快速確認：SRS 產出（8 個 User Story），SRS Review Approved
+- [x] Architect 跳過：純前端視覺改版，無架構變更
+
+### Phase 2: 設計 — 2026-03-21
+
+- [x] 跳過：Mockup V5 已確認、無 DB/API 變更、無需 SD API 文件
+
+### Phase 3: 工程 — 2026-03-21
+
+- [x] Git-Ops 建立 branch feat/132-homepage-ui-redesign
+- [ ] FE 實作中...
