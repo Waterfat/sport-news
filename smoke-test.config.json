@@ -29,6 +29,7 @@
     "/api/public/standings?league=nba",
     "/api/public/team?sport=nba&id=13",
     "/api/public/team?sport=nba&id=13&type=roster",
+    "/api/public/articles/trending?limit=3",
     "/robots.txt",
     "/sitemap.xml",
     "/llms.txt"

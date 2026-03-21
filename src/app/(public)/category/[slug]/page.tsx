@@ -41,7 +41,7 @@ export async function generateMetadata({
   const displayLabel = CATEGORY_LABELS[slug];
 
   if (!displayLabel) {
-    return { title: "分類未找到 - ${SITE_NAME}" };
+    return { title: `分類未找到 - ${SITE_NAME}` };
   }
 
   return {
@@ -119,7 +119,8 @@ export default async function CategoryPage({
     );
   }
 
-  const currentPage = Math.max(1, parseInt(pageParam || "1", 10));
+  const parsed = parseInt(pageParam || "1", 10);
+  const currentPage = Number.isNaN(parsed) ? 1 : Math.max(1, parsed);
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   const supabase = createServiceClient();
