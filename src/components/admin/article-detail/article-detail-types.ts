@@ -11,6 +11,7 @@ export interface ArticleDetail {
   scheduled_at: string | null;
   publish_channel_ids: number[];
   images: string[];
+  tags: string[];
   writer_personas: {
     name: string;
     description: string | null;
