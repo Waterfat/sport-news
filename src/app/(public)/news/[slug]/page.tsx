@@ -253,7 +253,7 @@ export default async function ArticlePage({
       )}
 
       {/* Content - react-markdown */}
-      <ArticleContent content={contentStr} />
+      <ArticleContent content={contentStr} category={article.category} />
 
       {/* Reactions */}
       <div className="mb-4">
