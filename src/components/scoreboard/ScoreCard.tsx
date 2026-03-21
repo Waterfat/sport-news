@@ -101,7 +101,7 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
             <thead>
               <tr className="text-muted-foreground">
                 <th className="text-left font-normal py-0.5 w-10"></th>
-                {game.homeTeam.linescores.map((ls) => (
+                {(game.homeTeam.linescores ?? []).map((ls) => (
                   <th key={ls.period} className="text-center font-normal py-0.5 w-7">
                     {ls.period}
                   </th>
@@ -112,14 +112,14 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
             <tbody>
               <tr className="text-muted-foreground">
                 <td className="text-left font-medium py-0.5">{game.awayTeam.abbreviation}</td>
-                {game.awayTeam.linescores.map((ls) => (
+                {(game.awayTeam.linescores ?? []).map((ls) => (
                   <td key={ls.period} className="text-center py-0.5">{ls.value}</td>
                 ))}
                 <td className={`text-center py-0.5 font-medium ${awayWins ? "text-foreground" : ""}`}>{game.awayTeam.score}</td>
               </tr>
               <tr className="text-muted-foreground">
                 <td className="text-left font-medium py-0.5">{game.homeTeam.abbreviation}</td>
-                {game.homeTeam.linescores.map((ls) => (
+                {(game.homeTeam.linescores ?? []).map((ls) => (
                   <td key={ls.period} className="text-center py-0.5">{ls.value}</td>
                 ))}
                 <td className={`text-center py-0.5 font-medium ${homeWins ? "text-foreground" : ""}`}>{game.homeTeam.score}</td>

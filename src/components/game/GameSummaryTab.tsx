@@ -163,7 +163,7 @@ export function GameSummaryTab({
                     <span className="text-sm font-medium text-foreground">{team.teamName}</span>
                   </div>
                   <div className="space-y-1">
-                    {team.leaders.slice(0, 3).map((l) => (
+                    {(team.leaders ?? []).slice(0, 3).map((l) => (
                       <p key={l.category} className="text-xs text-muted-foreground">
                         <span className="font-medium text-foreground">{l.displayName}</span>
                         <span className="ml-1">{l.displayValue}</span>

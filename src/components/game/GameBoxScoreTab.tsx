@@ -38,12 +38,12 @@ export function GameBoxScoreTab({ boxScore }: GameBoxScoreTabProps) {
                 </tr>
               </thead>
               <tbody>
-                {boxScore.teams[0].stats.map((stat, idx) => (
+                {(boxScore.teams[0].stats ?? []).map((stat, idx) => (
                   <tr key={stat.label} className={idx % 2 === 0 ? "bg-card" : "bg-muted/50"}>
                     <td className="text-center py-1.5 px-2 tabular-nums">{stat.value}</td>
                     <td className="text-center py-1.5 px-2 text-muted-foreground text-xs">{stat.label}</td>
                     <td className="text-center py-1.5 px-2 tabular-nums">
-                      {boxScore.teams[1].stats[idx]?.value ?? "-"}
+                      {(boxScore.teams[1].stats ?? [])[idx]?.value ?? "-"}
                     </td>
                   </tr>
                 ))}
@@ -67,7 +67,7 @@ export function GameBoxScoreTab({ boxScore }: GameBoxScoreTabProps) {
                     <th className="text-left py-2 px-2 font-medium text-muted-foreground sticky left-0 bg-muted min-w-[100px]">
                       球員
                     </th>
-                    {group.labels.map((label) => (
+                    {(group.labels ?? []).map((label) => (
                       <th key={label} className="text-center py-2 px-1.5 font-medium text-muted-foreground min-w-[36px]">
                         {label}
                       </th>
@@ -78,7 +78,7 @@ export function GameBoxScoreTab({ boxScore }: GameBoxScoreTabProps) {
                   {/* Starters */}
                   {group.athletes.filter((a) => a.starter).length > 0 && (
                     <tr>
-                      <td colSpan={group.labels.length + 1} className="text-xs text-muted-foreground font-medium px-2 py-1 bg-muted/70">
+                      <td colSpan={(group.labels ?? []).length + 1} className="text-xs text-muted-foreground font-medium px-2 py-1 bg-muted/70">
                         先發
                       </td>
                     </tr>
@@ -91,7 +91,7 @@ export function GameBoxScoreTab({ boxScore }: GameBoxScoreTabProps) {
                           <span className="font-medium">{athlete.name}</span>
                           <span className="text-muted-foreground ml-1">{athlete.position}</span>
                         </td>
-                        {athlete.stats.map((s, i) => (
+                        {(athlete.stats ?? []).map((s, i) => (
                           <td key={i} className="text-center py-1.5 px-1.5 tabular-nums">{s}</td>
                         ))}
                       </tr>
@@ -99,7 +99,7 @@ export function GameBoxScoreTab({ boxScore }: GameBoxScoreTabProps) {
                   {/* Bench */}
                   {group.athletes.filter((a) => !a.starter).length > 0 && (
                     <tr>
-                      <td colSpan={group.labels.length + 1} className="text-xs text-muted-foreground font-medium px-2 py-1 bg-muted/70">
+                      <td colSpan={(group.labels ?? []).length + 1} className="text-xs text-muted-foreground font-medium px-2 py-1 bg-muted/70">
                         替補
                       </td>
                     </tr>
@@ -112,7 +112,7 @@ export function GameBoxScoreTab({ boxScore }: GameBoxScoreTabProps) {
                           <span className="font-medium">{athlete.name}</span>
                           <span className="text-muted-foreground ml-1">{athlete.position}</span>
                         </td>
-                        {athlete.stats.map((s, i) => (
+                        {(athlete.stats ?? []).map((s, i) => (
                           <td key={i} className="text-center py-1.5 px-1.5 tabular-nums">{s}</td>
                         ))}
                       </tr>
