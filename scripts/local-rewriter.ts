@@ -160,6 +160,9 @@ function parseResult(output: string): { title: string; content: string; category
   return JSON.parse(jsonMatch[0]);
 }
 
+// extractTagsFromContent 從 shared-tags.ts 匯入
+import { extractTagsFromContent } from "./shared-tags";
+
 function buildColumnistPrompt(
   articles: RawArticle[],
   persona: WriterPersona,
@@ -356,6 +359,10 @@ async function produceFromPlans(planIds: string[]) {
         continue;
       }
 
+      // AI 不可靠地回傳 tags，用 extractTagsFromContent 作為 fallback
+      const aiTags = Array.isArray(result.tags) ? result.tags : [];
+      const finalTags = aiTags.length > 0 ? aiTags : extractTagsFromContent(result.title, result.content);
+
       const { error: insertError } = await supabase
         .from("generated_articles")
         .insert({
@@ -365,7 +372,7 @@ async function produceFromPlans(planIds: string[]) {
           content: result.content,
           category: result.category || plan.league || articles[0].category || "綜合",
           images: collectedImages,
-          tags: Array.isArray(result.tags) ? result.tags : [],
+          tags: finalTags,
           status: "draft",
         });
 
@@ -544,6 +551,9 @@ async function main() {
             continue;
           }
 
+          const aiTagsOfficial = Array.isArray(result.tags) ? result.tags : [];
+          const finalTagsOfficial = aiTagsOfficial.length > 0 ? aiTagsOfficial : extractTagsFromContent(result.title, result.content);
+
           const { error: insertError } = await supabase
             .from("generated_articles")
             .insert({
@@ -553,7 +563,7 @@ async function main() {
               content: result.content,
               category: result.category || league,
               images: officialImages,
-              tags: Array.isArray(result.tags) ? result.tags : [],
+              tags: finalTagsOfficial,
               status: "draft",
             });
 
@@ -614,6 +624,9 @@ async function main() {
           continue;
         }
 
+        const aiTagsCol = Array.isArray(result.tags) ? result.tags : [];
+        const finalTagsCol = aiTagsCol.length > 0 ? aiTagsCol : extractTagsFromContent(result.title, result.content);
+
         const { error: insertError } = await supabase
           .from("generated_articles")
           .insert({
@@ -623,7 +636,7 @@ async function main() {
             content: result.content,
             category: result.category || group[0].category || "綜合",
             images: columnistImages,
-            tags: Array.isArray(result.tags) ? result.tags : [],
+            tags: finalTagsCol,
             status: "draft",
           });
 

@@ -32,9 +32,18 @@ export function ArticleHeader({
         </Button>
         <Badge variant="secondary">{ARTICLE_STATUS_LABELS[article.status]}</Badge>
         {article.writer_personas && (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             寫手：{article.writer_personas.name}
           </span>
+        )}
+        {article.tags?.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {article.tags.map((tag) => (
+              <Badge key={tag} variant="outline" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+          </div>
         )}
       </div>
       <div className="flex gap-2">
