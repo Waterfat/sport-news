@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase";
 import { CATEGORY_COLORS, CATEGORY_DB_MAP, CATEGORY_FALLBACK_IMAGES, CATEGORY_LABELS, formatRelativeTime, getFirstImageUrl, SITE_NAME } from "@/lib/constants";
 import { categoryUrl, newsUrl } from "@/lib/routes";
 import { getExcerpt } from "@/lib/utils";
+import { CategorySidebar } from "@/components/public/CategorySidebar";
 
 export const revalidate = 60;
 
@@ -213,56 +214,60 @@ export default async function CategoryPage({
         </div>
       </div>
 
-      {/* Articles */}
-      {!articles || articles.length === 0 ? (
-        <p className="text-muted-foreground py-12 text-center">
-          此分類目前沒有文章。
-        </p>
-      ) : (
-        <div className="space-y-4 mb-8">
-          {(articles as unknown as ArticleWithWriter[]).map((article) => {
-            const writerName = article.writer_personas?.name;
-            const thumbnail = getFirstImageUrl(article.images) || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
-            return (
-              <Link
-                key={article.id}
-                href={newsUrl(article.slug || article.id)}
-                className="group block rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-brand/30 transition-all duration-200"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-semibold text-foreground line-clamp-2 group-hover:text-brand transition-colors mb-2">
-                      {article.title}
-                    </h2>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {getExcerpt(article.content)}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {writerName && <span>{writerName}</span>}
-                      {writerName && <span>&middot;</span>}
-                      <span>{formatRelativeTime(article.published_at)}</span>
-                      {sortBy === "popular" && article.view_count != null && article.view_count > 0 && (
-                        <>
-                          <span>&middot;</span>
-                          <span>{article.view_count} 次瀏覽</span>
-                        </>
-                      )}
+      {/* Main content + Sidebar grid */}
+      <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-8">
+        {/* Main content */}
+        <div>
+          {/* Articles */}
+          {!articles || articles.length === 0 ? (
+            <p className="text-muted-foreground py-12 text-center">
+              此分類目前沒有文章。
+            </p>
+          ) : (
+            <div className="space-y-4 mb-8">
+              {(articles as unknown as ArticleWithWriter[]).map((article) => {
+                const writerName = article.writer_personas?.name;
+                const thumbnail = getFirstImageUrl(article.images) || CATEGORY_FALLBACK_IMAGES[article.category ?? ""] || "/images/category-general.jpg";
+                return (
+                  <Link
+                    key={article.id}
+                    href={newsUrl(article.slug || article.id)}
+                    className="group block rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-brand/30 transition-all duration-200"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-lg font-semibold text-foreground line-clamp-2 group-hover:text-brand transition-colors mb-2">
+                          {article.title}
+                        </h2>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                          {getExcerpt(article.content)}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {writerName && <span>{writerName}</span>}
+                          {writerName && <span>&middot;</span>}
+                          <span>{formatRelativeTime(article.published_at)}</span>
+                          {sortBy === "popular" && article.view_count != null && article.view_count > 0 && (
+                            <>
+                              <span>&middot;</span>
+                              <span>{article.view_count} 次瀏覽</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <img
+                        src={thumbnail}
+                        alt=""
+                        className="w-28 h-20 object-cover rounded-lg flex-shrink-0"
+                      />
                     </div>
-                  </div>
-                  <img
-                    src={thumbnail}
-                    alt=""
-                    className="w-28 h-20 object-cover rounded-lg flex-shrink-0"
-                  />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
+          {/* Pagination */}
+          {totalPages > 1 && (
         <nav className="flex items-center justify-center gap-2 mt-8">
           {currentPage > 1 && (
             <Link
@@ -317,6 +322,13 @@ export default async function CategoryPage({
           )}
         </nav>
       )}
+        </div>
+
+        {/* Sidebar — desktop only inline, mobile below */}
+        <aside className="mt-8 lg:mt-0">
+          <CategorySidebar category={categoryName} />
+        </aside>
+      </div>
     </div>
   );
 }
