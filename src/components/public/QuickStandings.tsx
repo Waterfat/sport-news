@@ -26,23 +26,24 @@ export function QuickStandings() {
       const groups: StandingsGroup[] = d.standings ?? [];
       const all = groups.flatMap((g) => g.entries);
       all.sort((a, b) => {
-        const aWins = parseInt(a.stats.wins ?? "0", 10);
-        const bWins = parseInt(b.stats.wins ?? "0", 10);
+        const aWins = parseInt(a.stats.wins ?? "0", 10) || 0;
+        const bWins = parseInt(b.stats.wins ?? "0", 10) || 0;
         return bWins - aWins;
       });
       return all.slice(0, 5);
     },
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-card-foreground">NBA 排名</h3>
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
+        <h3 className="font-serif text-[15px] font-bold text-card-foreground">NBA 排名</h3>
         <Link href="/standings" className="text-xs text-brand hover:underline">
           完整排名
         </Link>
       </div>
-
+      <div className="p-4">
       {isLoading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
@@ -64,7 +65,7 @@ export function QuickStandings() {
           <tbody>
             {entries.map((entry, i) => (
               <tr key={entry.abbreviation} className={`border-b border-border/50 last:border-0 ${i < 3 ? "font-semibold" : ""}`}>
-                <td className={`py-1.5 tabular-nums ${i === 0 ? "text-amber-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-amber-700" : "text-muted-foreground"} font-medium`}>
+                <td className={`py-1.5 tabular-nums ${i === 0 ? "text-amber-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-700" : "text-muted-foreground"} font-medium`}>
                   {i + 1}
                 </td>
                 <td className="py-1.5">
@@ -84,6 +85,7 @@ export function QuickStandings() {
           </tbody>
         </table>
       )}
+      </div>
     </div>
   );
 }
