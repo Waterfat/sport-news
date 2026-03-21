@@ -7,6 +7,7 @@ import { HomeArticleSection } from "@/components/public/HomeArticleSection";
 import { QuickStandings } from "@/components/public/QuickStandings";
 import { QuickOdds } from "@/components/public/QuickOdds";
 import { TrendingArticles } from "@/components/public/TrendingArticles";
+import { SubmissionCTA } from "@/components/public/SubmissionCTA";
 
 // 每 60 秒重新驗證頁面資料
 export const revalidate = 60;
@@ -117,6 +118,7 @@ export default async function HomePage() {
             <TrendingArticles />
             <QuickStandings />
             <QuickOdds />
+            <SubmissionCTA />
           </div>
         </aside>
       </div>
