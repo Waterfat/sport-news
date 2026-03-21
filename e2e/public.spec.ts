@@ -31,7 +31,7 @@ test.describe("首頁", () => {
   test("Footer 存在", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("footer")).toBeVisible();
-    await expect(page.locator("footer").getByText("超級運動資訊網")).toBeVisible();
+    await expect(page.locator("footer").getByText("All rights reserved")).toBeVisible();
   });
 });
 
