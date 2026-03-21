@@ -9,7 +9,7 @@ import { CategorySidebar } from "@/components/public/CategorySidebar";
 
 export const revalidate = 60;
 
-const comingSoonCategories = new Set(["mlb", "soccer", "general"]);
+const comingSoonCategories = new Set(["soccer", "general"]);
 
 const CATEGORY_BANNERS: Record<string, string> = {
   nba: "/images/category-nba.jpg",
