@@ -184,11 +184,14 @@ async function autoPublishCompleted(
 
   if (autoTasks.length === 0) return null;
 
-  // 找出所有 draft 狀態的 generated_articles（產文完成但尚未發布的）
+  // 找出最近 24 小時內 draft + approved 狀態的 generated_articles（產文完成且審查通過但尚未發布的）
+  // 加時間過濾避免重複發布舊文章
   const { data: draftArticles } = await supabase
     .from("generated_articles")
     .select("id")
     .eq("status", "draft")
+    .eq("review_status", "approved")
+    .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
     .order("created_at", { ascending: false })
     .limit(20);
 

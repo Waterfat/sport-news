@@ -170,6 +170,7 @@ describe("publishArticle - publish with channels", () => {
       slug: "test-article",
       images: ["https://img.com/test.jpg"],
       publish_channel_ids: [42, 99],
+      review_status: "approved",
     };
 
     const channels = [
@@ -244,6 +245,7 @@ describe("publishArticle - publish with channels", () => {
       slug: "all-channels",
       images: ["https://img.com/art2.jpg"],
       publish_channel_ids: [],
+      review_status: "approved",
     };
 
     const allChannels = [
@@ -311,6 +313,7 @@ describe("publishArticle - publish with channels", () => {
       slug: "published-article",
       images: ["https://img.com/art3.jpg"],
       publish_channel_ids: [],
+      review_status: "approved",
     };
 
     const updateEqMock = vi.fn().mockResolvedValue({ error: null });
@@ -368,6 +371,7 @@ describe("publishArticle - publish with channels", () => {
       slug: "error-article",
       images: ["https://img.com/art4.jpg"],
       publish_channel_ids: [],
+      review_status: "approved",
     };
 
     const channels = [
@@ -439,6 +443,7 @@ describe("extractImageUrls (via publishArticle images field)", () => {
       slug: "image-test",
       images,
       publish_channel_ids: [],
+      review_status: "approved",
     };
 
     let fromCallIndex = 0;
@@ -587,6 +592,7 @@ describe("publishArticle - cover image dedup integration", () => {
       slug: "dedup-article",
       images: ["https://img.com/dup.jpg", "https://img.com/unique.jpg"],
       publish_channel_ids: [],
+      review_status: "approved",
     };
 
     const publishedArticles = [
@@ -660,6 +666,7 @@ describe("publishArticle - cover image dedup integration", () => {
       slug: "dedup-fail",
       images: ["https://img.com/dup.jpg", "https://img.com/alt.jpg"],
       publish_channel_ids: [],
+      review_status: "approved",
     };
 
     const publishedArticles = [
@@ -738,6 +745,7 @@ describe("publishArticle - image validation", () => {
       slug: "no-img",
       images: [],
       publish_channel_ids: [],
+      review_status: "approved",
     });
     mockCreateServiceClient.mockReturnValue(supabase as never);
 
@@ -756,6 +764,7 @@ describe("publishArticle - image validation", () => {
       slug: "null-img",
       images: null,
       publish_channel_ids: [],
+      review_status: "approved",
     });
     mockCreateServiceClient.mockReturnValue(supabase as never);
 
@@ -910,6 +919,7 @@ describe("deduplicateCoverImage", () => {
       slug: "seq-article",
       images: ["https://img.com/cover.jpg"],
       publish_channel_ids: [],
+      review_status: "approved",
     };
 
     const supabase = {
@@ -964,6 +974,7 @@ describe("deduplicateCoverImage", () => {
       slug: "first-pub",
       images: ["https://img.com/first-cover.jpg"],
       publish_channel_ids: [],
+      review_status: "approved",
     };
 
     const supabase = {

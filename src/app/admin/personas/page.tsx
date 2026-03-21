@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PersonaForm } from "@/components/admin/personas/PersonaForm";
 import { PersonaCard } from "@/components/admin/personas/PersonaCard";
+import { WritingRulesSection } from "@/components/admin/personas/WritingRulesSection";
 import { emptyForm, type Persona, type PersonaFormData } from "@/components/admin/personas/types";
 
 export default function PersonasPage() {
@@ -168,6 +169,9 @@ export default function PersonasPage() {
           />
         ))}
       </div>
+
+      {/* 系統規則區塊 */}
+      <WritingRulesSection />
 
       {/* 刪除確認 Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

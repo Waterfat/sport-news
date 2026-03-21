@@ -8,6 +8,8 @@ import { PublishStatusCard } from "@/components/admin/article-detail/PublishStat
 import { PublishOptionsCard } from "@/components/admin/article-detail/PublishOptionsCard";
 import { ArticleContentCard } from "@/components/admin/article-detail/ArticleContentCard";
 import { RawArticlesCard } from "@/components/admin/article-detail/RawArticlesCard";
+import { CitedSourcesCard } from "@/components/admin/article-detail/CitedSourcesCard";
+import { ReviewStatusCard } from "@/components/admin/article-detail/ReviewStatusCard";
 import type {
   ArticleDetail,
   RawArticle,
@@ -178,6 +180,13 @@ export default function ArticleDetailPage({
         />
       )}
 
+      <ReviewStatusCard
+        reviewStatus={article.review_status}
+        reviewResult={article.review_result}
+        reviewedAt={article.reviewed_at}
+        writingStrategy={article.writing_strategy}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ArticleContentCard
           article={article}
@@ -189,7 +198,10 @@ export default function ArticleDetailPage({
           onRemoveImage={handleRemoveImage}
         />
 
-        <RawArticlesCard rawArticles={rawArticles} />
+        <div className="space-y-6">
+          <RawArticlesCard rawArticles={rawArticles} />
+          <CitedSourcesCard citedSources={article.cited_sources || []} />
+        </div>
       </div>
     </div>
   );

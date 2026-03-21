@@ -24,7 +24,7 @@ export async function publishArticle(articleId: string): Promise<PublishResult> 
   // 讀取文章
   const { data: article, error: articleError } = await supabase
     .from("generated_articles")
-    .select("id, title, content, slug, images, publish_channel_ids")
+    .select("id, title, content, slug, images, publish_channel_ids, review_status")
     .eq("id", articleId)
     .single();
 
@@ -36,6 +36,18 @@ export async function publishArticle(articleId: string): Promise<PublishResult> 
       channels_published: 0,
       channels_failed: 0,
       errors: [articleError?.message || "Article not found"],
+    };
+  }
+
+  // 發布前檢查：文章必須通過總編輯審查
+  if (article.review_status !== "approved") {
+    return {
+      success: false,
+      article_id: articleId,
+      title: article.title,
+      channels_published: 0,
+      channels_failed: 0,
+      errors: [`文章未通過審查（目前狀態: ${article.review_status || "pending"}），無法發布`],
     };
   }
 
