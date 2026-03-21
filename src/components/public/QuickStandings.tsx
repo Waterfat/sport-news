@@ -26,8 +26,8 @@ export function QuickStandings() {
       const groups: StandingsGroup[] = d.standings ?? [];
       const all = groups.flatMap((g) => g.entries);
       all.sort((a, b) => {
-        const aWins = parseInt(a.stats.wins ?? "0", 10) || 0;
-        const bWins = parseInt(b.stats.wins ?? "0", 10) || 0;
+        const aWins = parseInt(a.stats?.wins ?? "0", 10) || 0;
+        const bWins = parseInt(b.stats?.wins ?? "0", 10) || 0;
         return bWins - aWins;
       });
       return all.slice(0, 5);
@@ -78,8 +78,8 @@ export function QuickStandings() {
                     </span>
                   </div>
                 </td>
-                <td className="text-center text-card-foreground font-medium tabular-nums">{entry.stats.wins ?? "-"}</td>
-                <td className="text-center text-card-foreground font-medium tabular-nums">{entry.stats.losses ?? "-"}</td>
+                <td className="text-center text-card-foreground font-medium tabular-nums">{entry.stats?.wins ?? "-"}</td>
+                <td className="text-center text-card-foreground font-medium tabular-nums">{entry.stats?.losses ?? "-"}</td>
               </tr>
             ))}
           </tbody>

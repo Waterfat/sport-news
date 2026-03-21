@@ -176,9 +176,9 @@ export function StandingsClient({
                                     <td
                                       key={key}
                                       className="text-center py-2 px-2 text-muted-foreground tabular-nums"
-                                      style={key === "winPercent" ? getWinPercentStyle(entry.stats[key]) : undefined}
+                                      style={key === "winPercent" ? getWinPercentStyle(entry.stats?.[key]) : undefined}
                                     >
-                                      {entry.stats[key] ?? "-"}
+                                      {entry.stats?.[key] ?? "-"}
                                     </td>
                                   ))}
                                 </tr>
