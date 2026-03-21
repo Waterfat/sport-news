@@ -37,15 +37,43 @@ const PlanProposalSchema = z.object({
 
 type PlanProposal = z.infer<typeof PlanProposalSchema>;
 
+/** 用括號計數器提取第一個完整的 JSON 陣列，避免 greedy regex 匹配到備註文字中的方括號 */
+function extractJsonArray(text: string): string | null {
+  const start = text.indexOf("[");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let stringChar: '"' | "'" | null = null;
+  let escape = false;
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+
+    if (escape) { escape = false; continue; }
+    if (ch === "\\" && inString) { escape = true; continue; }
+    if ((ch === '"' || ch === "'") && !inString) { inString = true; stringChar = ch; continue; }
+    if (ch === stringChar) { inString = false; stringChar = null; continue; }
+    if (inString) continue;
+
+    if (ch === "[") depth++;
+    else if (ch === "]") {
+      depth--;
+      if (depth === 0) return text.substring(start, i + 1);
+    }
+  }
+  return null;
+}
+
 function parseAIPlan(output: string): PlanProposal[] {
   const cleaned = output.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) {
+  const jsonStr = extractJsonArray(cleaned);
+  if (!jsonStr) {
     console.error("AI 回傳非 JSON:", output.substring(0, 500));
     return [];
   }
   try {
-    const parsed = JSON.parse(jsonMatch[0]);
+    const parsed = JSON.parse(jsonStr);
     if (!Array.isArray(parsed)) return [];
     const validated = z.array(PlanProposalSchema).safeParse(parsed);
     if (!validated.success) {
@@ -56,7 +84,7 @@ function parseAIPlan(output: string): PlanProposal[] {
   } catch (e) {
     console.error("JSON 解析失敗:", e);
     console.error("原始 AI 回傳（前 1000 字元）:", output.substring(0, 1000));
-    console.error("Regex 匹配結果（前 500 字元）:", jsonMatch[0].substring(0, 500));
+    console.error("提取的 JSON 字串（前 500 字元）:", jsonStr.substring(0, 500));
     return [];
   }
 }
