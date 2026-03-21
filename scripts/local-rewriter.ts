@@ -88,6 +88,16 @@ function groupByLeague(articles: RawArticle[]): Record<string, RawArticle[]> {
   return groups;
 }
 
+/** 將聯盟英文名映射到 DB 使用的分類名稱 */
+function leagueToCategory(league: string): string {
+  const map: Record<string, string> = {
+    MLB: "棒球",
+    NFL: "美式足球",
+    NHL: "冰球",
+  };
+  return map[league] ?? league; // NBA, 英超, 西甲 等直接使用原名
+}
+
 // 按關鍵字將文章分組（給一般寫手用），每組最多 MAX_GROUP_SIZE 篇
 const MAX_GROUP_SIZE = 5;
 
@@ -370,7 +380,7 @@ async function produceFromPlans(planIds: string[]) {
           writer_persona_id: persona.id,
           title: result.title,
           content: result.content,
-          category: result.category || plan.league || articles[0].category || "綜合",
+          category: leagueToCategory(result.category || plan.league || articles[0].category || "綜合"),
           images: collectedImages,
           tags: finalTags,
           status: "draft",
@@ -561,7 +571,7 @@ async function main() {
               writer_persona_id: official.id,
               title: result.title,
               content: result.content,
-              category: result.category || league,
+              category: leagueToCategory(result.category || league),
               images: officialImages,
               tags: finalTagsOfficial,
               status: "draft",
@@ -634,7 +644,7 @@ async function main() {
             writer_persona_id: columnist.id,
             title: result.title,
             content: result.content,
-            category: result.category || group[0].category || "綜合",
+            category: leagueToCategory(result.category || group[0].category || "綜合"),
             images: columnistImages,
             tags: finalTagsCol,
             status: "draft",
