@@ -37,24 +37,25 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://howger-sport.com"),
   title: {
-    default: "超級運動資訊網 - 體育新聞",
-    template: "%s | 超級運動資訊網",
+    default: "好球研究所 - 體育賽事分析",
+    template: "%s | 好球研究所",
   },
-  description: "最新體育新聞、NBA、MLB、足球賽事報導與深度分析",
+  description: "體育賽事深度分析、NBA、MLB 投注推薦與專業報導",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "超級運動",
+    title: "好球研究所",
   },
   icons: {
-    icon: "/favicon.ico",
-    apple: "/icon-180x180.png",
+    icon: "/icon.png",
+    apple: "/icon.png",
   },
   openGraph: {
     type: "website",
     locale: "zh_TW",
-    siteName: "超級運動資訊網",
+    siteName: "好球研究所 Howger Lab",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
 };
 

@@ -40,7 +40,7 @@ export default function PublicLayout({
             <div className="flex flex-col sm:flex-row justify-between items-start gap-7 mb-7">
               <div>
                 <div className="font-serif text-[22px] font-black text-white mb-2">
-                  超級運動<span className="text-blue-400">資訊網</span>
+                  好球研究所<span className="text-blue-400">資訊網</span>
                 </div>
                 <p className="text-[13px] text-white/45 max-w-[280px] leading-relaxed">
                   最新體育新聞、即時比分、深度分析
@@ -78,7 +78,7 @@ export default function PublicLayout({
             {/* Bottom: Copyright + Telegram CTA */}
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
               <span className="text-xs text-white/25">
-                &copy; {new Date().getFullYear()} 超級運動資訊網. All rights reserved.
+                &copy; {new Date().getFullYear()} 好球研究所. All rights reserved.
               </span>
               <Link
                 href={TELEGRAM_CHANNEL_URL}

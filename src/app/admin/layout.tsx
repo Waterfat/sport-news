@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "超級運動後台",
+    title: "好球研究所後台",
   },
 };
 

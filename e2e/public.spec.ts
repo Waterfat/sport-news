@@ -12,7 +12,7 @@ test.describe("首頁", () => {
     await page.goto("/");
 
     // Site branding in header
-    await expect(page.getByRole("link", { name: /超級運動資訊網/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /好球研究所/i }).first()).toBeVisible();
 
     // Navigation links
     const nav = page.locator("header nav").first();

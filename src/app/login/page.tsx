@@ -43,7 +43,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <Image
             src="/logo.png"
-            alt="超級運動資訊網"
+            alt="好球研究所 Howger Lab"
             width={336}
             height={60}
             className="h-12 w-auto mx-auto mb-2"

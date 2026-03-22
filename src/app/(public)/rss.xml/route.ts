@@ -36,7 +36,7 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>超級運動資訊網</title>
+    <title>好球研究所</title>
     <link>${SITE_URL}</link>
     <description>最新體育新聞報導</description>
     <language>zh-TW</language>

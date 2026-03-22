@@ -3,7 +3,7 @@ import { InstallGuide } from "@/components/public/InstallGuide";
 
 export const metadata: Metadata = {
   title: "安裝 App",
-  description: "將超級運動資訊網安裝到手機主畫面，享受全螢幕瀏覽體驗",
+  description: "將好球研究所安裝到手機主畫面，享受全螢幕瀏覽體驗",
 };
 
 export default function InstallPage() {
