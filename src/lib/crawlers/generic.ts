@@ -4,6 +4,7 @@ import type { CrawledArticle } from "./types";
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
+const FETCH_TIMEOUT_MS = 15000; // 單一 fetch 15 秒 timeout
 
 // 從文字中推測分類
 function detectCategory(url: string, title: string, content: string): string | null {
@@ -147,6 +148,7 @@ async function crawlArticle(
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!res.ok) return null;
@@ -243,6 +245,7 @@ export async function crawlGeneric(
   try {
     const res = await fetch(baseUrl, {
       headers: { "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!res.ok) {
