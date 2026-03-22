@@ -205,6 +205,13 @@ export function OddsClient() {
                             </tbody>
                           </table>
                         </div>
+                      ) : game.status === "final" ? (
+                        <div className="text-sm text-muted-foreground text-center py-2">
+                          <span className="font-medium">{game.awayTeam.abbreviation} {game.awayTeam.score}</span>
+                          <span className="mx-2">-</span>
+                          <span className="font-medium">{game.homeTeam.abbreviation} {game.homeTeam.score}</span>
+                          <span className="ml-2 text-xs">(Final)</span>
+                        </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">暫無賠率資料</p>
                       )}
