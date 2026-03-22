@@ -10,7 +10,6 @@ export interface SportSettings {
   [key: string]: {
     enabled: boolean;
     sources: string[];
-    title_prompt: string;
     updated_at?: string;
   };
 }
