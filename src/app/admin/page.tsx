@@ -2,16 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CHANNEL_TYPE_LABELS } from "@/lib/constants";
-import { AutomationPanel } from "@/components/admin/AutomationPanel";
-
-interface Channel {
-  id: number;
-  name: string;
-  type: string;
-  is_active: boolean;
-}
 
 interface Stats {
   raw_articles_total: number;
@@ -23,7 +13,7 @@ interface Stats {
   scheduled: number;
   total_views: number;
   personas: { id: string; name: string; is_active: boolean }[];
-  channels: Channel[];
+  channels: { id: number; name: string; type: string; is_active: boolean }[];
 }
 
 interface CrawlerStatus {
@@ -167,71 +157,6 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       )}
-
-      {/* 自動化設定 */}
-      <AutomationPanel />
-
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* 寫手列表 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>寫手陣容</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              {stats.personas.map((persona) => (
-                <div
-                  key={persona.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border"
-                >
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      persona.is_active ? "bg-green-500" : "bg-gray-300"
-                    }`}
-                  />
-                  <div>
-                    <div className="font-medium text-sm">{persona.name}</div>
-                    <div className="text-xs text-gray-500">
-                      {persona.is_active ? "啟用中" : "已停用"}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 發布頻道 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              發布頻道
-              <span className="ml-2 text-sm font-normal text-gray-500">
-                ({stats.channels.length} 個啟用中)
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.channels.length === 0 ? (
-              <p className="text-sm text-gray-400">尚未設定發布頻道</p>
-            ) : (
-              <div className="grid grid-cols-1 gap-3">
-                {stats.channels.map((ch) => (
-                  <div
-                    key={ch.id}
-                    className="flex items-center justify-between p-3 rounded-lg border"
-                  >
-                    <div className="font-medium text-sm">{ch.name}</div>
-                    <Badge variant="outline">
-                      {CHANNEL_TYPE_LABELS[ch.type] || ch.type}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
