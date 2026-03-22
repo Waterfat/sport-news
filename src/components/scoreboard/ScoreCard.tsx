@@ -129,10 +129,20 @@ export default function ScoreCard({ game, league }: { game: Game; league?: strin
         </div>
       )}
 
-      {/* Odds summary */}
+      {/* Odds summary with result */}
       {game.odds && (
         <div className="px-4 pb-2 text-xs text-muted-foreground text-center tabular-nums">
           {game.odds.details} | O/U {game.odds.overUnder}
+          {game.status === "final" && game.odds.overUnder > 0 && (
+            <span className="ml-2">
+              {(() => {
+                const total = homeScore + awayScore;
+                const ouResult = total > game.odds.overUnder ? "Over ↑" : total < game.odds.overUnder ? "Under ↓" : "Push";
+                const ouColor = total > game.odds.overUnder ? "text-red-500" : total < game.odds.overUnder ? "text-blue-500" : "text-yellow-500";
+                return <span className={ouColor}>{ouResult} ({total})</span>;
+              })()}
+            </span>
+          )}
         </div>
       )}
 
