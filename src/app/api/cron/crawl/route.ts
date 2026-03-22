@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runAllCrawlers } from "@/lib/crawlers";
 
-export const maxDuration = 60; // Vercel function timeout
+export const maxDuration = 300; // Vercel function timeout（5 分鐘，確保所有爬蟲來源都能完成）
 
 export async function GET(request: NextRequest) {
   // 驗證 cron secret
