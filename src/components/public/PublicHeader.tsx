@@ -133,7 +133,7 @@ export function PublicHeader() {
                 alt="好球研究所 Howger Lab"
                 width={280}
                 height={50}
-                className="h-7 sm:h-9 w-auto"
+                className="h-9 sm:h-11 w-auto"
                 priority
               />
             </Link>
