@@ -78,13 +78,13 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed md:static inset-y-0 left-0 z-50 w-60 bg-white border-r flex flex-col transition-transform duration-200",
+          "fixed md:static inset-y-0 left-0 z-50 w-60 bg-[#0f172a] flex flex-col transition-transform duration-200",
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
         {/* Brand */}
-        <div className="h-14 flex items-center px-4 border-b shrink-0">
-          <Link href="/admin" className="font-bold text-gray-900" onClick={() => setSidebarOpen(false)}>
+        <div className="h-14 flex items-center px-4 border-b border-white/10 shrink-0">
+          <Link href="/admin" className="font-bold text-white" onClick={() => setSidebarOpen(false)}>
             Howger Sport 後台
           </Link>
         </div>
@@ -93,7 +93,7 @@ export default function AdminLayout({
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-5">
           {navGroups.map((group) => (
             <div key={group.title}>
-              <p className="px-2 mb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <p className="px-2 mb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 {group.title}
               </p>
               <div className="space-y-0.5">
@@ -105,14 +105,14 @@ export default function AdminLayout({
                     className={cn(
                       "flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm transition-colors",
                       isActive(pathname, item.href)
-                        ? "bg-blue-50 text-blue-700 font-medium"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        ? "bg-white/10 text-white font-medium"
+                        : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
                     )}
                   >
                     <span className="text-base">{item.icon}</span>
                     <span className="flex-1">{item.label}</span>
                     {badgeMap[item.href] > 0 && (
-                      <span className="ml-auto bg-blue-100 text-blue-700 text-xs font-medium px-1.5 py-0.5 rounded-full tabular-nums">
+                      <span className="ml-auto bg-white/20 text-slate-200 text-xs font-medium px-1.5 py-0.5 rounded-full tabular-nums">
                         {badgeMap[item.href]}
                       </span>
                     )}
@@ -124,10 +124,10 @@ export default function AdminLayout({
         </nav>
 
         {/* Logout */}
-        <div className="border-t p-3 shrink-0">
+        <div className="border-t border-white/10 p-3 shrink-0">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-sm text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-colors"
           >
             <span className="text-base">🚪</span>
             登出
