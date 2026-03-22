@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 const navGroups = [
@@ -47,6 +48,22 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { data: pipelineData } = useQuery<{ pipeline: { review_pending: number; raw_unprocessed: number } }>({
+    queryKey: ["sidebar-badges"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/pipeline-status");
+      if (!res.ok) return { pipeline: { review_pending: 0, raw_unprocessed: 0 } };
+      return res.json();
+    },
+    refetchInterval: 60000,
+    staleTime: 30000,
+  });
+
+  const badgeMap: Record<string, number> = {
+    "/admin/review": pipelineData?.pipeline?.review_pending ?? 0,
+    "/admin/raw": pipelineData?.pipeline?.raw_unprocessed ?? 0,
+  };
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -93,7 +110,12 @@ export default function AdminLayout({
                     )}
                   >
                     <span className="text-base">{item.icon}</span>
-                    {item.label}
+                    <span className="flex-1">{item.label}</span>
+                    {badgeMap[item.href] > 0 && (
+                      <span className="ml-auto bg-blue-100 text-blue-700 text-xs font-medium px-1.5 py-0.5 rounded-full tabular-nums">
+                        {badgeMap[item.href]}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>
