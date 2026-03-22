@@ -121,6 +121,117 @@ ${recentImages.length > 0 ? recentImages.join("\n") : "（無近期圖片）"}
 {"decision": "approved|rejected", "scores": {"title_quality": N, "content_quality": N, "fact_check": N, "brand_tone": N, "seo": N, "overall": N}, "checks": {"topic_unique": "pass|fail", "image_unique": "pass|fail", "has_image": "pass|fail"}, "reject_reasons": ["原因"], "suggestions": ["建議"]}`;
 }
 
+const ARTICLE_STATUS_PUBLISHED = "published";
+
+/**
+ * 審稿通過後自動發布：封面圖去重 + 更新狀態為 published
+ * 注意：此函式直接操作 DB，不經過 src/lib/publish-article.ts 的統一入口，
+ * 因為 scripts/ 環境無法 import @/ 路徑別名模組。
+ * 頻道發布（Telegram 等）由 rewrite-listener 的 auto-pipeline API 處理。
+ */
+async function autoPublish(
+  articleId: string,
+  images: unknown
+): Promise<{ success: boolean; error?: string }> {
+  // 檢查圖片
+  const articleImages = extractImageUrls(images);
+  if (articleImages.length === 0) {
+    return { success: false, error: "無圖片，無法發布" };
+  }
+
+  // 封面圖去重：查已發布文章的封面圖
+  const { data: publishedCovers } = await supabase
+    .from("generated_articles")
+    .select("images")
+    .eq("status", ARTICLE_STATUS_PUBLISHED)
+    .neq("id", articleId)
+    .order("published_at", { ascending: false })
+    .limit(500);
+
+  const existingCovers = new Set<string>();
+  for (const row of publishedCovers || []) {
+    const urls = extractImageUrls(row.images);
+    if (urls.length > 0) {
+      existingCovers.add(urls[0]);
+    }
+  }
+
+  // 如果封面圖重複，嘗試用其他圖片替代
+  let finalImages = articleImages;
+  if (articleImages.length > 1 && existingCovers.has(articleImages[0])) {
+    const altIndex = articleImages.findIndex(
+      (url, i) => i > 0 && !existingCovers.has(url)
+    );
+    if (altIndex !== -1) {
+      finalImages = [...articleImages];
+      const [alt] = finalImages.splice(altIndex, 1);
+      finalImages.unshift(alt);
+    }
+  }
+
+  // 更新文章狀態為 published
+  const updateData: Record<string, unknown> = {
+    status: ARTICLE_STATUS_PUBLISHED,
+    published_at: new Date().toISOString(),
+  };
+
+  // 如果封面圖有調整，同時更新 images
+  if (finalImages[0] !== articleImages[0]) {
+    updateData.images = finalImages;
+  }
+
+  const { error: publishError } = await supabase
+    .from("generated_articles")
+    .update(updateData)
+    .eq("id", articleId);
+
+  if (publishError) {
+    return { success: false, error: publishError.message };
+  }
+
+  return { success: true };
+}
+
+/** 排除指向內部網路的 URL（防 SSRF），與 src/lib/publish-article.ts 保持一致 */
+function isSafeImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname;
+    if (
+      hostname === "localhost" ||
+      hostname.startsWith("127.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("169.254.") ||
+      hostname === "0.0.0.0" ||
+      hostname.endsWith(".local") ||
+      (hostname.startsWith("172.") && (() => {
+        const second = parseInt(hostname.split(".")[1], 10);
+        return second >= 16 && second <= 31;
+      })())
+    ) {
+      return false;
+    }
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function extractImageUrls(images: unknown): string[] {
+  if (!images || !Array.isArray(images)) return [];
+  return images
+    .map((img: unknown) => {
+      if (typeof img === "string") return img;
+      if (typeof img === "object" && img !== null && "url" in img) {
+        const url = (img as { url?: unknown }).url;
+        return typeof url === "string" ? url : undefined;
+      }
+      return undefined;
+    })
+    .filter((url): url is string => typeof url === "string" && url.startsWith("http") && isSafeImageUrl(url));
+}
+
 async function main() {
   console.log(`\n[${new Date().toLocaleString("zh-TW")}] === 總編輯審稿開始 ===`);
 
@@ -230,7 +341,7 @@ async function main() {
       }
 
       if (result.decision === "approved") {
-        console.log(`    通過 (平均分: ${(
+        const avgScore = (
           (result.scores.title_quality +
             result.scores.content_quality +
             result.scores.fact_check +
@@ -238,8 +349,20 @@ async function main() {
             result.scores.seo +
             result.scores.overall) /
           6
-        ).toFixed(1)})`);
-        approved++;
+        ).toFixed(1);
+        console.log(`    通過 (平均分: ${avgScore})`);
+
+        // 自動發布：封面圖去重 + 更新狀態
+        const publishResult = await autoPublish(article.id, article.images);
+        if (publishResult.success) {
+          console.log(`    已自動發布`);
+          approved++;
+        } else {
+          console.error(`    發布失敗: ${publishResult.error}`);
+          // 發布失敗但審稿已通過 — review_status 保持 approved，
+          // 文章可在後台手動發布，不會被遺忘
+          failed++;
+        }
       } else {
         console.log(`    退回: ${result.reject_reasons.join(", ")}`);
         rejected++;
