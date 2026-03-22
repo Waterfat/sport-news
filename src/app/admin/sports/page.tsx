@@ -193,20 +193,6 @@ export default function SportsSettingsPage() {
     },
   });
 
-  const saveTitlePromptMutation = useMutation({
-    mutationFn: async ({ sportKey, title_prompt }: { sportKey: SportKey; title_prompt: string }) => {
-      const res = await fetch("/api/settings/sports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sport_key: sportKey, title_prompt }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error("save failed");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sport-settings"] });
-    },
-  });
 
   async function toggleSport(sportKey: SportKey, enabled: boolean) {
     toggleSportMutation.mutate({ sportKey, enabled });
@@ -266,10 +252,6 @@ export default function SportsSettingsPage() {
   function saveEdit(id: number, oldName: string) {
     if (!editName.trim() || !editUrl.trim()) return;
     saveEditMutation.mutate({ id, oldName });
-  }
-
-  function saveTitlePrompt(sportKey: SportKey, title_prompt: string) {
-    saveTitlePromptMutation.mutate({ sportKey, title_prompt });
   }
 
   function handleStartEdit(source: CrawlSource) {
@@ -334,12 +316,10 @@ export default function SportsSettingsPage() {
                 isEnabled={isEnabled}
                 isUpdating={isUpdating}
                 selectedSources={selectedSources}
-                titlePrompt={settings[key]?.title_prompt || ""}
                 crawlSources={crawlSources}
                 updating={updating}
                 onToggleSport={toggleSport}
                 onToggleSource={toggleSource}
-                onSaveTitlePrompt={saveTitlePrompt}
               />
             );
           }

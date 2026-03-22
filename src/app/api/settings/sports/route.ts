@@ -14,7 +14,7 @@ export async function GET() {
     const supabase = createServiceClient();
     const { data, error } = await supabase
       .from("sport_settings")
-      .select("sport_key, enabled, sources, title_prompt, updated_at");
+      .select("sport_key, enabled, sources, updated_at");
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -22,11 +22,11 @@ export async function GET() {
 
     const settings: Record<
       string,
-      { enabled: boolean; sources: string[]; title_prompt: string; updated_at?: string }
+      { enabled: boolean; sources: string[]; updated_at?: string }
     > = {};
 
     for (const [key, config] of Object.entries(SPORTS)) {
-      settings[key] = { enabled: config.enabled, sources: [], title_prompt: "" };
+      settings[key] = { enabled: config.enabled, sources: [] };
     }
 
     if (data) {
@@ -35,7 +35,6 @@ export async function GET() {
           settings[row.sport_key] = {
             enabled: row.enabled,
             sources: row.sources || [],
-            title_prompt: row.title_prompt || "",
             updated_at: row.updated_at,
           };
         }
@@ -60,11 +59,10 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { sport_key, enabled, sources, title_prompt } = body as {
+    const { sport_key, enabled, sources } = body as {
       sport_key: SportKey;
       enabled?: boolean;
       sources?: string[];
-      title_prompt?: string;
     };
 
     if (!sport_key || !(sport_key in SPORTS)) {
@@ -85,10 +83,6 @@ export async function POST(request: Request) {
 
     if (Array.isArray(sources)) {
       updateData.sources = sources;
-    }
-
-    if (typeof title_prompt === "string") {
-      updateData.title_prompt = title_prompt;
     }
 
     const supabase = createServiceClient();

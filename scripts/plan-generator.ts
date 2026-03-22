@@ -181,20 +181,7 @@ export async function generatePlans() {
   const publishedTitles = (recentArticles || []).map((a) => a.title);
   console.log(`近 14 天已有文章: ${publishedTitles.length} 篇（含 draft）`);
 
-  // 讀取各球種的標題風格提詞
-  const { data: sportSettings } = await supabase
-    .from("sport_settings")
-    .select("sport_key, title_prompt")
-    .eq("enabled", true);
-
-  const titlePromptMap: Record<string, string> = {};
-  if (sportSettings) {
-    for (const s of sportSettings) {
-      if (s.title_prompt) titlePromptMap[s.sport_key] = s.title_prompt;
-    }
-  }
-
-  const allPlans: { writer_persona_id: string; title: string; raw_article_ids: string[]; league: string | null; plan_type: string; }[] = [];
+const allPlans: { writer_persona_id: string; title: string; raw_article_ids: string[]; league: string | null; plan_type: string; }[] = [];
 
   for (const persona of personas as WriterPersona[]) {
     // 驗證 specialties 欄位是否有效（Supabase JSONB 可能返回序列化字符串）
@@ -234,16 +221,12 @@ export async function generatePlans() {
       ? `\n以下是近 7 天已發布的文章標題，請勿規劃與這些主題重複的內容：\n${publishedTitles.map((t) => `- ${t}`).join("\n")}\n`
       : "";
 
-    // 組裝標題風格提詞（合併所有啟用球種的提詞）
-    const titlePrompts = Object.values(titlePromptMap).filter(Boolean);
-    const titleStyleSection = titlePrompts.length > 0
-      ? `\n標題風格指引：\n${titlePrompts.join("\n")}\n`
-      : "";
+    // 標題風格已整合到各寫手的 style_prompt 中（Issue #160）
 
     const prompt = `你是體育新聞網站的內容規劃師。以下是從多個來源爬取的 ${freshArticles.length} 篇體育新聞素材。
 
 你的任務：分析這些素材，找出不重複的獨立主題，為「${persona.name}」（${writerTypeDesc}）規劃要產出的文章列表。
-${publishedSection}${titleStyleSection}
+${publishedSection}
 重要規則：
 1. 多篇來自不同來源但報導同一事件的素材，必須合併為一個規劃項目（例如：ESPN 和 ETtoday 都在報導同一場比賽）
 2. 同一事件的不同角度（例如：得分紀錄、賽後反應、女友見證）可以合併成一篇綜合報導，或拆成最多 2 篇（主報導 + 花絮）

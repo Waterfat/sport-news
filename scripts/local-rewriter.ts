@@ -212,7 +212,6 @@ function inferWritingStrategy(articles: RawArticle[]): string {
 function buildColumnistPrompt(
   articles: RawArticle[],
   persona: WriterPersona,
-  titleStyleHint?: string
 ): string {
   const sourceSummaries = articles
     .map(
@@ -240,8 +239,7 @@ ${persona.style_prompt}
 4. 不可出現「根據報導」「據悉」「外媒指出」等轉述用語
 5. 以專業部落客的口吻撰寫，有自己的觀點和分析
 6. 文章長度 600-1200 字
-7. 標題要有創意、吸引眼球${titleStyleHint ? `\n${titleStyleHint}` : ""}
-8. 球員、教練、球隊等名稱保留英文原文，不要翻譯成中文（例如用 LeBron James 而非乔布朗·詹姆斯）
+7. 標題要有創意、吸引眼球8. 球員、教練、球隊等名稱保留英文原文，不要翻譯成中文（例如用 LeBron James 而非乔布朗·詹姆斯）
 9. 只回覆 JSON，不要 markdown code block
 10. tags 欄位必須包含文章提及的聯盟、球隊、球員名（英文原文），用於分類和推薦
 11. writing_strategy 欄位：根據素材狀態判斷策略
@@ -262,7 +260,6 @@ function buildOfficialRecapPrompt(
   league: string,
   articles: RawArticle[],
   persona: WriterPersona,
-  titleStyleHint?: string
 ): string {
   const sourceSummaries = articles
     .map(
@@ -284,8 +281,7 @@ ${persona.style_prompt}
 5. 每個重點賽事要有比分、關鍵球員表現、簡要分析
 6. 結尾可以展望接下來的賽程
 7. 文章長度 800-1500 字
-8. 標題必須包含「${league}」關鍵字，風格要專業且吸引眼球${titleStyleHint ? `\n${titleStyleHint}` : ""}
-9. 球員、教練、球隊等名稱保留英文原文，不要翻譯成中文（例如用 LeBron James 而非乔布朗·詹姆斯）
+8. 標題必須包含「${league}」關鍵字，風格要專業且吸引眼球9. 球員、教練、球隊等名稱保留英文原文，不要翻譯成中文（例如用 LeBron James 而非乔布朗·詹姆斯）
 10. 只回覆 JSON，不要 markdown code block
 11. tags 欄位必須包含文章提及的聯盟、球隊、球員名（英文原文），用於分類和推薦
 12. writing_strategy 欄位：根據素材狀態判斷策略
@@ -355,18 +351,6 @@ async function produceFromPlans(planIds: string[]) {
   const rawMap = Object.fromEntries(rawArticles.map((a) => [a.id, a as RawArticle]));
 
   // 讀取各球種的標題風格提詞
-  const { data: sportSettings } = await supabase
-    .from("sport_settings")
-    .select("sport_key, title_prompt")
-    .eq("enabled", true);
-
-  const titlePromptMap: Record<string, string> = {};
-  if (sportSettings) {
-    for (const s of sportSettings) {
-      if (s.title_prompt) titlePromptMap[s.sport_key] = s.title_prompt;
-    }
-  }
-
   let success = 0;
   let failed = 0;
   const producedPlanIds: string[] = [];
@@ -392,17 +376,11 @@ async function produceFromPlans(planIds: string[]) {
     console.log(`\n  [${plan.plan_type === "official" ? "官方戰報" : "專欄"}] ${persona.name} - "${plan.title}" (${articles.length} 篇素材)`);
 
     try {
-      // 組裝標題風格提詞
-      const titlePrompts = Object.values(titlePromptMap).filter(Boolean);
-      const titleStyleHint = titlePrompts.length > 0
-        ? `標題風格指引：\n${titlePrompts.join("\n")}`
-        : undefined;
-
       let prompt: string;
       if (plan.plan_type === "official" && plan.league) {
-        prompt = buildOfficialRecapPrompt(plan.league, articles, persona, titleStyleHint);
+        prompt = buildOfficialRecapPrompt(plan.league, articles, persona);
       } else {
-        prompt = buildColumnistPrompt(articles, persona, titleStyleHint);
+        prompt = buildColumnistPrompt(articles, persona);
       }
 
       const output = callClaude(prompt);
@@ -542,24 +520,6 @@ async function main() {
 
   console.log(`找到 ${rawArticles.length} 篇未處理文章`);
 
-  // 讀取各球種的標題風格提詞
-  const { data: sportSettings } = await supabase
-    .from("sport_settings")
-    .select("sport_key, title_prompt")
-    .eq("enabled", true);
-
-  const titlePromptMap: Record<string, string> = {};
-  if (sportSettings) {
-    for (const s of sportSettings) {
-      if (s.title_prompt) titlePromptMap[s.sport_key] = s.title_prompt;
-    }
-  }
-
-  const titlePrompts = Object.values(titlePromptMap).filter(Boolean);
-  const titleStyleHint = titlePrompts.length > 0
-    ? `標題風格指引：\n${titlePrompts.join("\n")}`
-    : undefined;
-
   let success = 0;
   let failed = 0;
 
@@ -605,7 +565,7 @@ async function main() {
         group.forEach((a) => console.log(`    - ${a.title}`));
 
         try {
-          const prompt = buildOfficialRecapPrompt(league, group, official, titleStyleHint);
+          const prompt = buildOfficialRecapPrompt(league, group, official);
           const output = callClaude(prompt);
           const result = parseResult(output);
 
@@ -686,7 +646,7 @@ async function main() {
       group.forEach((a) => console.log(`    - ${a.title}`));
 
       try {
-        const prompt = buildColumnistPrompt(group, columnist, titleStyleHint);
+        const prompt = buildColumnistPrompt(group, columnist);
         const output = callClaude(prompt);
         const result = parseResult(output);
 
