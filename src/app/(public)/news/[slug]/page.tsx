@@ -55,7 +55,7 @@ export async function generateMetadata({
   const article = await getArticle(slug);
 
   if (!article) {
-    return { title: "文章未找到 - 超級運動資訊網" };
+    return { title: "文章未找到 - 好球研究所" };
   }
 
   const description = getContentExcerpt(article.content);
@@ -64,7 +64,7 @@ export async function generateMetadata({
   const ogImageUrl = `${SITE_URL}/api/og?title=${encodeURIComponent(article.title)}&subtitle=${encodeURIComponent(article.category || "")}&type=article`;
 
   return {
-    title: `${article.title} - 超級運動資訊網`,
+    title: `${article.title} - 好球研究所`,
     description,
     alternates: {
       canonical: articleUrl,

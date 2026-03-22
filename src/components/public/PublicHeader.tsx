@@ -130,7 +130,7 @@ export function PublicHeader() {
             <Link href="/" className="flex items-center flex-shrink-0">
               <Image
                 src="/logo.png"
-                alt="超級運動資訊網"
+                alt="好球研究所 Howger Lab"
                 width={280}
                 height={50}
                 className="h-7 sm:h-9 w-auto brightness-0 invert"

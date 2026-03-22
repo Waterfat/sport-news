@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <section className="space-y-4 mb-8">
         <h2 className="text-lg font-semibold text-slate-800">一、資料蒐集</h2>
         <p className="text-slate-600 leading-relaxed">
-          超級運動資訊網（以下簡稱「本站」）透過 Google 及 LINE 第三方登入服務蒐集以下個人資料：
+          好球研究所（以下簡稱「本站」）透過 Google 及 LINE 第三方登入服務蒐集以下個人資料：
         </p>
         <ul className="list-disc pl-6 text-slate-600 space-y-1">
           <li><strong>電子郵件地址（Email）</strong>：用於會員帳號識別、帳號合併及重要通知</li>

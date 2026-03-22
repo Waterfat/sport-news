@@ -193,7 +193,7 @@ describe("publishToTelegram - text only", () => {
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.text).toContain("https://t.me/howger_sport_news");
-    expect(body.text).toContain("超級運動資訊網");
+    expect(body.text).toContain("好球研究所");
   });
 
   it("escapes HTML characters in title and content", async () => {

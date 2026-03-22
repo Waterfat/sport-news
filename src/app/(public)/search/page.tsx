@@ -6,7 +6,7 @@ import { newsUrl } from "@/lib/routes";
 import { SearchInput } from "./SearchInput";
 
 export const metadata: Metadata = {
-  title: "搜尋文章 - 超級運動資訊網",
+  title: "搜尋文章 - 好球研究所",
 };
 
 interface SearchResult {

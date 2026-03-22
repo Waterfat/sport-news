@@ -1,7 +1,7 @@
 {
-  "name": "超級運動資訊網 - 後台管理",
-  "short_name": "超級運動後台",
-  "description": "超級運動資訊網後台管理系統",
+  "name": "好球研究所 - 後台管理",
+  "short_name": "好球研究所後台",
+  "description": "好球研究所後台管理系統",
   "start_url": "/admin",
   "display": "standalone",
   "background_color": "#ffffff",
