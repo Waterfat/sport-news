@@ -67,7 +67,7 @@ export default function RawArticlesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">原始新聞</h1>
+        <h1 className="text-2xl font-bold">素材庫</h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <span className="text-sm text-gray-500">共 {total} 篇</span>
           <Select
