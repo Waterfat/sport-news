@@ -21,7 +21,7 @@ const navLinks = [
 ];
 
 // Scroll handler 常數
-const SCROLL_MIN_POSITION = 60; // 最小滾動位置才觸發隱藏（配合 logo h-12）
+const SCROLL_MIN_POSITION = 100; // 最小滾動位置才觸發隱藏（配合 logo h-20）
 const SCROLL_HIDE_DELTA = 10; // 向下滾動 delta 閾值
 const SCROLL_SHOW_DELTA = 30; // 向上滾動 delta 閾值（較高，避免慣性震盪誤觸發）
 const SCROLL_COOLDOWN_MS = 150; // 狀態切換最小間隔（ms）
@@ -122,18 +122,18 @@ export function PublicHeader() {
         className={`overflow-hidden transition-[height,opacity] duration-200 ease-in-out ${
           logoHidden
             ? "h-0 opacity-0 pointer-events-none"
-            : "h-12 sm:h-14 opacity-100"
+            : "h-20 sm:h-24 opacity-100"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-12 sm:h-14">
+          <div className="flex items-center justify-between h-20 sm:h-24">
             <Link href="/" className="flex items-center flex-shrink-0">
               <Image
                 src="/logo.png"
                 alt="好球研究所 Howger Lab"
                 width={280}
                 height={50}
-                className="h-9 sm:h-11 w-auto"
+                className="h-16 sm:h-20 w-auto"
                 priority
               />
             </Link>
