@@ -244,14 +244,28 @@ async function checkAutoPipeline() {
       return;
     }
 
-    // 檢查是否有正在執行的任務
+    // 檢查是否有正在執行的任務（含 timeout 防禦）
+    const TASK_TIMEOUT_MINUTES = 30;
     const { data: runningTasks } = await supabase
       .from("rewrite_tasks")
-      .select("id")
+      .select("id, status, created_at")
       .in("status", ["pending", "running"])
       .limit(1);
 
-    if (runningTasks && runningTasks.length > 0) return;
+    if (runningTasks && runningTasks.length > 0) {
+      const task = runningTasks[0];
+      const taskAge = (Date.now() - new Date(task.created_at).getTime()) / (1000 * 60);
+
+      if (taskAge > TASK_TIMEOUT_MINUTES) {
+        console.log(`[${ts()}] 自動管線：task ${task.id} 已超時 (${Math.round(taskAge)} 分鐘 > ${TASK_TIMEOUT_MINUTES})，自動標記失敗`);
+        await supabase
+          .from("rewrite_tasks")
+          .update({ status: "failed", error_message: `自動 timeout：task 執行超過 ${TASK_TIMEOUT_MINUTES} 分鐘未完成` })
+          .eq("id", task.id);
+      } else {
+        return;
+      }
+    }
 
     // 達門檻 → 觸發 auto-pipeline API（由 Vercel 端執行產文+發布）
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://howger-sport.com";
