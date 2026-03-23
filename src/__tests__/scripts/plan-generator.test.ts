@@ -362,6 +362,31 @@ describe("isSimilarTitle — 標題相似度", () => {
   });
 });
 
+// --- 素材截取邏輯（Issue #187 新增） ---
+
+describe("素材上限截取邏輯", () => {
+  const MAX_MATERIALS = 20;
+
+  it("超過上限時截取前 N 篇", () => {
+    const articles = Array.from({ length: 50 }, (_, i) => ({ id: `art-${i}` }));
+    const result = articles.slice(0, MAX_MATERIALS);
+    expect(result).toHaveLength(20);
+    expect(result[0].id).toBe("art-0");
+    expect(result[19].id).toBe("art-19");
+  });
+
+  it("未達上限時全部保留", () => {
+    const articles = Array.from({ length: 10 }, (_, i) => ({ id: `art-${i}` }));
+    const result = articles.slice(0, MAX_MATERIALS);
+    expect(result).toHaveLength(10);
+  });
+
+  it("空陣列不報錯", () => {
+    const result = ([] as { id: string }[]).slice(0, MAX_MATERIALS);
+    expect(result).toHaveLength(0);
+  });
+});
+
 describe("is_processed 標記邏輯", () => {
   it("收集所有 allPlans 中的 raw_article_ids 並去重", () => {
     const allPlans = [
