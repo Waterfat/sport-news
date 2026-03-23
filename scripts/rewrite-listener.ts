@@ -231,11 +231,14 @@ async function checkAutoPipeline() {
       .update({ last_check_at: now.toISOString() })
       .eq("id", 1);
 
-    // 計算未處理素材數
+    // 計算未處理素材數（只計 12h 內，與 plan-generator 窗口一致）
+    const materialSince = new Date();
+    materialSince.setHours(materialSince.getHours() - 12);
     const { count } = await supabase
       .from("raw_articles")
       .select("*", { count: "exact", head: true })
-      .eq("is_processed", false);
+      .eq("is_processed", false)
+      .gte("crawled_at", materialSince.toISOString());
 
     const pendingCount = count ?? 0;
 
