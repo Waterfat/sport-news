@@ -19,14 +19,12 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { matchesSpecialties, Specialties, RawArticleBase, leagueKeywords } from "./shared-matching";
 import { callClaude } from "./shared-claude";
+import { MATERIAL_WINDOW_HOURS, MAX_MATERIALS_PER_WRITER } from "./shared-constants";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
-
-/** 每位寫手每次最多處理的素材數量 */
-const MAX_MATERIALS = 20;
 
 interface WriterPersona { id: string; name: string; style_prompt: string; writer_type: string; specialties: Specialties; max_articles: number; }
 interface RawArticle extends RawArticleBase { crawled_at: string; images?: string[]; }
@@ -131,9 +129,9 @@ export async function generatePlans() {
 
   if (!personas?.length) { console.log("沒有啟用的寫手"); return; }
 
-  // 取得最近 12 小時的文章
+  // 取得時效窗口內的文章
   const since = new Date();
-  since.setHours(since.getHours() - 12);
+  since.setHours(since.getHours() - MATERIAL_WINDOW_HOURS);
 
   const { data: rawArticles } = await supabase
     .from("raw_articles").select("*")
@@ -207,10 +205,10 @@ const allPlans: { writer_persona_id: string; title: string; raw_article_ids: str
     }
 
     // 素材上限（DB 已按 crawled_at desc 排序，直接截取最新的）
-    const freshArticles = allFresh.slice(0, MAX_MATERIALS);
+    const freshArticles = allFresh.slice(0, MAX_MATERIALS_PER_WRITER);
 
-    if (allFresh.length > MAX_MATERIALS) {
-      console.log(`[${persona.name}] 匹配 ${matched.length} 篇，新素材 ${allFresh.length} 篇，截取最新 ${MAX_MATERIALS} 篇`);
+    if (allFresh.length > MAX_MATERIALS_PER_WRITER) {
+      console.log(`[${persona.name}] 匹配 ${matched.length} 篇，新素材 ${allFresh.length} 篇，截取最新 ${MAX_MATERIALS_PER_WRITER} 篇`);
     } else {
       console.log(`[${persona.name}] 匹配 ${matched.length} 篇，新素材 ${freshArticles.length} 篇`);
     }

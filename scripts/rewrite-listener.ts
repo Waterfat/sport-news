@@ -14,6 +14,7 @@ config({ path: resolve(__dirname, "..", ".env.local") });
 
 import { createClient } from "@supabase/supabase-js";
 import { spawnSync } from "child_process";
+import { MATERIAL_WINDOW_HOURS } from "./shared-constants";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -231,9 +232,9 @@ async function checkAutoPipeline() {
       .update({ last_check_at: now.toISOString() })
       .eq("id", 1);
 
-    // 計算未處理素材數（只計 12h 內，與 plan-generator 窗口一致）
+    // 計算未處理素材數（與 plan-generator 使用相同時效窗口）
     const materialSince = new Date();
-    materialSince.setHours(materialSince.getHours() - 12);
+    materialSince.setHours(materialSince.getHours() - MATERIAL_WINDOW_HOURS);
     const { count } = await supabase
       .from("raw_articles")
       .select("*", { count: "exact", head: true })
