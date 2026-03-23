@@ -21,7 +21,7 @@ config({ path: resolve(__dirname, "..", ".env.local") });
 import { createClient } from "@supabase/supabase-js";
 import { matchesSpecialties, Specialties, RawArticleBase } from "./shared-matching";
 import { callClaude } from "./shared-claude";
-import { isValidImageUrl } from "../src/lib/constants";
+import { collectImages, addToUsedImages } from "./local-rewriter.logic";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -143,20 +143,7 @@ function extractNames(text: string): string[] {
   return [...new Set(filtered.map((n) => n.toLowerCase()))];
 }
 
-// 從多篇原始文章中收集不重複的圖片 URL（最多取 5 張）
-function collectImages(articles: RawArticle[]): string[] {
-  const seen = new Set<string>();
-  const images: string[] = [];
-  for (const a of articles) {
-    for (const url of a.images || []) {
-      if (url && isValidImageUrl(url) && !seen.has(url) && images.length < 5) {
-        seen.add(url);
-        images.push(url);
-      }
-    }
-  }
-  return images;
-}
+// collectImages 已移至 local-rewriter.logic.ts（含跨文章去重支援）
 
 interface CitedSource {
   type: string;
@@ -354,6 +341,7 @@ async function produceFromPlans(planIds: string[]) {
   let success = 0;
   let failed = 0;
   const producedPlanIds: string[] = [];
+  const batchUsedImages = new Set<string>(); // 同批次跨文章圖片去重
 
   for (const plan of plans as PlanItem[]) {
     const persona = personaMap[plan.writer_persona_id];
@@ -386,9 +374,9 @@ async function produceFromPlans(planIds: string[]) {
       const output = callClaude(prompt);
       const result = parseResult(output);
 
-      const collectedImages = collectImages(articles);
+      const collectedImages = collectImages(articles, batchUsedImages);
       if (collectedImages.length === 0) {
-        console.log(`    跳過: 素材無任何圖片，不存入 DB`);
+        console.log(`    跳過: 素材無任何圖片（或已被同批次文章使用），不存入 DB`);
         failed++;
         continue;
       }
@@ -424,6 +412,9 @@ async function produceFromPlans(planIds: string[]) {
         failed++;
         continue;
       }
+
+      // 只有成功存入才標記圖片為已用（避免 insert 失敗時污染去重 Set）
+      addToUsedImages(batchUsedImages, collectedImages);
 
       // 標記原始素材為已處理
       const usedIds = articles.map((a) => a.id);
@@ -522,6 +513,7 @@ async function main() {
 
   let success = 0;
   let failed = 0;
+  const batchUsedImages = new Set<string>(); // 手動模式也需要跨文章圖片去重
 
   // === 官方戰報寫手：按聯盟出每日綜合戰報 ===
   for (const official of officials) {
@@ -569,12 +561,13 @@ async function main() {
           const output = callClaude(prompt);
           const result = parseResult(output);
 
-          const officialImages = collectImages(group);
+          const officialImages = collectImages(group, batchUsedImages);
           if (officialImages.length === 0) {
-            console.log(`    跳過: 素材無任何圖片，不存入 DB`);
+            console.log(`    跳過: 素材無任何圖片（或已被同批次文章使用），不存入 DB`);
             failed++;
             continue;
           }
+          addToUsedImages(batchUsedImages, officialImages);
 
           const aiTagsOfficial = Array.isArray(result.tags) ? result.tags : [];
           const finalTagsOfficial = aiTagsOfficial.length > 0 ? aiTagsOfficial : extractTagsFromContent(result.title, result.content);
@@ -650,12 +643,13 @@ async function main() {
         const output = callClaude(prompt);
         const result = parseResult(output);
 
-        const columnistImages = collectImages(group);
+        const columnistImages = collectImages(group, batchUsedImages);
         if (columnistImages.length === 0) {
-          console.log(`    跳過: 素材無任何圖片，不存入 DB`);
+          console.log(`    跳過: 素材無任何圖片（或已被同批次文章使用），不存入 DB`);
           failed++;
           continue;
         }
+        addToUsedImages(batchUsedImages, columnistImages);
 
         const aiTagsCol = Array.isArray(result.tags) ? result.tags : [];
         const finalTagsCol = aiTagsCol.length > 0 ? aiTagsCol : extractTagsFromContent(result.title, result.content);

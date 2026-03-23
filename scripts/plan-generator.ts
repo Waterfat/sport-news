@@ -339,10 +339,23 @@ ${articleList}
   }
 
   if (allPlans.length > 0) {
-    const { error } = await supabase.from("rewrite_plans").insert(allPlans);
-    if (error) {
-      console.error("儲存規劃失敗:", error.message);
-      return;
+    // 存檔含 retry（最多 3 次，間隔 2 秒）
+    let saved = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const { error } = await supabase.from("rewrite_plans").insert(allPlans);
+      if (!error) {
+        saved = true;
+        break;
+      }
+      console.error(`儲存規劃失敗 (attempt ${attempt}/3): ${error.message}`);
+      if (attempt < 3) {
+        console.log("等待 2 秒後重試...");
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+    if (!saved) {
+      console.error("儲存規劃全部失敗，exit 1");
+      process.exit(1);
     }
     console.log(`\n=== 已產生 ${allPlans.length} 個規劃項目 ===`);
 

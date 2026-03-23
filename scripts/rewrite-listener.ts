@@ -15,6 +15,7 @@ config({ path: resolve(__dirname, "..", ".env.local") });
 import { createClient } from "@supabase/supabase-js";
 import { spawnSync } from "child_process";
 import { MATERIAL_WINDOW_HOURS } from "./shared-constants";
+import { shouldTriggerProduce, shouldTriggerReview, parseTaskMode } from "./rewrite-listener.logic";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -33,18 +34,7 @@ const EDITOR_IN_CHIEF_SCRIPT = resolve(__dirname, "editor-in-chief.ts");
 
 let isRunning = false;
 
-// 解析任務的模式：plan（產生規劃）、produce（根據規劃產出文章）、review（總編輯審稿）
-function parseTaskMode(metadata: Record<string, unknown> | null): { mode: string; planIds?: string[]; articleIds?: string[] } {
-  if (!metadata) return { mode: "plan" };
-  if (metadata.mode === "produce" && Array.isArray(metadata.plan_ids)) {
-    return { mode: "produce", planIds: metadata.plan_ids as string[] };
-  }
-  if (metadata.mode === "review") {
-    const articleIds = Array.isArray(metadata.article_ids) ? metadata.article_ids as string[] : undefined;
-    return { mode: "review", articleIds };
-  }
-  return { mode: "plan" };
-}
+// parseTaskMode 已移至 rewrite-listener.logic.ts
 
 async function executeTask(taskId: string) {
   if (isRunning) {
@@ -172,7 +162,7 @@ async function executeTask(taskId: string) {
     isRunning = false;
   }
 
-  // plan 完成後自動接力 produce
+  // plan 完成後自動接力 produce（使用 logic 模組判斷）
   // 必須在 finally（isRunning = false）之後才 insert，
   // 否則 Realtime callback 收到新任務時 isRunning 仍為 true 而被跳過
   if (mode === "plan" && taskSucceeded) {
@@ -183,8 +173,10 @@ async function executeTask(taskId: string) {
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (newPlans && newPlans.length > 0) {
-      const newPlanIds = newPlans.map((p) => p.id);
+    const newPlanCount = newPlans?.length || 0;
+
+    if (shouldTriggerProduce(mode, taskSucceeded, newPlanCount)) {
+      const newPlanIds = newPlans!.map((p) => p.id);
       console.log(`[${ts()}] plan 完成，產出 ${newPlanIds.length} 篇規劃，自動觸發 produce...`);
       const { error: produceTaskError } = await supabase
         .from("rewrite_tasks")
@@ -196,13 +188,13 @@ async function executeTask(taskId: string) {
         console.error(`[${ts()}] 建立 produce 任務失敗: ${produceTaskError.message}`);
       }
     } else {
-      console.log(`[${ts()}] plan 完成但無新規劃`);
+      console.log(`[${ts()}] plan 完成但無新規劃（實際存入 ${newPlanCount} 筆）`);
     }
   }
 
-  // produce 完成後自動觸發審稿
-  if (mode === "produce" && generated > 0) {
-    console.log(`[${ts()}] 產出完成，自動觸發總編輯審稿...`);
+  // produce 完成後自動觸發審稿（使用 logic 模組判斷）
+  if (shouldTriggerReview(mode, generated)) {
+    console.log(`[${ts()}] 產出完成（${generated} 篇），自動觸發總編輯審稿...`);
     const { error: reviewTaskError } = await supabase
       .from("rewrite_tasks")
       .insert({
