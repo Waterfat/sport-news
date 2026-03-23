@@ -62,14 +62,16 @@ async function executeTask(taskId: string) {
     .single();
 
   const { mode, planIds, articleIds } = parseTaskMode(task?.metadata);
+  const autoPublish = !!(task?.metadata as Record<string, unknown> | null)?.auto_publish;
   console.log(`[${ts()}] 開始執行任務: ${taskId} (模式: ${mode})`);
 
   // 更新狀態為 running
+  const taskStartedAt = new Date().toISOString();
   await supabase
     .from("rewrite_tasks")
     .update({
       status: "running",
-      started_at: new Date().toISOString(),
+      started_at: taskStartedAt,
     })
     .eq("id", taskId);
 
@@ -83,6 +85,7 @@ async function executeTask(taskId: string) {
 
   // 提升至 try 外，讓 finally 後的邏輯可以存取
   let generated = 0;
+  let taskSucceeded = false;
 
   try {
     let script: string;
@@ -134,6 +137,7 @@ async function executeTask(taskId: string) {
         })
         .eq("id", taskId);
 
+      taskSucceeded = true;
       console.log(
         `[${ts()}] 任務完成 (${mode})，產出 ${generated} 篇文章`
       );
@@ -168,16 +172,42 @@ async function executeTask(taskId: string) {
     isRunning = false;
   }
 
-  // produce 完成後自動觸發審稿
+  // plan 完成後自動接力 produce
   // 必須在 finally（isRunning = false）之後才 insert，
   // 否則 Realtime callback 收到新任務時 isRunning 仍為 true 而被跳過
+  if (mode === "plan" && taskSucceeded) {
+    const { data: newPlans } = await supabase
+      .from("rewrite_plans")
+      .select("id")
+      .gte("created_at", taskStartedAt)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (newPlans && newPlans.length > 0) {
+      const newPlanIds = newPlans.map((p) => p.id);
+      console.log(`[${ts()}] plan 完成，產出 ${newPlanIds.length} 篇規劃，自動觸發 produce...`);
+      const { error: produceTaskError } = await supabase
+        .from("rewrite_tasks")
+        .insert({
+          status: "pending",
+          metadata: { mode: "produce", plan_ids: newPlanIds, auto_publish: autoPublish },
+        });
+      if (produceTaskError) {
+        console.error(`[${ts()}] 建立 produce 任務失敗: ${produceTaskError.message}`);
+      }
+    } else {
+      console.log(`[${ts()}] plan 完成但無新規劃`);
+    }
+  }
+
+  // produce 完成後自動觸發審稿
   if (mode === "produce" && generated > 0) {
     console.log(`[${ts()}] 產出完成，自動觸發總編輯審稿...`);
     const { error: reviewTaskError } = await supabase
       .from("rewrite_tasks")
       .insert({
         status: "pending",
-        metadata: { mode: "review" },
+        metadata: { mode: "review", auto_publish: autoPublish },
       });
     if (reviewTaskError) {
       console.error(`[${ts()}] 建立審稿任務失敗: ${reviewTaskError.message}`);
