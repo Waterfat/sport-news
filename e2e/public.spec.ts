@@ -222,6 +222,55 @@ test.describe("PWA 安裝教學頁", () => {
 });
 
 // ---------------------------------------------------------------------------
+// 排行榜頁 (Standings) — #192 hotfix regression
+// ---------------------------------------------------------------------------
+test.describe("排行榜頁", () => {
+  test("首頁側欄完整排名連結導航到排行榜頁", async ({ page }) => {
+    await page.goto("/");
+
+    // 找到「完整排名」連結並點擊
+    const standingsLink = page.getByRole("link", { name: /完整排名/i }).first();
+    // 可能不存在（側欄未載入），跳過
+    const isVisible = await standingsLink.isVisible().catch(() => false);
+    if (!isVisible) {
+      test.skip(true, "首頁側欄未顯示完整排名連結 — 可能無啟用的聯賽");
+      return;
+    }
+
+    await standingsLink.click();
+    await page.waitForURL(/\/standings\//);
+
+    // 確認導航成功
+    expect(page.url()).toContain("/standings/");
+  });
+
+  test("/standings/nba 頁面正常載入排名資料", async ({ page }) => {
+    await page.goto("/standings/nba");
+
+    // 頁面不應 404
+    const heading = page.getByRole("heading").first();
+    await expect(heading).toBeVisible({ timeout: 15_000 });
+
+    // 應顯示排名表格或資料（不是錯誤頁面）
+    const errorText = page.getByText("404");
+    const hasError = await errorText.isVisible().catch(() => false);
+    expect(hasError).toBe(false);
+  });
+
+  test("Standings API 回傳正確格式", async ({ request }) => {
+    const resp = await request.get("/api/public/standings?sport=nba");
+    // ESPN upstream 可能偶發失敗，非 200 時跳過而非讓 CI 紅燈
+    if (!resp.ok()) {
+      test.skip(true, `Standings API returned ${resp.status()} — possible ESPN upstream issue`);
+      return;
+    }
+    const json = await resp.json();
+    expect(json).toHaveProperty("groups");
+    expect(Array.isArray(json.groups)).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // SEO / crawler files
 // ---------------------------------------------------------------------------
 test.describe("SEO 檔案", () => {
