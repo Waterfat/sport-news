@@ -188,7 +188,7 @@ export function GameSummaryTab({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {seasonSeries.games.map((g: SeasonSeriesGame, idx: number) => (
+              {(seasonSeries.games ?? []).map((g: SeasonSeriesGame, idx: number) => (
                 <div key={idx} className="flex items-center justify-between text-sm border-b border-border last:border-0 pb-2">
                   <span className="text-muted-foreground text-xs w-16">
                     {g.date ? new Date(g.date).toLocaleDateString("zh-TW", { month: "short", day: "numeric" }) : "-"}

@@ -39,7 +39,7 @@ export function QuickStandings() {
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
         <h3 className="font-serif text-[15px] font-bold text-card-foreground">NBA 排名</h3>
-        <Link href="/standings" className="text-xs text-brand hover:underline">
+        <Link href="/standings/nba" className="text-xs text-brand hover:underline">
           完整排名
         </Link>
       </div>

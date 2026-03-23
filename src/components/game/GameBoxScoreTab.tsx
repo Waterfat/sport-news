@@ -54,7 +54,7 @@ export function GameBoxScoreTab({ boxScore }: GameBoxScoreTabProps) {
       )}
 
       {/* Player Stats */}
-      {boxScore.players.map((group) => (
+      {(boxScore.players ?? []).map((group) => (
         <Card key={group.teamName}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{group.teamName}</CardTitle>

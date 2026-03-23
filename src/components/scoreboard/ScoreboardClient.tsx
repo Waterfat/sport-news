@@ -121,7 +121,7 @@ export default function ScoreboardClient({
             <ScoreCardSkeleton key={i} />
           ))}
         </div>
-      ) : !data || data.games.length === 0 ? (
+      ) : !data || !data.games || data.games.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-4xl mb-3">📋</div>
           <h3 className="text-lg font-medium text-muted-foreground mb-1">
