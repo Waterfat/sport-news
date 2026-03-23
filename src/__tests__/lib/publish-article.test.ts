@@ -1019,3 +1019,66 @@ describe("deduplicateCoverImage", () => {
     // First article: no dedup needed, cover image unchanged
   });
 });
+
+// ============================================================
+// PA: review_status 檢查（補充缺口）
+// ============================================================
+
+describe("publishArticle - review_status 阻擋發布（PA）", () => {
+  function makeArticleWithReviewStatus(review_status: string | null) {
+    return {
+      id: "rev-test",
+      title: "Review Gate Article",
+      content: "Content",
+      slug: "review-gate",
+      images: ["https://img.com/cover.jpg"],
+      publish_channel_ids: [],
+      review_status,
+    };
+  }
+
+  function buildSimpleSupabase(article: Record<string, unknown>) {
+    return {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: article, error: null }),
+      }),
+    };
+  }
+
+  it("PA-01: review_status=pending 時阻擋發布並回傳錯誤", async () => {
+    const supabase = buildSimpleSupabase(makeArticleWithReviewStatus("pending"));
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+
+    const result = await publishArticle("rev-test");
+
+    expect(result.success).toBe(false);
+    expect(result.channels_published).toBe(0);
+    expect(result.errors.some((e) => e.includes("未通過審查"))).toBe(true);
+    expect(mockPublishToChannel).not.toHaveBeenCalled();
+  });
+
+  it("PA-02: review_status=rejected 時阻擋發布並回傳錯誤", async () => {
+    const supabase = buildSimpleSupabase(makeArticleWithReviewStatus("rejected"));
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+
+    const result = await publishArticle("rev-test");
+
+    expect(result.success).toBe(false);
+    expect(result.channels_published).toBe(0);
+    expect(result.errors.some((e) => e.includes("未通過審查"))).toBe(true);
+    expect(mockPublishToChannel).not.toHaveBeenCalled();
+  });
+
+  it("review_status=null 時阻擋發布（視為尚未審查）", async () => {
+    const supabase = buildSimpleSupabase(makeArticleWithReviewStatus(null));
+    mockCreateServiceClient.mockReturnValue(supabase as never);
+
+    const result = await publishArticle("rev-test");
+
+    expect(result.success).toBe(false);
+    expect(result.errors.some((e) => e.includes("未通過審查"))).toBe(true);
+    expect(mockPublishToChannel).not.toHaveBeenCalled();
+  });
+});
