@@ -2,7 +2,7 @@
  * 規劃產生器 — AI 整體分析所有素材，產出去重後的文章規劃
  *
  * 核心邏輯：
- * 1. 從 DB 讀取最近 48 小時的原始新聞
+ * 1. 從 DB 讀取最近 12 小時的原始新聞
  * 2. 取得啟用的寫手及其專長設定
  * 3. 根據寫手專長匹配素材
  * 4. 一次把所有素材丟給 Claude，讓 AI 分析、去重、規劃
@@ -24,6 +24,9 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
   process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 );
+
+/** 每位寫手每次最多處理的素材數量 */
+const MAX_MATERIALS = 20;
 
 interface WriterPersona { id: string; name: string; style_prompt: string; writer_type: string; specialties: Specialties; max_articles: number; }
 interface RawArticle extends RawArticleBase { crawled_at: string; images?: string[]; }
@@ -128,9 +131,9 @@ export async function generatePlans() {
 
   if (!personas?.length) { console.log("沒有啟用的寫手"); return; }
 
-  // 取得最近 48 小時的文章
+  // 取得最近 12 小時的文章
   const since = new Date();
-  since.setHours(since.getHours() - 48);
+  since.setHours(since.getHours() - 12);
 
   const { data: rawArticles } = await supabase
     .from("raw_articles").select("*")
@@ -197,13 +200,20 @@ const allPlans: { writer_persona_id: string; title: string; raw_article_ids: str
     }
 
     // 排除已被產出過的素材
-    const freshArticles = matched.filter((a) => !alreadyUsedIds.has(a.id));
-    if (!freshArticles.length) {
+    const allFresh = matched.filter((a) => !alreadyUsedIds.has(a.id));
+    if (!allFresh.length) {
       console.log(`[${persona.name}] 所有匹配文章皆已產出過`);
       continue;
     }
 
-    console.log(`[${persona.name}] 匹配 ${matched.length} 篇，新素材 ${freshArticles.length} 篇`);
+    // 素材上限（DB 已按 crawled_at desc 排序，直接截取最新的）
+    const freshArticles = allFresh.slice(0, MAX_MATERIALS);
+
+    if (allFresh.length > MAX_MATERIALS) {
+      console.log(`[${persona.name}] 匹配 ${matched.length} 篇，新素材 ${allFresh.length} 篇，截取最新 ${MAX_MATERIALS} 篇`);
+    } else {
+      console.log(`[${persona.name}] 匹配 ${matched.length} 篇，新素材 ${freshArticles.length} 篇`);
+    }
 
     const maxArticles = persona.max_articles || 5;
 
@@ -218,7 +228,7 @@ const allPlans: { writer_persona_id: string; title: string; raw_article_ids: str
 
     // 組裝已發布文章提示
     const publishedSection = publishedTitles.length > 0
-      ? `\n以下是近 7 天已發布的文章標題，請勿規劃與這些主題重複的內容：\n${publishedTitles.map((t) => `- ${t}`).join("\n")}\n`
+      ? `\n以下是近 14 天已發布的文章標題，請勿規劃與這些主題重複的內容：\n${publishedTitles.map((t) => `- ${t}`).join("\n")}\n`
       : "";
 
     // 標題風格已整合到各寫手的 style_prompt 中（Issue #160）
@@ -252,7 +262,13 @@ ${articleList}
 [{"title": "Bam Adebayo 單場轟下83分超越 Kobe，寫下 NBA 史上第二高得分紀錄", "source_indices": [0, 1, 5, 8], "league": "NBA", "plan_type": "${persona.writer_type}"}]`;
 
     console.log(`[${persona.name}] 呼叫 AI 分析 ${freshArticles.length} 篇素材...`);
-    const output = callClaude(prompt, 180000);
+    let output: string;
+    try {
+      output = callClaude(prompt, 180000);
+    } catch (err) {
+      console.error(`[${persona.name}] AI 呼叫失敗（超時或其他錯誤），跳過此寫手，等待下次觸發:`, (err as Error).message);
+      continue;
+    }
     const proposals = parseAIPlan(output);
 
     if (!proposals.length) {
