@@ -2,27 +2,7 @@
 
 ## 需求處理流程
 
-收到**需要修改程式碼**的功能需求或架構變更時，**預設先進入 Plan Mode**，不可直接修改程式碼。純討論、問答、規劃不需要進入 Plan Mode。
-
-### Plan Mode 流程
-
-1. 讀取相關程式碼，理解現有架構
-2. 向使用者說明：
-   - 我理解的需求（確認沒有誤解）
-   - 受影響的檔案與模組
-   - 具體改法與重構計畫
-   - 可能的風險或副作用
-   - 是否需要重啟服務、清除 session 等（參考「變更影響對照表」）
-3. 使用者確認或調整後，才退出 Plan Mode 開始實作
-
-### 可跳過 Plan Mode 的情況
-
-- 明確的 bug fix（如「這個按鈕壞了」、「這個 API 回傳錯誤」）
-- 使用者明確說「直接改」
-- 純文字、設定檔、環境變數修改
-- 使用者指示非常具體且範圍明確
-
-**注意：跳過 Plan Mode ≠ 跳過 PM 流程。** Bug fix 仍需走 PM 完整流程（Issue → branch → 修復 → review → QA → deploy → evolve），只是不需要在動手前先做需求確認。
+程式碼變更預設先 Plan Mode（說明需求理解 + 受影響檔案 + 改法 + 風險 + 是否需重啟服務），使用者確認後才實作。可跳過：bug fix、使用者說直接改、純設定、指示具體明確。**跳過 Plan Mode ≠ 跳過 PM 流程。**
 
 ### 變更影響對照表
 
@@ -49,26 +29,21 @@
 | Git Push 確認 | **自動**（安全掃描通過後直接 push，不需暫停詢問使用者） |
 | 統一 QA 指令 | `./scripts/qa.sh <URL>`（串接 vitest + smoke + E2E） |
 | 共用常數檔案 | `src/lib/constants.ts` |
-| 跨服務介面 | `scripts/` ↔ `src/app/api/` 共用 DB schema（特別是 `rewrite_tasks` 表） |
+| 跨服務介面 | `scripts/` ↔ `src/app/api/` 共用 DB schema（特別是 `rewrite_tasks` 表），修改任一邊欄位時必須同步檢查另一邊 |
 
 ## 強制開發流程
 
 - 每次 commit 前必須執行統一 QA：`./scripts/qa.sh`，未通過不得 commit
 - **部署後必須對正式環境執行統一 QA**：`./scripts/qa.sh https://howger-sport.com`
 
-## E2E 測試
+## 測試
 
-- 框架：Playwright（`npx playwright test`）
-- 測試目錄：`e2e/`
-- 執行：`./scripts/e2e-test.sh [BASE_URL]`
-- 後台測試需設定環境變數：`E2E_USERNAME` + `E2E_PASSWORD`（未設定時腳本會主動詢問，不得自動跳過）
-
-## 測試指令
-
-- 執行測試：`npx vitest run`
-- 監聽模式：`npx vitest`
+- 單元測試：`npx vitest run`（監聽：`npx vitest`）
 - 測試檔案位置：`src/__tests__/`
 - 測試命名規則：`src/__tests__/lib/<module>.test.ts`、`src/__tests__/components/<Component>.test.tsx`
+- E2E 框架：Playwright（`npx playwright test`），測試目錄：`e2e/`
+- E2E 執行：`./scripts/e2e-test.sh [BASE_URL]`
+- 後台測試需設定環境變數：`E2E_USERNAME` + `E2E_PASSWORD`（未設定時腳本會主動詢問，不得自動跳過）
 
 ## 資料庫（Supabase 特定）
 
@@ -102,11 +77,6 @@
   ```
 - 檢查是否存活：`ps aux | grep rewrite-listener | grep -v grep`
 - 檢查日誌：`cat /tmp/rewrite-listener.log`
-
-### 跨服務介面一致性
-
-- `scripts/` 下的 listener 與 `src/app/api/` 下的 API route 共用 DB schema，修改其中一邊的欄位名稱時，必須同步檢查另一邊
-- 特別注意 `rewrite_tasks` 表：API 寫入的欄位（如 `metadata`）必須與 listener 讀取的欄位一致
 
 ## 技術棧
 
